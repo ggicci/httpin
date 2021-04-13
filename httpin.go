@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-func Input(inputStruct interface{}) Middleware {
+func New(inputStruct interface{}) Middleware {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
