@@ -1,2 +1,3 @@
-# httpio
-HTTP Input/Ouput for Go
+# httpin
+
+HTTP Input for Go
