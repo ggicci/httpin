@@ -1,6 +1,8 @@
 package httpin_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/url"
 	"testing"
@@ -21,7 +23,13 @@ func (c *TestCase) Check(t *testing.T, got interface{}, err error) {
 		return
 	}
 
-	// TODO(ggicci): compare got vs. expected
+	// Compare got vs. expected.
+	left, _ := json.Marshal(c.Expected)
+	right, _ := json.Marshal(got)
+	if bytes.Compare(left, right) != 0 {
+		t.Errorf("invalid parsed result, expected %s, got %s", left, right)
+		return
+	}
 }
 
 type ProductQuery struct {
@@ -31,7 +39,7 @@ type ProductQuery struct {
 	SortBy    []string  `query:"sort_by"`
 	SortDesc  []bool    `query:"sort_desc"`
 	Page      int       `query:"page"`
-	PerPage   int       `query:"per_per"`
+	PerPage   int       `query:"per_page"`
 }
 
 func TestExtractingQueryParameters(t *testing.T) {
@@ -47,6 +55,19 @@ func TestExtractingQueryParameters(t *testing.T) {
 				"created_at": {"2020-01-02"},
 				"color":      {"red"},
 				"is_soldout": {"true"},
+				"sort_by":    {"quantity"},
+				"sort_desc":  {"true"},
+				"page":       {"1"},
+				"per_page":   {"20"},
+			},
+			Expected: &ProductQuery{
+				CreatedAt: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
+				Color:     "red",
+				IsSoldout: true,
+				SortBy:    []string{"quantity"},
+				SortDesc:  []bool{true},
+				Page:      1,
+				PerPage:   20,
 			},
 		},
 	}

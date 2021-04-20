@@ -41,9 +41,9 @@ func NewEngine(inputStruct interface{}) (*Engine, error) {
 		inputType: typ,
 	}
 
-	if err := engine.build(); err != nil {
-		return nil, fmt.Errorf("httpin: build: %w", err)
-	}
+	// if err := engine.build(); err != nil {
+	// 	return nil, fmt.Errorf("httpin: build: %w", err)
+	// }
 
 	return engine, nil
 }
@@ -57,7 +57,11 @@ func (e *Engine) ReadRequest(r *http.Request) (interface{}, error) {
 }
 
 func (e *Engine) ReadForm(form url.Values) (interface{}, error) {
-	return nil, errors.New("not implemented")
+	rv, err := readForm(e.inputType, form)
+	if err != nil {
+		return nil, err
+	}
+	return rv.Interface(), nil
 }
 
 func (e *Engine) ReadBody(body io.Reader) (interface{}, error) {
