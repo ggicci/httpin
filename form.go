@@ -44,6 +44,17 @@ func readForm(inputType reflect.Type, form url.Values) (reflect.Value, error) {
 
 	for i := 0; i < inputType.NumField(); i++ {
 		field := inputType.Field(i)
+
+		// Process on embedded fields - recursively.
+		if field.Anonymous {
+			embedded, err := readForm(field.Type, form)
+			if err != nil {
+				return rv, fmt.Errorf("parse embedded field %s: %w", field.Name, err)
+			}
+			rv.Elem().Field(i).Set(embedded.Elem())
+			continue
+		}
+
 		if name := field.Tag.Get("query"); name != "" {
 			formValue, _ := form[name]
 			// fmt.Printf("query: %v, formValue: %v\n", name, formValue)
@@ -88,7 +99,7 @@ func setField(fv reflect.Value, formValue []string) error {
 		return nil
 	}
 
-	return fmt.Errorf("%s: unsupported type", ft.Name())
+	return UnsupportedType(ft.Name())
 }
 
 func setBasicValue(fv reflect.Value, ft reflect.Type, strValue string) error {

@@ -36,6 +36,13 @@ func New(inputStruct interface{}) Middleware {
 
 func NewEngine(inputStruct interface{}) (*Engine, error) {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+	if typ.Kind() != reflect.Struct {
+		return nil, UnsupportedType(typ.Name())
+	}
+
 	// TODO(ggicci): check typ
 	engine := &Engine{
 		inputType: typ,

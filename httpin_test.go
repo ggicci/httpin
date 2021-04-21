@@ -3,6 +3,7 @@ package httpin_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/url"
 	"testing"
@@ -12,14 +13,17 @@ import (
 )
 
 type TestCase struct {
-	InputForm url.Values
-	InputBody io.Reader
-	Expected  interface{}
+	Title         string
+	InputType     interface{}
+	InputForm     url.Values
+	InputBody     io.Reader
+	Expected      interface{}
+	ExpectedError error
 }
 
 func (c *TestCase) Check(t *testing.T, got interface{}, err error) {
-	if err != nil {
-		t.Errorf("parse error: %s", err)
+	if !errors.Is(err, c.ExpectedError) {
+		t.Errorf("parse failed, expect error %v, got %v", c.ExpectedError, err)
 		return
 	}
 
@@ -32,25 +36,42 @@ func (c *TestCase) Check(t *testing.T, got interface{}, err error) {
 	}
 }
 
+type Pagination struct {
+	Page    int `query:"page"`
+	PerPage int `query:"per_page"`
+}
+
 type ProductQuery struct {
 	CreatedAt time.Time `query:"created_at"`
 	Color     string    `query:"color"`
 	IsSoldout bool      `query:"is_soldout"`
 	SortBy    []string  `query:"sort_by"`
 	SortDesc  []bool    `query:"sort_desc"`
-	Page      int       `query:"page"`
-	PerPage   int       `query:"per_page"`
+	Pagination
+}
+
+type ObjectID struct {
+	timestamp [4]byte
+	mid       [3]byte
+	pid       [2]byte
+	counter   [3]byte
+}
+type Cursor struct {
+	AfterMarker  ObjectID `query:"after"`
+	BeforeMarker ObjectID `query:"before"`
+	Limit        int      `query:"limit"`
+}
+
+type MessageQuery struct {
+	UserId string `query:"uid"`
+	Cursor
 }
 
 func TestExtractingQueryParameters(t *testing.T) {
-	engine, err := httpin.NewEngine(ProductQuery{})
-	if err != nil {
-		t.Errorf("unable to create engine: %s", err)
-		t.FailNow()
-	}
-
 	testcases := []*TestCase{
 		{
+			Title:     "normal case",
+			InputType: ProductQuery{},
 			InputForm: url.Values{
 				"created_at": {"1991-11-10T08:00:00+08:00"},
 				"color":      {"red"},
@@ -66,13 +87,31 @@ func TestExtractingQueryParameters(t *testing.T) {
 				IsSoldout: true,
 				SortBy:    []string{"stock", "price"},
 				SortDesc:  []bool{true, true},
-				Page:      1,
-				PerPage:   20,
+				Pagination: Pagination{
+					Page:    1,
+					PerPage: 20,
+				},
 			},
+		},
+		{
+			Title:     "unsupported custom type",
+			InputType: &MessageQuery{},
+			InputForm: url.Values{
+				"uid":   {"ggicci"},
+				"after": {"5cb71995ad763f7f1717c9eb"},
+				"limit": {"50"},
+			},
+			ExpectedError: httpin.UnsupportedType("ObjectID"),
 		},
 	}
 
 	for _, c := range testcases {
+		engine, err := httpin.NewEngine(c.InputType)
+		if err != nil {
+			t.Errorf("unable to create engine: %s", err)
+			t.FailNow()
+		}
+
 		got, err := engine.ReadForm(c.InputForm)
 		c.Check(t, got, err)
 	}
