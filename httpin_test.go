@@ -27,7 +27,7 @@ func (c *TestCase) Check(t *testing.T, got interface{}, err error) {
 	left, _ := json.Marshal(c.Expected)
 	right, _ := json.Marshal(got)
 	if bytes.Compare(left, right) != 0 {
-		t.Errorf("invalid parsed result, expected %s, got %s", left, right)
+		t.Errorf("parse failed, expected %s, got %s", left, right)
 		return
 	}
 }
@@ -52,20 +52,20 @@ func TestExtractingQueryParameters(t *testing.T) {
 	testcases := []*TestCase{
 		{
 			InputForm: url.Values{
-				"created_at": {"2020-01-02"},
+				"created_at": {"1991-11-10T08:00:00+08:00"},
 				"color":      {"red"},
 				"is_soldout": {"true"},
-				"sort_by":    {"quantity"},
-				"sort_desc":  {"true"},
+				"sort_by":    {"stock", "price"},
+				"sort_desc":  {"true", "true"},
 				"page":       {"1"},
 				"per_page":   {"20"},
 			},
 			Expected: &ProductQuery{
-				CreatedAt: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
+				CreatedAt: time.Date(1991, 11, 10, 8, 0, 0, 0, time.FixedZone("+08:00", 8*3600)),
 				Color:     "red",
 				IsSoldout: true,
-				SortBy:    []string{"quantity"},
-				SortDesc:  []bool{true},
+				SortBy:    []string{"stock", "price"},
+				SortDesc:  []bool{true, true},
 				Page:      1,
 				PerPage:   20,
 			},
