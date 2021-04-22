@@ -43,6 +43,15 @@ type MessageQuery struct {
 	Cursor
 }
 
+type PositionXY struct {
+	X int
+	Y int
+}
+
+type PointsQuery struct {
+	Positions []PositionXY `query:"positions"`
+}
+
 func TestForm_NormalCase(t *testing.T) {
 	parseFormAndCheck(
 		t,
@@ -80,6 +89,17 @@ func TestForm_UnsupportedCustomType(t *testing.T) {
 		},
 		&MessageQuery{},
 		httpin.UnsupportedType("ObjectID"),
+	)
+}
+
+func TestForm_UnsupportedElementTypeOfArray(t *testing.T) {
+	parseFormAndCheck(
+		t,
+		url.Values{
+			"positions": {"(1,4)", "(5,7)"},
+		},
+		PointsQuery{},
+		httpin.UnsupportedType("PositionXY"),
 	)
 }
 

@@ -191,5 +191,5 @@ func setSliceValue(fv reflect.Value, ft reflect.Type, formValue []string) error 
 	}
 
 	// TODO(ggicci): hook custom parsers
-	return fmt.Errorf("%s: unsupported element type of slice", ft.Name())
+	return fmt.Errorf("unsupported element type in array: %w", UnsupportedType(elemType.Name()))
 }
