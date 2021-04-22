@@ -31,6 +31,7 @@ type ObjectID struct {
 	pid       [2]byte
 	counter   [3]byte
 }
+
 type Cursor struct {
 	AfterMarker  ObjectID `query:"after"`
 	BeforeMarker ObjectID `query:"before"`
@@ -40,44 +41,6 @@ type Cursor struct {
 type MessageQuery struct {
 	UserId string `query:"uid"`
 	Cursor
-}
-
-func check(t *testing.T, expected, got interface{}) {
-	// Expecting error.
-	expectedError, isExpectingError := expected.(error)
-	if isExpectingError {
-		if gotError, ok := got.(error); ok {
-			if errors.Is(gotError, expectedError) {
-				return
-			}
-		}
-		t.Errorf("parse failed, expected error %v, got %v", expectedError, got)
-		return
-	}
-
-	// Expecting struct output.
-	left, _ := json.Marshal(expected)
-	right, _ := json.Marshal(got)
-	if bytes.Compare(left, right) != 0 {
-		t.Errorf("parse failed, expected %s, got %s", left, right)
-		return
-	}
-}
-
-func parseFormAndCheck(t *testing.T, form url.Values, inputStruct, expected interface{}) {
-	engine, err := httpin.NewEngine(inputStruct)
-	if err != nil {
-		t.Errorf("unable to create engine: %s", err)
-		t.FailNow()
-		return
-	}
-
-	got, err := engine.ReadForm(form)
-	if err != nil {
-		check(t, expected, err)
-	} else {
-		check(t, expected, got)
-	}
 }
 
 func TestForm_NormalCase(t *testing.T) {
@@ -118,4 +81,42 @@ func TestForm_UnsupportedCustomType(t *testing.T) {
 		&MessageQuery{},
 		httpin.UnsupportedType("ObjectID"),
 	)
+}
+
+func parseFormAndCheck(t *testing.T, form url.Values, inputStruct, expected interface{}) {
+	engine, err := httpin.NewEngine(inputStruct)
+	if err != nil {
+		t.Errorf("unable to create engine: %s", err)
+		t.FailNow()
+		return
+	}
+
+	got, err := engine.ReadForm(form)
+	if err != nil {
+		check(t, expected, err)
+	} else {
+		check(t, expected, got)
+	}
+}
+
+func check(t *testing.T, expected, got interface{}) {
+	// Expecting error.
+	expectedError, isExpectingError := expected.(error)
+	if isExpectingError {
+		if gotError, ok := got.(error); ok {
+			if errors.Is(gotError, expectedError) {
+				return
+			}
+		}
+		t.Errorf("parse failed, expected error %v, got %v", expectedError, got)
+		return
+	}
+
+	// Expecting struct output.
+	left, _ := json.Marshal(expected)
+	right, _ := json.Marshal(got)
+	if bytes.Compare(left, right) != 0 {
+		t.Errorf("parse failed, expected %s, got %s", left, right)
+		return
+	}
 }
