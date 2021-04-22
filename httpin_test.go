@@ -67,7 +67,31 @@ type MessageQuery struct {
 	Cursor
 }
 
-func TestExtractingQueryParameters(t *testing.T) {
+func parseFormAndCheck(t *testing.T, inputStruct,expected, got interface{} ) {
+	engine, err := httpin.NewEngine(inputStruct)
+	if err != nil {
+		t.Errorf("unable to create engine: %s", err)
+		t.FailNow()
+		return
+	}
+
+	if expectedError, ok := expected.(error); ok {
+		if !errors.Is(err, expectedError) {
+			t.Errorf("parse failed, expect error %v, got %v", expectedError, err)
+			return
+		}
+	} else {
+		// Compare got vs. expected.
+		left, _ := json.Marshal(expected)
+		right, _ := json.Marshal(got)
+		if bytes.Compare(left, right) != 0 {
+			t.Errorf("parse failed, expected %s, got %s", left, right)
+			return
+		}
+	}
+}
+
+func TestForm_NormalCase(t *testing.T) {
 	testcases := []*TestCase{
 		{
 			Title:     "normal case",
