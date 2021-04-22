@@ -140,7 +140,7 @@ func setBasicValue(fv reflect.Value, ft reflect.Type, strValue string) error {
 	return nil
 }
 
-func tryParsingTime(value string) (time.Time, error) {
+func parseTime(value string) (time.Time, error) {
 	// Try parsing value as RFC3339 format.
 	if t, err := time.Parse(time.RFC3339Nano, value); err == nil {
 		return t, nil
@@ -156,8 +156,7 @@ func tryParsingTime(value string) (time.Time, error) {
 }
 
 func setTimeValue(fv reflect.Value, ft reflect.Type, strValue string) error {
-	// Try parsing strValue as time.Time in following formats.
-	timeValue, err := tryParsingTime(strValue)
+	timeValue, err := parseTime(strValue)
 	if err != nil {
 		return err
 	}
