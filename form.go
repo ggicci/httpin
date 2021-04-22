@@ -29,21 +29,14 @@ var basicKinds = map[reflect.Kind]struct{}{
 
 var timeType = reflect.TypeOf(time.Time{})
 
-func isBasicType(typ reflect.Type) bool {
-	_, ok := basicKinds[typ.Kind()]
-	return ok
-}
+// readForm fills a new created instance of `inputStruct` by inspecting the
+// "query" tag of each field and extracing, parsing corresponding values from
+// `form` keyed by the tag.
+func readForm(inputStruct reflect.Type, form url.Values) (reflect.Value, error) {
+	rv := reflect.New(inputStruct)
 
-func isTimeType(typ reflect.Type) bool {
-	return typ == timeType
-}
-
-// readForm
-func readForm(inputType reflect.Type, form url.Values) (reflect.Value, error) {
-	rv := reflect.New(inputType)
-
-	for i := 0; i < inputType.NumField(); i++ {
-		field := inputType.Field(i)
+	for i := 0; i < inputStruct.NumField(); i++ {
+		field := inputStruct.Field(i)
 
 		// Process on embedded fields - recursively.
 		if field.Anonymous {
@@ -65,6 +58,15 @@ func readForm(inputType reflect.Type, form url.Values) (reflect.Value, error) {
 	}
 
 	return rv, nil
+}
+
+func isBasicType(typ reflect.Type) bool {
+	_, ok := basicKinds[typ.Kind()]
+	return ok
+}
+
+func isTimeType(typ reflect.Type) bool {
+	return typ == timeType
 }
 
 func setField(fv reflect.Value, formValue []string) error {
