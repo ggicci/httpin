@@ -1,0 +1,34 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test and generate coverage report
+      run: go test -race -failfast -parallel 4 -cpu 4 -coverprofile main.cover.out -v ./...
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        name: codecov-umbrella
+        files: ./main.cover.out
+        flags: unittests
+        fail_ci_if_error: true
+        verbose: true
