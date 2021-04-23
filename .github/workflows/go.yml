@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -18,11 +18,8 @@ jobs:
       with:
         go-version: 1.16
 
-    - name: Build
-      run: go build -v ./...
-
     - name: Test and generate coverage report
-      run: go test -race -failfast -parallel 4 -cpu 4 -coverprofile main.cover.out -v ./...
+      run: make test/cover
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
