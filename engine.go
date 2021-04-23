@@ -19,7 +19,6 @@ func NewEngine(inputStruct interface{}) (*Engine, error) {
 		return nil, UnsupportedType(typ.Name())
 	}
 
-	// TODO(ggicci): check typ
 	engine := &Engine{
 		inputType: typ,
 	}
