@@ -2,7 +2,6 @@ package httpin
 
 import (
 	"fmt"
-	"net/url"
 	"reflect"
 	"strconv"
 	"time"
@@ -29,10 +28,7 @@ var basicKinds = map[reflect.Kind]struct{}{
 
 var timeType = reflect.TypeOf(time.Time{})
 
-// readForm fills a new created instance of `inputStruct` by inspecting the
-// "query" tag of each field and extracing, parsing corresponding values from
-// `form` keyed by the tag.
-func readForm(inputStruct reflect.Type, form url.Values) (reflect.Value, error) {
+func readKeyValues(inputStruct reflect.Type, kv map[string][]string, tag string) (reflect.Value, error) {
 	rv := reflect.New(inputStruct)
 
 	for i := 0; i < inputStruct.NumField(); i++ {
@@ -40,7 +36,7 @@ func readForm(inputStruct reflect.Type, form url.Values) (reflect.Value, error) 
 
 		// Process on embedded fields - recursively.
 		if field.Anonymous {
-			embedded, err := readForm(field.Type, form)
+			embedded, err := readKeyValues(field.Type, kv, tag)
 			if err != nil {
 				return rv, fmt.Errorf("parse embedded field %s: %w", field.Name, err)
 			}
@@ -48,11 +44,16 @@ func readForm(inputStruct reflect.Type, form url.Values) (reflect.Value, error) 
 			continue
 		}
 
-		if name := field.Tag.Get("query"); name != "" {
-			formValue, _ := form[name]
-			// fmt.Printf("query: %v, formValue: %v\n", name, formValue)
+		if name := field.Tag.Get(tag); name != "" {
+			formValue, _ := kv[name]
 			if err := setField(rv.Elem().Field(i), formValue); err != nil {
-				return rv, fmt.Errorf("parse field %s: %w", name, err)
+				return rv, &InvalidField{
+					Name:   field.Name,
+					TagKey: tag,
+					Tag:    name,
+					Value:  formValue,
+					err:    err,
+				}
 			}
 		}
 	}

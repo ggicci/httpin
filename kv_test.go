@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"net/url"
 	"testing"
 	"time"
 
@@ -83,10 +82,10 @@ type PointsQuery struct {
 	Positions []PositionXY `query:"positions"`
 }
 
-func TestForm_NormalCase(t *testing.T) {
-	parseFormAndCheck(
+func TestKV_NormalCase(t *testing.T) {
+	kvTest(
 		t,
-		url.Values{
+		map[string][]string{
 			"bool":       {"true"},
 			"int":        {"9"},
 			"int8":       {"14"},
@@ -141,11 +140,46 @@ func TestForm_NormalCase(t *testing.T) {
 	)
 }
 
-func TestForm_EmbeddedField(t *testing.T) {
-	parseFormAndCheck(
-		t,
-		url.Values{
+func TestKV_SetFieldErrorOfBasicTypes(t *testing.T) {
+	type testcase struct {
+		key      string
+		value    []string
+		expected error
+	}
+	badCases := []testcase{
+		{"bool", []string{"a"}, &httpin.InvalidField{Name: "BoolValue", TagKey: "query", Tag: "bool", Value: `["a"]`}},
+		{"int", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"int8", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"int16", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"int32", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"int64", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"uint", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"uint8", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"uint16", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"uint32", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"uint64", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"float32", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"float64", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"complex64", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"complex128", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
+		{"string", []string{""}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `[""]`}},
+		{"time", []string{"1991-11-10"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["1991-11-10"]`}},
+	}
 
+	for _, badCase := range badCases {
+		kvTest(
+			t,
+			map[string][]string{badCase.key: badCase.value},
+			ChaosQuery{},
+			badCase.expected,
+		)
+	}
+}
+
+func TestKV_EmbeddedField(t *testing.T) {
+	kvTest(
+		t,
+		map[string][]string{
 			"created_at": {"1991-11-10T08:00:00+08:00"},
 			"color":      {"red"},
 			"is_soldout": {"true"},
@@ -169,10 +203,30 @@ func TestForm_EmbeddedField(t *testing.T) {
 	)
 }
 
-func TestForm_UnsupportedCustomType(t *testing.T) {
-	parseFormAndCheck(
+func TestKV_MissingFields(t *testing.T) {
+	kvTest(
 		t,
-		url.Values{
+		map[string][]string{
+			"sort_by":   {"stock", "price"},
+			"sort_desc": {"true", "true"},
+			"per_page":  {"10"},
+		},
+		ProductQuery{},
+		&ProductQuery{
+			SortBy:   []string{"stock", "price"},
+			SortDesc: []bool{true, true},
+			Pagination: Pagination{
+				Page:    0,
+				PerPage: 10,
+			},
+		},
+	)
+}
+
+func TestKV_UnsupportedCustomType(t *testing.T) {
+	kvTest(
+		t,
+		map[string][]string{
 			"uid":   {"ggicci"},
 			"after": {"5cb71995ad763f7f1717c9eb"},
 			"limit": {"50"},
@@ -182,10 +236,10 @@ func TestForm_UnsupportedCustomType(t *testing.T) {
 	)
 }
 
-func TestForm_UnsupportedElementTypeOfArray(t *testing.T) {
-	parseFormAndCheck(
+func TestKV_UnsupportedElementTypeOfArray(t *testing.T) {
+	kvTest(
 		t,
-		url.Values{
+		map[string][]string{
 			"positions": {"(1,4)", "(5,7)"},
 		},
 		PointsQuery{},
@@ -193,7 +247,7 @@ func TestForm_UnsupportedElementTypeOfArray(t *testing.T) {
 	)
 }
 
-func parseFormAndCheck(t *testing.T, form url.Values, inputStruct, expected interface{}) {
+func kvTest(t *testing.T, form map[string][]string, inputStruct, expected interface{}) {
 	engine, err := httpin.NewEngine(inputStruct)
 	if err != nil {
 		t.Errorf("unable to create engine: %s", err)

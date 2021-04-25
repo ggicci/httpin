@@ -10,7 +10,14 @@ import (
 	"reflect"
 )
 
-func NewEngine(inputStruct interface{}) (*Engine, error) {
+type Engine struct {
+	inputType reflect.Type
+	queryTag  string
+	headerTag string
+	bodyTag   string
+}
+
+func NewEngine(inputStruct interface{}, opts ...EngineOption) (*Engine, error) {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
@@ -21,6 +28,9 @@ func NewEngine(inputStruct interface{}) (*Engine, error) {
 
 	engine := &Engine{
 		inputType: typ,
+		queryTag:  "query",
+		headerTag: "header",
+		bodyTag:   "body",
 	}
 
 	// if err := engine.build(); err != nil {
@@ -30,16 +40,20 @@ func NewEngine(inputStruct interface{}) (*Engine, error) {
 	return engine, nil
 }
 
-type Engine struct {
-	inputType reflect.Type
-}
-
 func (e *Engine) ReadRequest(r *http.Request) (interface{}, error) {
 	return nil, nil
 }
 
 func (e *Engine) ReadForm(form url.Values) (interface{}, error) {
-	rv, err := readForm(e.inputType, form)
+	rv, err := readKeyValues(e.inputType, form, "query")
+	if err != nil {
+		return nil, err
+	}
+	return rv.Interface(), nil
+}
+
+func (e *Engine) ReadHeader(header http.Header) (interface{}, error) {
+	rv, err := readKeyValues(e.inputType, header, "header")
 	if err != nil {
 		return nil, err
 	}
