@@ -28,7 +28,7 @@ var basicKinds = map[reflect.Kind]struct{}{
 
 var timeType = reflect.TypeOf(time.Time{})
 
-func readKeyValues(inputStruct reflect.Type, kv map[string][]string, tag string) (reflect.Value, error) {
+func readKV(inputStruct reflect.Type, kv map[string][]string, tag string) (reflect.Value, error) {
 	rv := reflect.New(inputStruct)
 
 	for i := 0; i < inputStruct.NumField(); i++ {
@@ -36,7 +36,7 @@ func readKeyValues(inputStruct reflect.Type, kv map[string][]string, tag string)
 
 		// Process on embedded fields - recursively.
 		if field.Anonymous {
-			embedded, err := readKeyValues(field.Type, kv, tag)
+			embedded, err := readKV(field.Type, kv, tag)
 			if err != nil {
 				return rv, fmt.Errorf("parse embedded field %s: %w", field.Name, err)
 			}
@@ -48,11 +48,10 @@ func readKeyValues(inputStruct reflect.Type, kv map[string][]string, tag string)
 			formValue, _ := kv[name]
 			if err := setField(rv.Elem().Field(i), formValue); err != nil {
 				return rv, &InvalidField{
-					Name:   field.Name,
-					TagKey: tag,
-					Tag:    name,
-					Value:  formValue,
-					err:    err,
+					Field:         field.Name,
+					Source:        tag + "." + name,
+					Value:         formValue,
+					InternalError: err,
 				}
 			}
 		}
@@ -102,7 +101,7 @@ func setField(fv reflect.Value, formValue []string) error {
 		return nil
 	}
 
-	return UnsupportedType(ft.Name())
+	return UnsupportedTypeError{Type: ft}
 }
 
 func setBasicValue(fv reflect.Value, ft reflect.Type, strValue string) error {
@@ -193,5 +192,5 @@ func setSliceValue(fv reflect.Value, ft reflect.Type, formValue []string) error 
 	}
 
 	// TODO(ggicci): hook custom parsers
-	return fmt.Errorf("unsupported element type in array: %w", UnsupportedType(elemType.Name()))
+	return fmt.Errorf("unsupported element type in array: %w", UnsupportedTypeError{Type: elemType})
 }
