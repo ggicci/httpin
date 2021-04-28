@@ -51,12 +51,6 @@ type ChaosQuery struct {
 	TimeList   []time.Time `in:"query.times"`
 }
 
-type ProductLocation struct {
-	Area   string `json:"area" xml:"area"`
-	Floor  int    `json:"fl" xml:"fl"`
-	Number int    `json:"no" xml:"no"`
-}
-
 type ProductQuery struct {
 	CreatedAt time.Time `in:"query.created_at,required"`
 	Color     string    `in:"query.color"`
@@ -65,8 +59,6 @@ type ProductQuery struct {
 	SortDesc  []bool    `in:"query.sort_desc"`
 	Authorization
 	Pagination
-
-	Locations []ProductLocation `in:"body,json"`
 }
 
 type ObjectID struct {

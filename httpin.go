@@ -6,8 +6,11 @@ import (
 	"net/http"
 )
 
-type JSON struct{}
-type XML struct{}
+type ContextKey int
+
+const (
+	Input ContextKey = iota // the primary key to get the input object in the context injected by httpin
+)
 
 func New(inputStruct interface{}) Middleware {
 	engine, err := NewEngine(inputStruct)
@@ -26,7 +29,7 @@ func New(inputStruct interface{}) Middleware {
 			}
 
 			// We put the `input` to the request's context, and it will pass to the next hop.
-			ctx := context.WithValue(r.Context(), "httpin", input)
+			ctx := context.WithValue(r.Context(), Input, input)
 			next.ServeHTTP(rw, r.WithContext(ctx))
 		})
 	}
