@@ -1,19 +1,28 @@
 package httpin_test
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
 
 	"github.com/ggicci/httpin"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestResolver_Build(t *testing.T) {
-	resolver, err := httpin.BuildFieldResolver(reflect.TypeOf(ProductQuery{}))
-	if err != nil {
-		t.Error("build resolver failed:", err)
-		t.Fail()
-	}
-	jsonContent, _ := json.Marshal(resolver)
-	t.Log(string(jsonContent))
+func TestFieldResolver(t *testing.T) {
+	Convey("Build FieldResolver normally", t, func() {
+		resolver, err := httpin.BuildFieldResolver(reflect.TypeOf(ProductQuery{}))
+		So(err, ShouldBeNil)
+		So(resolver, ShouldNotBeNil)
+
+		// TODO(ggicci): add more checks and tests
+	})
+}
+
+func TestResolver_BuildNonStructType(t *testing.T) {
+	Convey("Build FieldResolver with non-struct type", t, func() {
+		var Name string
+		resolver, err := httpin.BuildFieldResolver(reflect.TypeOf(Name))
+		So(err, ShouldBeError)
+		So(resolver, ShouldBeNil)
+	})
 }
