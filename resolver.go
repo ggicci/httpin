@@ -1,7 +1,7 @@
 package httpin
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -11,62 +11,51 @@ type Resolver interface {
 	Resolve([]byte) interface{}
 }
 
-type ResolverContext struct {
-	Source   string // e.g. query, header, body
-	Key      string // e.g. page, x-api-token
-	resolver Resolver
+type FieldResolver struct {
+	Type       reflect.Type
+	Field      reflect.StructField
+	Path       []string
+	Directives []*Directive
+	Fields     []*FieldResolver
 }
 
-type TypeResolver struct {
-	Type      reflect.Type
-	Field     reflect.StructField
-	Resolvers []ResolverContext
-	Path      []string
-	Fields    []TypeResolver
-}
-
-func (r *TypeResolver) IsRoot() bool {
+func (r *FieldResolver) IsRoot() bool {
 	return r.Field.Name == ""
 }
 
-func BuildTypeResolver(t reflect.Type) (TypeResolver, error) {
-	return buildTypeResolver(t)
-}
-
-func (r *TypeResolver) dump(buffer *bytes.Buffer, indent int) {
-	// indent
-	buffer.WriteString(fmt.Sprintf("%s-", strings.Repeat(" ", indent)))
-
-	// field name
-	if !r.IsRoot() {
-		buffer.WriteString(" [" + r.Field.Name + "]")
+// BuildFieldResolver builds a resolver for the specified struct type.
+// Which helps resolving fields data from input sources.
+func BuildFieldResolver(t reflect.Type) (*FieldResolver, error) {
+	if t.Kind() != reflect.Struct {
+		return nil, errors.New("input type must be struct")
 	}
 
-	// type
-	buffer.WriteString(" " + r.Type.String())
-	buffer.WriteString(fmt.Sprintf(" (%d)", len(r.Fields)))
-	buffer.WriteString("\n")
-
-	for _, field := range r.Fields {
-		field.dump(buffer, indent+4)
+	root := &FieldResolver{Type: t}
+	for i := 0; i < t.NumField(); i++ {
+		fieldResolver, err := buildFieldResolver(root, t.Field(i))
+		if err != nil {
+			return root, err
+		}
+		root.Fields = append(root.Fields, fieldResolver)
 	}
+
+	return root, nil
 }
 
-func (t *TypeResolver) DumpTree() string {
-	var buffer bytes.Buffer
-	buffer.WriteString("\n")
-	t.dump(&buffer, 0)
-	return string(buffer.Bytes())
-}
-
-func buildTypeResolver(t reflect.Type) (TypeResolver, error) {
-	root := TypeResolver{
-		Type:      t,
-		Field:     reflect.StructField{},
-		Resolvers: nil,
-		Path:      []string{},
-		Fields:    make([]TypeResolver, 0),
+func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*FieldResolver, error) {
+	t := field.Type
+	root := &FieldResolver{
+		Type:  t,
+		Field: field,
+		Path:  make([]string, len(parent.Path)+1),
 	}
+	copy(root.Path, parent.Path)
+	root.Path[len(root.Path)-1] = field.Name
+	directives, err := parseStructTag(field)
+	if err != nil {
+		return nil, fmt.Errorf("parse struct tag error: %w", err)
+	}
+	root.Directives = directives
 
 	if isBasicType(t) {
 		return root, nil
@@ -76,19 +65,40 @@ func buildTypeResolver(t reflect.Type) (TypeResolver, error) {
 		return root, nil
 	}
 
+	if isArrayType(t) {
+		return root, nil
+	}
+
 	if t.Kind() == reflect.Struct {
 		for i := 0; i < t.NumField(); i++ {
-			field := t.Field(i)
-			child, err := buildTypeResolver(field.Type)
+			fieldResolver, err := buildFieldResolver(root, t.Field(i))
 			if err != nil {
 				return root, err
 			}
-			child.Field = field
-			root.Fields = append(root.Fields, child)
+			root.Fields = append(root.Fields, fieldResolver)
 		}
 
 		return root, nil
 	}
 
 	return root, UnsupportedTypeError{Type: t}
+}
+
+func parseStructTag(field reflect.StructField) ([]*Directive, error) {
+	directives := make([]*Directive, 0)
+	// Parse and build resolvers from field struct tag. Tag examples:
+	// "query.name"
+	// "query.access_token,header.x-api-token"
+	inTag := field.Tag.Get("in")
+	if inTag == "" {
+		return directives, nil // skip
+	}
+	for _, key := range strings.Split(inTag, ",") {
+		directive, err := BuildDirective(key)
+		if err != nil {
+			return nil, err
+		}
+		directives = append(directives, directive)
+	}
+	return directives, nil
 }

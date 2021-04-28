@@ -12,48 +12,61 @@ import (
 )
 
 type Pagination struct {
-	Page    int `query:"page"`
-	PerPage int `query:"per_page"`
+	Page    int `in:"query.page"`
+	PerPage int `in:"query.per_page"`
+}
+
+type Authorization struct {
+	AccessToken string `in:"query.access_token,header.x-api-token"`
 }
 
 // ChaosQuery is designed to make the normal case test coverage higher.
 type ChaosQuery struct {
 	// Basic Types
-	BoolValue       bool       `query:"bool"`
-	IntValue        int        `query:"int"`
-	Int8Value       int8       `query:"int8"`
-	Int16Value      int16      `query:"int16"`
-	Int32Value      int32      `query:"int32"`
-	Int64Value      int64      `query:"int64"`
-	UintValue       uint       `query:"uint"`
-	Uint8Value      uint8      `query:"uint8"`
-	Uint16Value     uint16     `query:"uint16"`
-	Uint32Value     uint32     `query:"uint32"`
-	Uint64Value     uint64     `query:"uint64"`
-	Float32Value    float32    `query:"float32"`
-	Float64Value    float64    `query:"float64"`
-	Complex64Value  complex64  `query:"complex64"`
-	Complex128Value complex128 `query:"complex128"`
-	StringValue     string     `query:"string"`
+	BoolValue       bool       `in:"query.bool"`
+	IntValue        int        `in:"query.int"`
+	Int8Value       int8       `in:"query.int8"`
+	Int16Value      int16      `in:"query.int16"`
+	Int32Value      int32      `in:"query.int32"`
+	Int64Value      int64      `in:"query.int64"`
+	UintValue       uint       `in:"query.uint"`
+	Uint8Value      uint8      `in:"query.uint8"`
+	Uint16Value     uint16     `in:"query.uint16"`
+	Uint32Value     uint32     `in:"query.uint32"`
+	Uint64Value     uint64     `in:"query.uint64"`
+	Float32Value    float32    `in:"query.float32"`
+	Float64Value    float64    `in:"query.float64"`
+	Complex64Value  complex64  `in:"query.complex64"`
+	Complex128Value complex128 `in:"query.complex128"`
+	StringValue     string     `in:"query.string"`
 
 	// Time Type
-	TimeValue time.Time `query:"time"`
+	TimeValue time.Time `in:"query.time"`
 
 	// Array
-	BoolList   []bool      `query:"bools"`
-	IntList    []int       `query:"ints"`
-	FloatList  []float64   `query:"floats"`
-	StringList []string    `query:"strings"`
-	TimeList   []time.Time `query:"times"`
+	BoolList   []bool      `in:"query.bools"`
+	IntList    []int       `in:"query.ints"`
+	FloatList  []float64   `in:"query.floats"`
+	StringList []string    `in:"query.strings"`
+	TimeList   []time.Time `in:"query.times"`
+}
+
+type ProductLocation struct {
+	Area   string `json:"area" xml:"area"`
+	Floor  int    `json:"fl" xml:"fl"`
+	Number int    `json:"no" xml:"no"`
 }
 
 type ProductQuery struct {
-	CreatedAt time.Time `query:"created_at"`
-	Color     string    `query:"color"`
-	IsSoldout bool      `query:"is_soldout"`
-	SortBy    []string  `query:"sort_by"`
-	SortDesc  []bool    `query:"sort_desc"`
+	CreatedAt time.Time `in:"query.created_at,required"`
+	Color     string    `in:"query.color"`
+	IsSoldout bool      `in:"query.is_soldout"`
+	SortBy    []string  `in:"query.sort_by"`
+	SortDesc  []bool    `in:"query.sort_desc"`
+	Authorization
 	Pagination
+
+	Locations []ProductLocation `in:"body,json"`
 }
 
 type ObjectID struct {
@@ -64,13 +77,13 @@ type ObjectID struct {
 }
 
 type Cursor struct {
-	AfterMarker  ObjectID `query:"after"`
-	BeforeMarker ObjectID `query:"before"`
-	Limit        int      `query:"limit"`
+	AfterMarker  ObjectID `in:"query.after"`
+	BeforeMarker ObjectID `in:"query.before"`
+	Limit        int      `in:"query.limit"`
 }
 
 type MessageQuery struct {
-	UserId string `query:"uid"`
+	UserId string `in:"query.uid"`
 	Cursor
 }
 
@@ -80,7 +93,7 @@ type PositionXY struct {
 }
 
 type PointsQuery struct {
-	Positions []PositionXY `query:"positions"`
+	Positions []PositionXY `in:"query.positions"`
 }
 
 func TestKV_NormalCase(t *testing.T) {

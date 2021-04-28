@@ -6,6 +6,9 @@ import (
 	"net/http"
 )
 
+type JSON struct{}
+type XML struct{}
+
 func New(inputStruct interface{}) Middleware {
 	engine, err := NewEngine(inputStruct)
 	if err != nil {

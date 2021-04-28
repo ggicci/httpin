@@ -69,6 +69,10 @@ func isTimeType(typ reflect.Type) bool {
 	return typ == timeType
 }
 
+func isArrayType(typ reflect.Type) bool {
+	return typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice
+}
+
 func setField(fv reflect.Value, formValue []string) error {
 	if len(formValue) == 0 {
 		// TODO(ggicci): throw an error if decorator like "required" set?
