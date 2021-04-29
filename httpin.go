@@ -37,7 +37,7 @@ func New(inputStruct interface{}, opts ...CoreOption) (*Core, error) {
 	return core, nil
 }
 
-func (e *Core) Read(r *http.Request) (interface{}, error) {
+func (e *Core) ReadRequest(r *http.Request) (interface{}, error) {
 	return nil, nil
 }
 

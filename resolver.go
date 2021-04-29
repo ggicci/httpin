@@ -2,6 +2,7 @@ package httpin
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 )
@@ -20,6 +21,40 @@ type FieldResolver struct {
 
 func (r *FieldResolver) IsRoot() bool {
 	return r.Field.Name == ""
+}
+
+func (r *FieldResolver) newInstance() reflect.Value {
+	return reflect.New(r.Type)
+}
+
+func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
+	rv := r.newInstance()
+
+	// Execute directives.
+	if len(r.Directives) > 0 {
+		directiveContext := &DirectiveContext{
+			Request: req,
+			Value:   rv,
+		}
+
+		for _, dir := range r.Directives {
+			if err := dir.Execute(directiveContext); err != nil {
+				return rv, fmt.Errorf("execute directive %q failed: %w", dir.Executor, err)
+			}
+		}
+	}
+
+	if len(r.Fields) > 0 {
+		for i, fr := range r.Fields {
+			field, err := fr.resolve(req)
+			if err != nil {
+				return rv, err
+			}
+			rv.Elem().Field(i).Set(field.Elem())
+		}
+	}
+
+	return rv, nil
 }
 
 // buildResolverTree builds a resolver tree for the specified struct type.
