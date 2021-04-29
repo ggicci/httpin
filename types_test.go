@@ -1,4 +1,4 @@
-package httpin_test
+package httpin
 
 import (
 	"encoding/json"
@@ -6,12 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ggicci/httpin"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestTypes_Bool(t *testing.T) {
-	var v httpin.Bool
+	var v Bool
 
 	Convey("Unmarshal Bool", t, func() {
 		So(json.Unmarshal([]byte("true"), &v), ShouldBeNil)
@@ -27,7 +26,7 @@ func TestTypes_Bool(t *testing.T) {
 }
 
 func TestTypes_Int(t *testing.T) {
-	var v httpin.Int
+	var v Int
 
 	Convey("Unmarshal Int", t, func() {
 		So(json.Unmarshal([]byte("2015"), &v), ShouldBeNil)
@@ -43,7 +42,7 @@ func TestTypes_Int(t *testing.T) {
 }
 
 func TestTypes_Uint(t *testing.T) {
-	var v httpin.Uint
+	var v Uint
 
 	Convey("Unmarshal Int", t, func() {
 		So(json.Unmarshal([]byte("2045"), &v), ShouldBeNil)
@@ -59,7 +58,7 @@ func TestTypes_Uint(t *testing.T) {
 }
 
 func TestTypes_Float32(t *testing.T) {
-	var v httpin.Float32
+	var v Float32
 
 	Convey("Unmarshal Float32", t, func() {
 		So(json.Unmarshal([]byte("3.1415"), &v), ShouldBeNil)
@@ -75,7 +74,7 @@ func TestTypes_Float32(t *testing.T) {
 }
 
 func TestTypes_Time(t *testing.T) {
-	var v httpin.Time
+	var v Time
 
 	Convey("Unmarshal Time", t, func() {
 		So(json.Unmarshal([]byte("\"1991-11-10T08:00:00+08:00\""), &v), ShouldBeNil)
@@ -91,7 +90,7 @@ func TestTypes_Time(t *testing.T) {
 }
 
 func TestTypes_BoolArray(t *testing.T) {
-	var v httpin.BoolArray
+	var v BoolArray
 
 	Convey("Unmarshal BoolArray", t, func() {
 		So(json.Unmarshal([]byte("[true, false, true]"), &v), ShouldBeNil)
@@ -107,7 +106,7 @@ func TestTypes_BoolArray(t *testing.T) {
 }
 
 func TestTypes_IntArray(t *testing.T) {
-	var v httpin.IntArray
+	var v IntArray
 
 	Convey("Unmarshal IntArray", t, func() {
 		So(json.Unmarshal([]byte("[9, 12, 1024]"), &v), ShouldBeNil)
@@ -123,7 +122,7 @@ func TestTypes_IntArray(t *testing.T) {
 }
 
 func TestTypes_Float32Array(t *testing.T) {
-	var v httpin.Float32Array
+	var v Float32Array
 
 	Convey("Unmarshal Float32Array", t, func() {
 		So(json.Unmarshal([]byte("[0.618, 2.718, 3.141]"), &v), ShouldBeNil)
@@ -163,7 +162,7 @@ func shouldTimeArrayEqual(actual interface{}, expected ...interface{}) string {
 }
 
 func TestTypes_TimeArray(t *testing.T) {
-	var v httpin.TimeArray
+	var v TimeArray
 
 	Convey("Unmarshal TimeArray", t, func() {
 		So(json.Unmarshal([]byte("[ \"1991-11-10T08:00:00+08:00\", \"1991-06-28T06:00:00+00:00\" ]"), &v), ShouldBeNil)

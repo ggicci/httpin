@@ -1,7 +1,6 @@
 package httpin
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -25,11 +24,7 @@ func (r *FieldResolver) IsRoot() bool {
 
 // BuildFieldResolver builds a resolver for the specified struct type.
 // Which helps resolving fields data from input sources.
-func BuildFieldResolver(t reflect.Type) (*FieldResolver, error) {
-	if t.Kind() != reflect.Struct {
-		return nil, errors.New("input type must be struct")
-	}
-
+func buildResolverTree(t reflect.Type) (*FieldResolver, error) {
 	root := &FieldResolver{Type: t}
 	for i := 0; i < t.NumField(); i++ {
 		fieldResolver, err := buildFieldResolver(root, t.Field(i))

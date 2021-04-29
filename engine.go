@@ -1,19 +1,14 @@
 package httpin
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 )
 
-const (
-	QueryTag  string = "query"
-	HeaderTag string = "header"
-	BodyTag   string = "body"
-)
-
 type Engine struct {
 	inputType reflect.Type
+	tree      *FieldResolver
 }
 
 func NewEngine(inputStruct interface{}, opts ...EngineOption) (*Engine, error) {
@@ -29,9 +24,9 @@ func NewEngine(inputStruct interface{}, opts ...EngineOption) (*Engine, error) {
 		inputType: typ,
 	}
 
-	// if err := engine.build(); err != nil {
-	// 	return nil, fmt.Errorf("httpin: build: %w", err)
-	// }
+	if err := engine.build(); err != nil {
+		return nil, fmt.Errorf("httpin: build: %w", err)
+	}
 
 	return engine, nil
 }
@@ -47,5 +42,10 @@ func (e *Engine) newInstance() reflect.Value {
 
 // build builds extractors for the exported fields of the input struct.
 func (e *Engine) build() error {
-	return errors.New("not implemented")
+	tree, err := buildResolverTree(e.inputType)
+	if err != nil {
+		return err
+	}
+	e.tree = tree
+	return nil
 }

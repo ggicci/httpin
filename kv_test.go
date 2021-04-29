@@ -1,4 +1,4 @@
-package httpin_test
+package httpin
 
 import (
 	"bytes"
@@ -7,8 +7,6 @@ import (
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/ggicci/httpin"
 )
 
 type Pagination struct {
@@ -238,7 +236,7 @@ func TestKV_UnsupportedCustomType(t *testing.T) {
 			"limit": {"50"},
 		},
 		&MessageQuery{},
-		httpin.UnsupportedTypeError{Type: reflect.TypeOf(ObjectID{})},
+		UnsupportedTypeError{Type: reflect.TypeOf(ObjectID{})},
 	)
 }
 
@@ -249,7 +247,7 @@ func TestKV_UnsupportedElementTypeOfArray(t *testing.T) {
 			"positions": {"(1,4)", "(5,7)"},
 		},
 		PointsQuery{},
-		httpin.UnsupportedTypeError{Type: reflect.TypeOf(PositionXY{})},
+		UnsupportedTypeError{Type: reflect.TypeOf(PositionXY{})},
 	)
 }
 

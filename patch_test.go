@@ -1,9 +1,7 @@
-package httpin_test
-
-import "github.com/ggicci/httpin"
+package httpin
 
 type ProductPatch struct {
-	Title    httpin.String `json:"title"`
-	Color    httpin.String `json:"color"`
-	Quantity httpin.Int    `json:"quantity"`
+	Title    String `json:"title"`
+	Color    String `json:"color"`
+	Quantity Int    `json:"quantity"`
 }
