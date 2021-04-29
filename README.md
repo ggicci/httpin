@@ -34,7 +34,7 @@ type UserQuery struct {
 Use `httpin` to extract the data from `http.Request` for you:
 
 ```go
-httpinUserQuery, err := httpin.NewEngine(UserQuery{})
+httpinUserQuery, err := httpin.New(UserQuery{})
 if err != nil {
     // You can create your engines at server start up.
     // And reuse them in your http handlers.

@@ -89,7 +89,7 @@ func parseStructTag(field reflect.StructField) ([]*Directive, error) {
 		return directives, nil // skip
 	}
 	for _, key := range strings.Split(inTag, ",") {
-		directive, err := BuildDirective(key)
+		directive, err := buildDirective(key)
 		if err != nil {
 			return nil, err
 		}

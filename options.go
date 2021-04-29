@@ -1,3 +1,3 @@
 package httpin
 
-type EngineOption func(*Engine)
+type CoreOption func(*Core)
