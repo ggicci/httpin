@@ -22,7 +22,7 @@ func (r *FieldResolver) IsRoot() bool {
 	return r.Field.Name == ""
 }
 
-// BuildFieldResolver builds a resolver for the specified struct type.
+// buildResolverTree builds a resolver tree for the specified struct type.
 // Which helps resolving fields data from input sources.
 func buildResolverTree(t reflect.Type) (*FieldResolver, error) {
 	root := &FieldResolver{Type: t}
