@@ -1,6 +1,7 @@
 package httpin
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -23,28 +24,35 @@ func (r *FieldResolver) IsRoot() bool {
 	return r.Field.Name == ""
 }
 
-func (r *FieldResolver) newInstance() reflect.Value {
-	return reflect.New(r.Type)
-}
-
 func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
-	rv := r.newInstance()
+	rv := reflect.New(r.Type)
+	fmt.Printf("resolve: %s (of %s)\n", r.Field.Name, r.Type)
 
 	// Execute directives.
 	if len(r.Directives) > 0 {
-		directiveContext := &DirectiveContext{
-			Request: req,
-			Value:   rv,
-		}
-
+		inheritableContext := context.Background()
 		for _, dir := range r.Directives {
-			if err := dir.Execute(directiveContext); err != nil {
-				return rv, fmt.Errorf("execute directive %q failed: %w", dir.Executor, err)
+			directiveContext := &DirectiveContext{
+				Directive: *dir,
+				Request:   req,
+				ValueType: r.Type,
+				Value:     rv,
+				Context:   inheritableContext,
 			}
+			fmt.Printf("  > execute directive: %s with %v\n", dir.Executor, dir.Argv)
+			if err := dir.Execute(directiveContext); err != nil {
+				return rv, &InvalidField{
+					Field:         r.Field.Name,
+					Source:        dir.Executor,
+					Value:         nil, // FIXME(ggicci): add source data
+					InternalError: err,
+				}
+			}
+			inheritableContext = directiveContext.Context
 		}
 	}
 
-	if len(r.Fields) > 0 {
+	if len(r.Fields) > 0 { // struct
 		for i, fr := range r.Fields {
 			field, err := fr.resolve(req)
 			if err != nil {
@@ -73,19 +81,20 @@ func buildResolverTree(t reflect.Type) (*FieldResolver, error) {
 }
 
 func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*FieldResolver, error) {
-	t := field.Type
-	root := &FieldResolver{
-		Type:  t,
-		Field: field,
-		Path:  make([]string, len(parent.Path)+1),
-	}
-	copy(root.Path, parent.Path)
-	root.Path[len(root.Path)-1] = field.Name
 	directives, err := parseStructTag(field)
 	if err != nil {
 		return nil, fmt.Errorf("parse struct tag error: %w", err)
 	}
-	root.Directives = directives
+	t := field.Type
+	path := make([]string, len(parent.Path)+1)
+	copy(path, parent.Path)
+	path[len(path)-1] = field.Name
+	root := &FieldResolver{
+		Type:       t,
+		Field:      field,
+		Path:       path,
+		Directives: directives,
+	}
 
 	if isBasicType(t) {
 		return root, nil
@@ -99,7 +108,7 @@ func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*Fiel
 		return root, nil
 	}
 
-	if t.Kind() == reflect.Struct {
+	if field.Anonymous && t.Kind() == reflect.Struct && len(directives) == 0 {
 		for i := 0; i < t.NumField(); i++ {
 			fieldResolver, err := buildFieldResolver(root, t.Field(i))
 			if err != nil {
@@ -107,11 +116,9 @@ func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*Fiel
 			}
 			root.Fields = append(root.Fields, fieldResolver)
 		}
-
-		return root, nil
 	}
 
-	return root, UnsupportedTypeError{Type: t}
+	return root, nil
 }
 
 func parseStructTag(field reflect.StructField) ([]*Directive, error) {
@@ -123,7 +130,7 @@ func parseStructTag(field reflect.StructField) ([]*Directive, error) {
 	if inTag == "" {
 		return directives, nil // skip
 	}
-	for _, key := range strings.Split(inTag, ",") {
+	for _, key := range strings.Split(inTag, ";") {
 		directive, err := buildDirective(key)
 		if err != nil {
 			return nil, err

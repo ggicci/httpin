@@ -21,7 +21,7 @@ func NewInput(inputStruct interface{}) Middleware {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			// Here we read the request and decode it to fill our structure.
 			// Once failed, the request should end here.
-			input, err := core.Read(r)
+			input, err := core.ReadRequest(r)
 			if err != nil {
 				http.Error(rw, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return

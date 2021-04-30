@@ -10,12 +10,12 @@ import (
 )
 
 type Pagination struct {
-	Page    int `in:"query.page"`
-	PerPage int `in:"query.per_page"`
+	Page    int `in:"form=page,page_index,index"`
+	PerPage int `in:"form=per_page,page_size"`
 }
 
 type Authorization struct {
-	AccessToken string `in:"query.access_token,header.x-api-token"`
+	AccessToken string `in:"form=access_token;header=x-api-token"`
 }
 
 // ChaosQuery is designed to make the normal case test coverage higher.
@@ -50,13 +50,15 @@ type ChaosQuery struct {
 }
 
 type ProductQuery struct {
-	CreatedAt time.Time `in:"query.created_at,required"`
-	Color     string    `in:"query.color"`
-	IsSoldout bool      `in:"query.is_soldout"`
-	SortBy    []string  `in:"query.sort_by"`
-	SortDesc  []bool    `in:"query.sort_desc"`
+	CreatedAt  time.Time `in:"form=created_at;required"`
+	Color      string    `in:"form=colour,color"`
+	IsSoldout  bool      `in:"form=is_soldout"`
+	SortBy     []string  `in:"form=sort_by"`
+	SortDesc   []bool    `in:"form=sort_desc"`
+	Pagination `in:"form=paging"`
 	Authorization
-	Pagination
+
+	Patch map[string]interface{} `in:"body=json"`
 }
 
 type ObjectID struct {

@@ -1,16 +1,20 @@
 package httpin
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
 
+var MissingFieldError = errors.New("field required but missing")
+
 type UnsupportedTypeError struct {
-	Type reflect.Type
+	Type  reflect.Type
+	Where string
 }
 
 func (e UnsupportedTypeError) Error() string {
-	return "httpin: unsupported type: " + e.Type.String()
+	return fmt.Sprintf("httpin: unsupported type in %s: %s", e.Where, e.Type.String())
 }
 
 type InvalidField struct {
