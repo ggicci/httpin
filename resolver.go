@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-type Resolver interface {
-	Resolve([]byte) interface{}
-}
-
 type FieldResolver struct {
 	Type       reflect.Type
 	Field      reflect.StructField
@@ -94,18 +90,6 @@ func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*Fiel
 		Field:      field,
 		Path:       path,
 		Directives: directives,
-	}
-
-	if isBasicType(t) {
-		return root, nil
-	}
-
-	if isTimeType(t) {
-		return root, nil
-	}
-
-	if isArrayType(t) {
-		return root, nil
 	}
 
 	if field.Anonymous && t.Kind() == reflect.Struct && len(directives) == 0 {

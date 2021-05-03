@@ -90,44 +90,71 @@ func (d *Directive) Execute(ctx *DirectiveContext) error {
 	return d.getExecutor().Execute(ctx)
 }
 
+func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]string, key string) error {
+	elemType := ctx.ValueType.Elem()
+
+	decoder := decoderOf(elemType)
+	if decoder == nil {
+		return UnsupportedTypeError{ctx.ValueType, ctx.Directive.Executor}
+	}
+
+	formValues, exists := kvs[key]
+	if !exists {
+		fmt.Printf("    > key %q not found in %s\n", key, ctx.Executor)
+		return nil
+	}
+
+	theSlice := reflect.MakeSlice(ctx.ValueType, len(formValues), len(formValues))
+	for i, formValue := range formValues {
+		if err := decoder.Decode([]byte(formValue), theSlice.Index(i)); err != nil {
+			return fmt.Errorf("at index %d: %w", i, err)
+		}
+	}
+
+	ctx.Value.Elem().Set(theSlice)
+	ctx.DeliverContextValue(fieldSet, true)
+	return nil
+}
+
 func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key string) error {
 	if ctx.Context.Value(fieldSet) == true {
 		fmt.Printf("    > field already set, skip\n")
 		return nil
 	}
 
-	// FIXME(ggicci): get converter and check type first, fail fast here
-	got, exists := kvs[key]
-	if !exists || len(got) == 0 {
+	if ctx.ValueType.Kind() == reflect.Slice {
+		return extractFromKVSWithKeyForSlice(ctx, kvs, key)
+	}
+
+	decoder := decoderOf(ctx.ValueType)
+	if decoder == nil {
+		return UnsupportedTypeError{ctx.ValueType, ctx.Directive.Executor}
+	}
+
+	formValues, exists := kvs[key]
+	if !exists {
 		fmt.Printf("    > key %q not found in %s\n", key, ctx.Executor)
 		return nil
 	}
-
-	if isBasicType(ctx.ValueType) {
-		if err := setBasicValue(ctx.Value.Elem(), ctx.ValueType, got[0]); err != nil {
-			return err
-		}
-		ctx.DeliverContextValue(fieldSet, true)
-		return nil
+	var got string
+	if len(formValues) > 0 {
+		got = formValues[0]
+	}
+	if err := decoder.Decode([]byte(got), ctx.Value.Elem()); err != nil {
+		return err
 	}
 
-	if isTimeType(ctx.ValueType) {
-		if err := setTimeValue(ctx.Value.Elem(), ctx.ValueType, got[0]); err != nil {
-			return err
-		}
-		ctx.DeliverContextValue(fieldSet, true)
-		return nil
-	}
+	ctx.DeliverContextValue(fieldSet, true)
+	return nil
 
-	if isArrayType(ctx.ValueType) {
-		if err := setSliceValue(ctx.Value.Elem(), ctx.ValueType, got); err != nil {
-			return err
-		}
-		ctx.DeliverContextValue(fieldSet, true)
-		return nil
-	}
+	// if isArrayType(ctx.ValueType) {
+	// 	if err := setSliceValue(ctx.Value.Elem(), ctx.ValueType, got); err != nil {
+	// 		return err
+	// 	}
+	// 	ctx.DeliverContextValue(fieldSet, true)
+	// 	return nil
+	// }
 
-	return UnsupportedTypeError{ctx.ValueType, ctx.Directive.Executor}
 }
 
 func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, headerKey bool) error {
@@ -158,7 +185,7 @@ func BodyDecoder(ctx *DirectiveContext) error {
 
 func RequireField(ctx *DirectiveContext) error {
 	if ctx.Context.Value(fieldSet) == nil {
-		return MissingFieldError
+		return ErrMissingField
 	}
 	return nil
 }

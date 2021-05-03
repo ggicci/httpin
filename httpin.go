@@ -37,8 +37,12 @@ func New(inputStruct interface{}, opts ...CoreOption) (*Core, error) {
 	return core, nil
 }
 
-func (e *Core) ReadRequest(r *http.Request) (interface{}, error) {
-	return nil, nil
+func (e *Core) ReadRequest(req *http.Request) (interface{}, error) {
+	rv, err := e.tree.resolve(req)
+	if err != nil {
+		return nil, err
+	}
+	return rv.Interface(), nil
 }
 
 // build builds extractors for the exported fields of the input struct.

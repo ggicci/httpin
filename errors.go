@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-var MissingFieldError = errors.New("field required but missing")
+var ErrMissingField = errors.New("field required but missing")
 
 type UnsupportedTypeError struct {
 	Type  reflect.Type
