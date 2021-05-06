@@ -80,8 +80,8 @@ func buildDirective(directive string) (*Directive, error) {
 	// Validate the directive.
 	dir := &Directive{Executor: executor, Argv: argv}
 	if dir.getExecutor() == nil {
-		return nil, fmt.Errorf("invalid directive %q since executor %q not registered",
-			directive, dir.Executor)
+		return nil, fmt.Errorf("invalid directive %q with executor %q: %w",
+			directive, dir.Executor, ErrExecutorNotRegistered)
 	}
 	return dir, nil
 }

@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	ErrMissingField     = errors.New("field required but missing")
-	ErrUnsupporetedType = errors.New("unsupported type")
+	ErrMissingField          = errors.New("field required but missing")
+	ErrUnsupporetedType      = errors.New("unsupported type")
+	ErrExecutorNotRegistered = errors.New("executor not registered")
 )
 
 type UnsupportedTypeError struct {

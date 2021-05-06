@@ -90,6 +90,12 @@ type PointsQuery struct {
 }
 
 func TestCore(t *testing.T) {
+	Convey("New core with non-struct type", t, func() {
+		core, err := New(string("hello"))
+		So(core, ShouldBeNil)
+		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
+	})
+
 	Convey("Very basic and normal case", t, func() {
 		r, _ := http.NewRequest("GET", "/", nil)
 		r.Form = url.Values{
@@ -190,11 +196,10 @@ func TestCore(t *testing.T) {
 			"page":       {"1"},
 			"per_page":   {"20"},
 		}
-		core, err := New(ProductQuery{})
+		core, err := New(&ProductQuery{}) // struct pointer also works
 		So(err, ShouldBeNil)
 		got, err := core.ReadRequest(r)
 		So(got, ShouldBeNil)
-		So(err, ShouldBeError)
 		So(errors.Is(err, ErrMissingField), ShouldBeTrue)
 	})
 
@@ -209,7 +214,6 @@ func TestCore(t *testing.T) {
 		So(err, ShouldBeNil)
 		got, err := core.ReadRequest(r)
 		So(got, ShouldBeNil)
-		So(err, ShouldBeError)
 		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
 	})
 }
