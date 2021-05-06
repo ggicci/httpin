@@ -14,18 +14,18 @@ Suppose that we have an RESTful API for querying users. We can define a struct t
 
 ```go
 type Authorization struct {
-	Token string `in:"query.access_token,header.x-api-token"`
+	Token string `in:"form=access_token,header=x-api-token"`
 }
 
 type Pagination struct {
-	Page    int `in:"query.page"`
-	PerPage int `in:"query.per_page"`
+	Page    int `in:"form=page"`
+	PerPage int `in:"form=per_page,page_size"`
 }
 
 type UserQuery struct {
-	Gender   string `in:"query.gender"`
-	AgeRange []int  `in:"query.age_range"`
-	IsMember bool   `in:"query.is_member"`
+	Gender   string `in:"form=gender"`
+	AgeRange []int  `in:"form=age_range"`
+	IsMember bool   `in:"form=is_member"`
 	Pagination
 	Authorization
 }
@@ -59,7 +59,7 @@ func QueryUser(rw http.ResponseWriter, r *http.Request) {
 
 ```
 
-## Advanced Usage - Use Middleware
+## Advanced: Use Middleware
 
 Firstly setup httpin middleware for you APIs.
 

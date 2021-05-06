@@ -63,7 +63,7 @@ func RegisterDirectiveExecutor(name string, exe DirectiveExecutor) {
 		panic(fmt.Sprintf("duplicate executor: %q", name))
 	}
 	executors[name] = exe
-	fmt.Printf("directive executor registered: %q\n", name)
+	debug("directive executor registered: %q\n", name)
 }
 
 func buildDirective(directive string) (*Directive, error) {
@@ -100,7 +100,7 @@ func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]strin
 
 	formValues, exists := kvs[key]
 	if !exists {
-		fmt.Printf("    > key %q not found in %s\n", key, ctx.Executor)
+		debug("    > key %q not found in %s\n", key, ctx.Executor)
 		return nil
 	}
 
@@ -118,7 +118,7 @@ func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]strin
 
 func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key string) error {
 	if ctx.Context.Value(fieldSet) == true {
-		fmt.Printf("    > field already set, skip\n")
+		debug("    > field already set, skip\n")
 		return nil
 	}
 
@@ -133,7 +133,7 @@ func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key s
 
 	formValues, exists := kvs[key]
 	if !exists {
-		fmt.Printf("    > key %q not found in %s\n", key, ctx.Executor)
+		debug("    > key %q not found in %s\n", key, ctx.Executor)
 		return nil
 	}
 	var got string
@@ -159,7 +159,7 @@ func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key s
 
 func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, headerKey bool) error {
 	for _, key := range ctx.Directive.Argv {
-		fmt.Printf("    > execute directive %q with key %q\n", ctx.Directive.Executor, key)
+		debug("    > execute directive %q with key %q\n", ctx.Directive.Executor, key)
 		if headerKey {
 			key = http.CanonicalHeaderKey(key)
 		}

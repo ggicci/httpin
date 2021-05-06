@@ -104,13 +104,13 @@ func DecodeString(data []byte, rv reflect.Value) error {
 func parseTime(value string) (time.Time, error) {
 	// Try parsing value as RFC3339 format.
 	if t, err := time.Parse(time.RFC3339Nano, value); err == nil {
-		return t, nil
+		return t.UTC(), nil
 	}
 
 	// Try parsing value as int64 (timestamp).
 	// TODO(ggicci): can support float timestamp, e.g. 1618974933.284368
 	if timestamp, err := strconv.ParseInt(value, 10, 64); err == nil {
-		return time.Unix(timestamp, 0), nil
+		return time.Unix(timestamp, 0).UTC(), nil
 	}
 
 	return time.Time{}, fmt.Errorf("invalid time value, use time.RFC3339Nano format or timestamp")

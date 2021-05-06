@@ -6,7 +6,10 @@ import (
 	"reflect"
 )
 
-var ErrMissingField = errors.New("field required but missing")
+var (
+	ErrMissingField     = errors.New("field required but missing")
+	ErrUnsupporetedType = errors.New("unsupported type")
+)
 
 type UnsupportedTypeError struct {
 	Type  reflect.Type
@@ -15,6 +18,10 @@ type UnsupportedTypeError struct {
 
 func (e UnsupportedTypeError) Error() string {
 	return fmt.Sprintf("httpin: unsupported type in %s: %s", e.Where, e.Type.String())
+}
+
+func (e UnsupportedTypeError) Unwrap() error {
+	return ErrUnsupporetedType
 }
 
 type InvalidField struct {
@@ -36,6 +43,6 @@ func (f *InvalidField) Error() string {
 	return fmt.Sprintf("httpin: invalid field %q: %v", f.Field, f.InternalError)
 }
 
-func (f *InvalidField) Unwarp() error {
+func (f *InvalidField) Unwrap() error {
 	return f.InternalError
 }

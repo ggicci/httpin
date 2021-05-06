@@ -22,7 +22,7 @@ func (r *FieldResolver) IsRoot() bool {
 
 func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	rv := reflect.New(r.Type)
-	fmt.Printf("resolve: %s (of %s)\n", r.Field.Name, r.Type)
+	debug("resolve: %s (of %s)\n", r.Field.Name, r.Type)
 
 	// Execute directives.
 	if len(r.Directives) > 0 {
@@ -35,7 +35,7 @@ func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 				Value:     rv,
 				Context:   inheritableContext,
 			}
-			fmt.Printf("  > execute directive: %s with %v\n", dir.Executor, dir.Argv)
+			debug("  > execute directive: %s with %v\n", dir.Executor, dir.Argv)
 			if err := dir.Execute(directiveContext); err != nil {
 				return rv, &InvalidField{
 					Field:         r.Field.Name,

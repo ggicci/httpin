@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"reflect"
 	"testing"
 	"time"
 
@@ -134,14 +133,14 @@ func TestCore(t *testing.T) {
 			Complex64Value:  1 + 4i,
 			Complex128Value: -6 + 17i,
 			StringValue:     "doggy",
-			TimeValue:       time.Date(1991, 11, 10, 8, 0, 0, 0, time.FixedZone("E8", 8*3600)),
+			TimeValue:       time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
 			BoolList:        []bool{true, false, false, true},
 			IntList:         []int{9, 9, 6},
 			FloatList:       []float64{0.0, 0.5, 1.0},
 			StringList:      []string{"Life", "is", "a", "Miracle"},
 			TimeList: []time.Time{
-				time.Date(2000, 1, 2, 15, 4, 5, 0, time.FixedZone("W7", -7*3600)),
-				time.Date(1991, 6, 28, 14, 0, 0, 0, time.FixedZone("E8", 8*3600)),
+				time.Date(2000, 1, 2, 22, 4, 5, 0, time.UTC),
+				time.Date(1991, 6, 28, 6, 0, 0, 0, time.UTC),
 			},
 		}
 
@@ -164,11 +163,11 @@ func TestCore(t *testing.T) {
 			"per_page":   {"20"},
 		}
 		expected := &ProductQuery{
-			CreatedAt: time.Date(1991, 11, 10, 8, 0, 0, 0, time.FixedZone("+08:00", 8*3600)),
+			CreatedAt: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
 			Color:     "red",
 			IsSoldout: true,
 			SortBy:    []string{"id", "quantity"},
-			SortDesc:  []bool{true, true},
+			SortDesc:  []bool{false, true},
 			Pagination: Pagination{
 				Page:    1,
 				PerPage: 20,
@@ -211,7 +210,7 @@ func TestCore(t *testing.T) {
 		got, err := core.ReadRequest(r)
 		So(got, ShouldBeNil)
 		So(err, ShouldBeError)
-		So(errors.Is(err, UnsupportedTypeError{Type: reflect.TypeOf(ObjectID{})}), ShouldBeTrue)
+		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
 	})
 }
 
