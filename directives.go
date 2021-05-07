@@ -27,6 +27,8 @@ func init() {
 	RegisterDirectiveExecutor("required", DirectiveExecutorFunc(RequireField))
 }
 
+// RegisterDirectiveExecutor registers a named executor globally, which
+// implemented the DirectiveExecutor interface.
 func RegisterDirectiveExecutor(name string, exe DirectiveExecutor) {
 	if _, ok := executors[name]; ok {
 		panic(fmt.Sprintf("duplicate executor: %q", name))

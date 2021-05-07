@@ -6,37 +6,28 @@ import (
 	"reflect"
 )
 
+// FormValueExtractor implements the "form" executor who extracts values from
+// the forms of an HTTP request.
 func FormValueExtractor(ctx *DirectiveContext) error {
 	return extractFromKVS(ctx, ctx.Request.Form, false)
 }
 
+// HeaderValueExtractor implements the "header" executor who extracts values
+// from the HTTP headers.
 func HeaderValueExtractor(ctx *DirectiveContext) error {
 	return extractFromKVS(ctx, ctx.Request.Header, true)
 }
 
-func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]string, key string) error {
-	elemType := ctx.ValueType.Elem()
-
-	decoder := decoderOf(elemType)
-	if decoder == nil {
-		return UnsupportedTypeError{ctx.ValueType}
-	}
-
-	formValues, exists := kvs[key]
-	if !exists {
-		debug("    > key %q not found in %s\n", key, ctx.Executor)
-		return nil
-	}
-
-	theSlice := reflect.MakeSlice(ctx.ValueType, len(formValues), len(formValues))
-	for i, formValue := range formValues {
-		if err := decoder.Decode([]byte(formValue), theSlice.Index(i)); err != nil {
-			return fmt.Errorf("at index %d: %w", i, err)
+func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, headerKey bool) error {
+	for _, key := range ctx.Directive.Argv {
+		debug("    > execute directive %q with key %q\n", ctx.Directive.Executor, key)
+		if headerKey {
+			key = http.CanonicalHeaderKey(key)
+		}
+		if err := extractFromKVSWithKey(ctx, kvs, key); err != nil {
+			return err
 		}
 	}
-
-	ctx.Value.Elem().Set(theSlice)
-	ctx.DeliverContextValue(fieldSet, true)
 	return nil
 }
 
@@ -73,15 +64,28 @@ func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key s
 	return nil
 }
 
-func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, headerKey bool) error {
-	for _, key := range ctx.Directive.Argv {
-		debug("    > execute directive %q with key %q\n", ctx.Directive.Executor, key)
-		if headerKey {
-			key = http.CanonicalHeaderKey(key)
-		}
-		if err := extractFromKVSWithKey(ctx, kvs, key); err != nil {
-			return err
+func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]string, key string) error {
+	elemType := ctx.ValueType.Elem()
+
+	decoder := decoderOf(elemType)
+	if decoder == nil {
+		return UnsupportedTypeError{ctx.ValueType}
+	}
+
+	formValues, exists := kvs[key]
+	if !exists {
+		debug("    > key %q not found in %s\n", key, ctx.Executor)
+		return nil
+	}
+
+	theSlice := reflect.MakeSlice(ctx.ValueType, len(formValues), len(formValues))
+	for i, formValue := range formValues {
+		if err := decoder.Decode([]byte(formValue), theSlice.Index(i)); err != nil {
+			return fmt.Errorf("at index %d: %w", i, err)
 		}
 	}
+
+	ctx.Value.Elem().Set(theSlice)
+	ctx.DeliverContextValue(fieldSet, true)
 	return nil
 }
