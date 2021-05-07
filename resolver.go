@@ -61,7 +61,7 @@ func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	return rv, nil
 }
 
-// buildResolverTree builds a resolver tree for the specified struct type.
+// buildResolverTree builds a tree of resolvers for the specified struct type.
 // Which helps resolving fields data from input sources.
 func buildResolverTree(t reflect.Type) (*FieldResolver, error) {
 	root := &FieldResolver{Type: t}
@@ -105,11 +105,19 @@ func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*Fiel
 	return root, nil
 }
 
+// parseStructTag parses and builds a resolver for a field by inspecting the struct tag.
+// The tag named "in" will be extracted by httpin.
+// Example contents of the `in` tag:
+//   - `in:"query=name"`
+//   - `in:"query=access_token,token;header=x-api-token"`
+// Which should conform to the format:
+//
+//    <intag> := "<direction_1>[;<direction_2>...[;<direction_N>]]"
+//    <direction> := <executor>[=<arg_1>[,<arg_2>...[,<arg_N>]]]
+//
+// For short, use `;` as directions' delimiter, use `,` as arguments' delimiter.
 func parseStructTag(field reflect.StructField) ([]*Directive, error) {
 	directives := make([]*Directive, 0)
-	// Parse and build resolvers from field struct tag. Tag examples:
-	// "query.name"
-	// "query.access_token,header.x-api-token"
 	inTag := field.Tag.Get("in")
 	if inTag == "" {
 		return directives, nil // skip
@@ -121,5 +129,6 @@ func parseStructTag(field reflect.StructField) ([]*Directive, error) {
 		}
 		directives = append(directives, directive)
 	}
+
 	return directives, nil
 }
