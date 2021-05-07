@@ -79,7 +79,7 @@ func buildResolverTree(t reflect.Type) (*FieldResolver, error) {
 func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*FieldResolver, error) {
 	directives, err := parseStructTag(field)
 	if err != nil {
-		return nil, fmt.Errorf("parse struct tag error: %w", err)
+		return nil, fmt.Errorf("parse struct tag failed: %w", err)
 	}
 	t := field.Type
 	path := make([]string, len(parent.Path)+1)
@@ -96,7 +96,7 @@ func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*Fiel
 		for i := 0; i < t.NumField(); i++ {
 			fieldResolver, err := buildFieldResolver(root, t.Field(i))
 			if err != nil {
-				return root, err
+				return nil, err
 			}
 			root.Fields = append(root.Fields, fieldResolver)
 		}

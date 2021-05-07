@@ -7,18 +7,17 @@ import (
 )
 
 var (
-	ErrMissingField          = errors.New("field required but missing")
-	ErrUnsupporetedType      = errors.New("unsupported type")
-	ErrExecutorNotRegistered = errors.New("executor not registered")
+	ErrMissingField         = errors.New("field required but missing")
+	ErrUnsupporetedType     = errors.New("unsupported type")
+	ErrUnregisteredExecutor = errors.New("unregistered executor")
 )
 
 type UnsupportedTypeError struct {
-	Type  reflect.Type
-	Where string
+	Type reflect.Type
 }
 
 func (e UnsupportedTypeError) Error() string {
-	return fmt.Sprintf("httpin: unsupported type in %s: %s", e.Where, e.Type.String())
+	return fmt.Sprintf("unsupported type %q", e.Type.String())
 }
 
 func (e UnsupportedTypeError) Unwrap() error {
@@ -29,19 +28,19 @@ type InvalidField struct {
 	// Field is the name of the field.
 	Field string `json:"field"`
 
-	// Source is the tag indicates where to extract the value of the field.
-	// e.g. query.name, header.bearer_token, body.file
+	// Source is the directive which causes the error.
+	// e.g. form, header, required, etc.
 	Source string `json:"source"`
 
-	// Value of the source, who caused the error.
+	// Value is the input data.
 	Value interface{} `json:"value"`
 
-	// InternalError
+	// InternalError is the underlying error thrown by the directive executor.
 	InternalError error `json:"error"`
 }
 
 func (f *InvalidField) Error() string {
-	return fmt.Sprintf("httpin: invalid field %q: %v", f.Field, f.InternalError)
+	return fmt.Sprintf("invalid field %q: %v", f.Field, f.InternalError)
 }
 
 func (f *InvalidField) Unwrap() error {

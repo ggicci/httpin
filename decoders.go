@@ -7,10 +7,6 @@ import (
 	"time"
 )
 
-type Encoder interface {
-	Encode(reflect.Value) ([]string, error)
-}
-
 type Decoder interface {
 	Decode([]byte, reflect.Value) error
 }

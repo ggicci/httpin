@@ -75,18 +75,16 @@ type Cursor struct {
 	Limit        int      `in:"form=limit"`
 }
 
-type MessageQuery struct {
-	UserId string `in:"form=uid"`
+type ThingWithInvalidDirectives struct {
+	Sequence string `in:"form=seq;base58_to_integer"`
+}
+
+type ThingWithUnsupportedCustomType struct {
 	Cursor
 }
 
-type PositionXY struct {
-	X int
-	Y int
-}
-
-type PointsQuery struct {
-	Positions []PositionXY `in:"form=positions"`
+type ThingWithUnsupportedCustomTypeOfSliceField struct {
+	IdList []ObjectID `in:"form=id[]"`
 }
 
 func TestCore(t *testing.T) {
@@ -94,6 +92,12 @@ func TestCore(t *testing.T) {
 		core, err := New(string("hello"))
 		So(core, ShouldBeNil)
 		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
+	})
+
+	Convey("New core with unregistered executor", t, func() {
+		core, err := New(ThingWithInvalidDirectives{})
+		So(core, ShouldBeNil)
+		So(errors.Is(err, ErrUnregisteredExecutor), ShouldBeTrue)
 	})
 
 	Convey("Very basic and normal case", t, func() {
@@ -186,7 +190,7 @@ func TestCore(t *testing.T) {
 		So(got, ShouldResemble, expected)
 	})
 
-	Convey("Missing field error", t, func() {
+	Convey("Required field is missing", t, func() {
 		r, _ := http.NewRequest("GET", "/", nil)
 		r.Form = url.Values{
 			"color":      {"red"},
@@ -201,6 +205,34 @@ func TestCore(t *testing.T) {
 		got, err := core.ReadRequest(r)
 		So(got, ShouldBeNil)
 		So(errors.Is(err, ErrMissingField), ShouldBeTrue)
+
+		var invalidField *InvalidField
+		So(errors.As(err, &invalidField), ShouldBeTrue)
+		So(invalidField.Source, ShouldEqual, "required")
+	})
+
+	Convey("Non-required fields can be absent", t, func() {
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{
+			"created_at": {"1991-11-10T08:00:00+08:00"},
+			"is_soldout": {"true"},
+			"page":       {"1"},
+			"per_page":   {"20"},
+		}
+		expected := &ProductQuery{
+			CreatedAt: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
+			Color:     "",
+			IsSoldout: true,
+			Pagination: Pagination{
+				Page:    1,
+				PerPage: 20,
+			},
+		}
+		core, err := New(ProductQuery{})
+		So(err, ShouldBeNil)
+		got, err := core.ReadRequest(r)
+		So(err, ShouldBeNil)
+		So(got, ShouldResemble, expected)
 	})
 
 	Convey("Unsupported custom type", t, func() {
@@ -210,7 +242,23 @@ func TestCore(t *testing.T) {
 			"after": {"5cb71995ad763f7f1717c9eb"},
 			"limit": {"50"},
 		}
-		core, err := New(MessageQuery{})
+		core, err := New(ThingWithUnsupportedCustomType{})
+		So(err, ShouldBeNil)
+		got, err := core.ReadRequest(r)
+		So(got, ShouldBeNil)
+		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
+	})
+
+	Convey("Unsupported custom type of slice field", t, func() {
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{
+			"id[]": {
+				"5cb71995ad763f7f1717c9eb",
+				"60922dd8940cf19c30bba50c",
+				"6093a70fdb597d966944c125",
+			},
+		}
+		core, err := New(ThingWithUnsupportedCustomTypeOfSliceField{})
 		So(err, ShouldBeNil)
 		got, err := core.ReadRequest(r)
 		So(got, ShouldBeNil)

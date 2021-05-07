@@ -31,7 +31,7 @@ func New(inputStruct interface{}, opts ...CoreOption) (*Core, error) {
 	}
 
 	if err := core.build(); err != nil {
-		return nil, fmt.Errorf("httpin: build: %w", err)
+		return nil, fmt.Errorf("httpin: %w", err)
 	}
 
 	return core, nil
@@ -40,7 +40,7 @@ func New(inputStruct interface{}, opts ...CoreOption) (*Core, error) {
 func (e *Core) ReadRequest(req *http.Request) (interface{}, error) {
 	rv, err := e.tree.resolve(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("httpin: %w", err)
 	}
 	return rv.Interface(), nil
 }

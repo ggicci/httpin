@@ -62,6 +62,9 @@ func RegisterDirectiveExecutor(name string, exe DirectiveExecutor) {
 	if _, ok := executors[name]; ok {
 		panic(fmt.Sprintf("duplicate executor: %q", name))
 	}
+	if exe == nil {
+		panic(fmt.Sprintf("nil executor: %q", name))
+	}
 	executors[name] = exe
 	debug("directive executor registered: %q\n", name)
 }
@@ -80,8 +83,7 @@ func buildDirective(directive string) (*Directive, error) {
 	// Validate the directive.
 	dir := &Directive{Executor: executor, Argv: argv}
 	if dir.getExecutor() == nil {
-		return nil, fmt.Errorf("invalid directive %q with executor %q: %w",
-			directive, dir.Executor, ErrExecutorNotRegistered)
+		return nil, fmt.Errorf("%q: %w", dir.Executor, ErrUnregisteredExecutor)
 	}
 	return dir, nil
 }
@@ -95,7 +97,7 @@ func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]strin
 
 	decoder := decoderOf(elemType)
 	if decoder == nil {
-		return UnsupportedTypeError{ctx.ValueType, ctx.Directive.Executor}
+		return UnsupportedTypeError{ctx.ValueType}
 	}
 
 	formValues, exists := kvs[key]
@@ -122,13 +124,14 @@ func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key s
 		return nil
 	}
 
+	// NOTE(ggicci): Array?
 	if ctx.ValueType.Kind() == reflect.Slice {
 		return extractFromKVSWithKeyForSlice(ctx, kvs, key)
 	}
 
 	decoder := decoderOf(ctx.ValueType)
 	if decoder == nil {
-		return UnsupportedTypeError{ctx.ValueType, ctx.Directive.Executor}
+		return UnsupportedTypeError{ctx.ValueType}
 	}
 
 	formValues, exists := kvs[key]
@@ -146,15 +149,6 @@ func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key s
 
 	ctx.DeliverContextValue(fieldSet, true)
 	return nil
-
-	// if isArrayType(ctx.ValueType) {
-	// 	if err := setSliceValue(ctx.Value.Elem(), ctx.ValueType, got); err != nil {
-	// 		return err
-	// 	}
-	// 	ctx.DeliverContextValue(fieldSet, true)
-	// 	return nil
-	// }
-
 }
 
 func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, headerKey bool) error {
