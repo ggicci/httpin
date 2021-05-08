@@ -4,7 +4,7 @@
 
 HTTP Input for Go - Decode an HTTP request into a custom struct
 
-**Define your input struct and then fetch your data!**
+**Define the struct for your input and then fetch your data!**
 
 ## Quick View
 
