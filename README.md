@@ -136,7 +136,7 @@ type Authorization struct {
 }
 ```
 
-There are three directives above:
+There are three directives above, separated by semicolons (`;`):
 
 - d1: `form=access_token,token`
 - d2: `header=x-api-token`
