@@ -142,13 +142,13 @@ There are three directives above:
 - d2: `header=x-api-token`
 - d3: `required`
 
-A directive consists of two parts separated by an equal sign (`=`). The left part is the name of an executor who was designed to run this directive. The right part is a list of arguments separated by commas (`,`) which will be passed to the corresponding executor as its arguments.
+A directive consists of two parts separated by an equal sign (`=`). The left part is the name of an executor who was designed to run this directive. The right part is a list of arguments separated by commas (`,`) which will be passed to the corresponding executor at runtime.
 
-For instance, `form=access_token,token`, here `form` is the name of the executor, and `access_token,token` is the argument list will be parsed as `[]string{"access_token", "token"}`.
+For instance, `form=access_token,token`, here `form` is the name of the executor, and `access_token,token` is the argument list which will be parsed as `[]string{"access_token", "token"}`.
 
-There are several builtin directive executors, e.g. `form`, `header`, `required`, etc. See the [full list](./directives.go). And you can define your own by:
+There are several builtin directive executors, e.g. `form`, `header`, `required`, ... [full list](./directives.go). And you can define your own by:
 
-First, create a "directive executor" by implementing the `httpin.DirectiveExecutor` interface:
+First, create a **directive executor** by implementing the `httpin.DirectiveExecutor` interface:
 
 ```go
 func toLower(ctx *DirectiveContext) error {
@@ -161,12 +161,15 @@ func toLower(ctx *DirectiveContext) error {
 	ctx.Value.Elem().SetString(newValue)
 	return nil
 }
+
+// Adapt toLower to httpin.DirectiveExecutor.
+var MyLowercaseDirectiveExecutor = httpin.DirectiveExecutorFunc(toLower)
 ```
 
 Seconds, register it to `httpin`:
 
 ```go
-httpin.RegisterDirectiveExecutor("to_lowercase", MyTrimDirective)
+httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor)
 ```
 
 Finally, you can use your own directives in the struct tags:
@@ -176,3 +179,5 @@ type Authorization struct {
 	Token string `in:"form=token;required;to_lowercase"`
 }
 ```
+
+The directives will run in the order as they defined in the struct tag.
