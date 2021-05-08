@@ -100,7 +100,7 @@ type ListUsersInput struct {
 
 ## Advanced - Use Middleware
 
-First, set up the middleware for your handlers.
+First, set up the middleware for your handlers. We recommend using [alice](https://github.com/justinas/alice) to chain your HTTP middleware functions.
 
 ```go
 func init() {
