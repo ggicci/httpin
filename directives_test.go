@@ -21,4 +21,9 @@ func TestDirectives(t *testing.T) {
 	Convey("Register nil executor", t, func() {
 		So(func() { RegisterDirectiveExecutor("whatever", nil) }, ShouldPanic)
 	})
+
+	Convey("Replace an executor", t, func() {
+		So(func() { ReplaceDirectiveExecutor("noop", &NoopDirective{}) }, ShouldNotPanic)
+		So(func() { ReplaceDirectiveExecutor("noop", &NoopDirective{}) }, ShouldNotPanic)
+	})
 }
