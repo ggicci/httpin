@@ -56,8 +56,10 @@ func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key s
 	if len(formValues) > 0 {
 		got = formValues[0]
 	}
-	if err := decoder.Decode([]byte(got), ctx.Value.Elem()); err != nil {
+	if interfaceValue, err := decoder.Decode([]byte(got)); err != nil {
 		return err
+	} else {
+		ctx.Value.Elem().Set(reflect.ValueOf(interfaceValue))
 	}
 
 	ctx.DeliverContextValue(fieldSet, true)
@@ -80,8 +82,10 @@ func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]strin
 
 	theSlice := reflect.MakeSlice(ctx.ValueType, len(formValues), len(formValues))
 	for i, formValue := range formValues {
-		if err := decoder.Decode([]byte(formValue), theSlice.Index(i)); err != nil {
+		if interfaceValue, err := decoder.Decode([]byte(formValue)); err != nil {
 			return fmt.Errorf("at index %d: %w", i, err)
+		} else {
+			theSlice.Index(i).Set(reflect.ValueOf(interfaceValue))
 		}
 	}
 
