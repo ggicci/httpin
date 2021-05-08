@@ -81,7 +81,7 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 ```go
 type Authorization struct {
 	// Decode from multiple sources, the former with higher priority
-	Token string `in:"form=access_token,header=x-api-token"`
+	Token string `in:"form=access_token;header=x-api-token"`
 }
 
 type Pagination struct {
