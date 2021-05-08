@@ -2,14 +2,16 @@
 
 [![codecov](https://codecov.io/gh/ggicci/httpin/branch/main/graph/badge.svg?token=RT61L9ngHj)](https://codecov.io/gh/ggicci/httpin)
 
-HTTP Input for Go
+HTTP Input for Go - Decode an HTTP request into a custom struct
+
+**Define your input struct and then fetch your data!**
 
 ## Quick View
 
 <table>
 <tr>
-  <th>BEFORE (use functions provided by net/http lib)</th>
-  <th>AFTER (use httpin to extract input parameters from HTTP request)</th>
+  <th>BEFORE (use net/http)</th>
+  <th>AFTER (use httpin)</th>
 </tr>
 <tr>
   <td>
