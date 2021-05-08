@@ -2,6 +2,8 @@ package httpin
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -21,7 +23,16 @@ func NewInput(inputStruct interface{}) func(http.Handler) http.Handler {
 			// Once failed, the request should end here.
 			input, err := core.Decode(r)
 			if err != nil {
-				http.Error(rw, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				var invalidFieldError *InvalidField
+				if errors.As(err, &invalidFieldError) {
+					// TODO(ggicci): options to tweak the response
+					rw.Header().Add("Content-Type", "application/json")
+					rw.WriteHeader(422)
+					json.NewEncoder(rw).Encode(invalidFieldError)
+					return
+				}
+
+				http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
 
