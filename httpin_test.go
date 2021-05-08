@@ -206,7 +206,7 @@ func TestCore(t *testing.T) {
 		So(got, ShouldBeNil)
 		So(errors.Is(err, ErrMissingField), ShouldBeTrue)
 
-		var invalidField *InvalidField
+		var invalidField *InvalidFieldError
 		So(errors.As(err, &invalidField), ShouldBeTrue)
 		So(invalidField.Source, ShouldEqual, "required")
 	})

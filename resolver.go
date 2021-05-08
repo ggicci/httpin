@@ -37,11 +37,12 @@ func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 			}
 			debug("  > execute directive: %s with %v\n", dir.Executor, dir.Argv)
 			if err := dir.Execute(directiveContext); err != nil {
-				return rv, &InvalidField{
+				return rv, &InvalidFieldError{
 					Field:         r.Field.Name,
 					Source:        dir.Executor,
 					Value:         nil, // FIXME(ggicci): add source data
-					InternalError: err,
+					ErrorMessage:  err.Error(),
+					internalError: err,
 				}
 			}
 			inheritableContext = directiveContext.Context

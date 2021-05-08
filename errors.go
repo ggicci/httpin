@@ -24,7 +24,7 @@ func (e UnsupportedTypeError) Unwrap() error {
 	return ErrUnsupporetedType
 }
 
-type InvalidField struct {
+type InvalidFieldError struct {
 	// Field is the name of the field.
 	Field string `json:"field"`
 
@@ -35,14 +35,15 @@ type InvalidField struct {
 	// Value is the input data.
 	Value interface{} `json:"value"`
 
-	// InternalError is the underlying error thrown by the directive executor.
-	InternalError error `json:"error"`
+	// internalError is the underlying error thrown by the directive executor.
+	internalError error  `json:"-"`
+	ErrorMessage  string `json:"error"`
 }
 
-func (f *InvalidField) Error() string {
-	return fmt.Sprintf("invalid field %q: %v", f.Field, f.InternalError)
+func (f *InvalidFieldError) Error() string {
+	return fmt.Sprintf("invalid field %q: %v", f.Field, f.internalError)
 }
 
-func (f *InvalidField) Unwrap() error {
-	return f.InternalError
+func (f *InvalidFieldError) Unwrap() error {
+	return f.internalError
 }
