@@ -71,7 +71,7 @@ func BuildDirective(directive string) (*Directive, error) {
 	// Ensure that the corresponding executor had been registered.
 	dir := &Directive{Executor: executor, Argv: argv}
 	if dir.getExecutor() == nil {
-		return nil, fmt.Errorf("%q: %w", dir.Executor, ErrUnregisteredExecutor)
+		return nil, fmt.Errorf("%w: %q", ErrUnregisteredExecutor, dir.Executor)
 	}
 
 	// TODO(ggicci): hook custom validators, e.g. dir.Validate()

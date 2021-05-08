@@ -17,7 +17,7 @@ type UnsupportedTypeError struct {
 }
 
 func (e UnsupportedTypeError) Error() string {
-	return fmt.Sprintf("unsupported type %q", e.Type.String())
+	return fmt.Sprintf("unsupported type: %q", e.Type.String())
 }
 
 func (e UnsupportedTypeError) Unwrap() error {
