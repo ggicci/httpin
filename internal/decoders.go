@@ -13,6 +13,7 @@ type Decoder interface {
 
 type DecoderFunc func([]byte) (interface{}, error)
 
+// Decode calls fn(data).
 func (fn DecoderFunc) Decode(data []byte) (interface{}, error) {
 	return fn(data)
 }

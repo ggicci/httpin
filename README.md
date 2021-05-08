@@ -101,7 +101,9 @@ type ListUsersInput struct {
 }
 ```
 
-## Advanced - Use Middleware
+## Advanced
+
+### Use middleware handler to reduce much more trivial code
 
 First, set up the middleware for your handlers. We recommend using [alice](https://github.com/justinas/alice) to chain your HTTP middleware functions.
 
@@ -119,5 +121,58 @@ Second, fetch your input with **only one line** of code.
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
 	input := r.Context().Value(httpin.Input).(*UserQuery)
 	// do sth.
+}
+```
+
+### Extend `httpin` by adding custom directives
+
+Know the concept of a `Directive`:
+
+```go
+type Authorization struct {
+	Token string `in:"form=access_token,token;header=x-api-token;required"`
+	                  ^---------------------^ ^----------------^ ^------^
+	                        d1                 d2             d3
+}
+```
+
+There are three directives above:
+
+- `form=access_token,token`
+- `header=x-api-token`
+- `required`
+
+A directive consists of two parts separated by an equal sign (`=`). The left part is the name of an executor who was designed to run this directive. The right part is a list of arguments separated by commas (`,`) which will be passed to the corresponding executor as its arguments.
+
+For instance, `form=access_token,token`, here `form` is the name of the executor, and `access_token,token` is the argument list will be parsed as `[]string{"access_token", "token"}`.
+
+There are several builtin directive executors, e.g. `form`, `header`, `required`, etc. See the [full list](./directives.go). And you can define your own by:
+
+First, create a "directive executor" by implementing the `httpin.DirectiveExecutor` interface:
+
+```go
+func toLower(ctx *DirectiveContext) error {
+	if ctx.ValueType.Kind() != reflect.String {
+		return errors.New("not a string")
+	}
+
+	currentValue := ctx.Value.Elem().String()
+	newValue := strings.ToLower(currentValue)
+	ctx.Value.Elem().SetString(newValue)
+	return nil
+}
+```
+
+Seconds, register it to `httpin`:
+
+```go
+httpin.RegisterDirectiveExecutor("to_lowercase", MyTrimDirective)
+```
+
+Finally, you can use your own directives in the struct tags:
+
+```go
+type Authorization struct {
+	Token string `in:"form=token;required;to_lowercase"`
 }
 ```

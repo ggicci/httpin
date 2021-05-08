@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-type DirectiveExecutor interface {
-	Execute(*DirectiveContext) error
-}
-
 var (
 	executors map[string]DirectiveExecutor
 )
@@ -23,6 +19,11 @@ func init() {
 	RegisterDirectiveExecutor("header", DirectiveExecutorFunc(headerValueExtractor))
 	RegisterDirectiveExecutor("body", DirectiveExecutorFunc(bodyDecoder))
 	RegisterDirectiveExecutor("required", DirectiveExecutorFunc(required))
+}
+
+// DirectiveExecutor is the interface implemented by a "directive executor".
+type DirectiveExecutor interface {
+	Execute(*DirectiveContext) error
 }
 
 // RegisterDirectiveExecutor registers a named executor globally, which
@@ -45,12 +46,17 @@ func ReplaceDirectiveExecutor(name string, exe DirectiveExecutor) {
 	debug("directive executor replaced: %q\n", name)
 }
 
+// DirectiveExecutorFunc is an adpator to allow to use of ordinary functions as
+// httpin.DirectiveExecutor.
 type DirectiveExecutorFunc func(*DirectiveContext) error
 
+// Execute calls f(ctx).
 func (f DirectiveExecutorFunc) Execute(ctx *DirectiveContext) error {
 	return f(ctx)
 }
 
+// DirectiveContext holds essential information about the field being resolved
+// and the active HTTP request. Working as the context in a directive executor.
 type DirectiveContext struct {
 	directive
 	ValueType reflect.Type
@@ -59,19 +65,25 @@ type DirectiveContext struct {
 	Context   context.Context
 }
 
-func (c *DirectiveContext) DeliverContextValue(key, val interface{}) {
-	c.Context = context.WithValue(c.Context, key, val)
+// DeliverContextValue binds a value to the specified key in the context. And it
+// will be delivered among the executors in the same field resolver.
+func (c *DirectiveContext) DeliverContextValue(key, value interface{}) {
+	c.Context = context.WithValue(c.Context, key, value)
 }
 
+// directive defines the profile to locate an httpin.DirectiveExecutor instance
+// and drive it with essential arguments.
 type directive struct {
 	Executor string   // name of the executor
 	Argv     []string // argv
 }
 
-// buildDirective builds a Directive instance by parsing a directive string.
+// buildDirective builds a `directive` by parsing a directive string extracted
+// from the struct tag.
+//
 // Example directives are:
-//   - form=page,page_index -> { Executor: "form", Args: ["page", "page_index"] }
-//   - header=x-api-token   -> { Executor: "header", Args: ["x-api-token"] }
+//    "form=page,page_index" -> { Executor: "form", Args: ["page", "page_index"] }
+//    "header=x-api-token"   -> { Executor: "header", Args: ["x-api-token"] }
 func buildDirective(directiveStr string) (*directive, error) {
 	parts := strings.SplitN(directiveStr, "=", 2)
 	executor := parts[0]
@@ -91,10 +103,12 @@ func buildDirective(directiveStr string) (*directive, error) {
 	return dir, nil
 }
 
+// Execute locates the executor and runs it with the specified context.
 func (d *directive) Execute(ctx *DirectiveContext) error {
 	return d.getExecutor().Execute(ctx)
 }
 
+// getExecutor locates the executor by its name. It must exist.
 func (d *directive) getExecutor() DirectiveExecutor {
 	return executors[d.Executor]
 }
