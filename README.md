@@ -103,7 +103,7 @@ type ListUsersInput struct {
 
 ## Advanced
 
-### Use middleware handler to reduce much more trivial code
+### Use middleware handlers to reduce much more trivial code
 
 First, set up the middleware for your handlers. We recommend using [alice](https://github.com/justinas/alice) to chain your HTTP middleware functions.
 
@@ -132,15 +132,15 @@ Know the concept of a `Directive`:
 type Authorization struct {
 	Token string `in:"form=access_token,token;header=x-api-token;required"`
 	                  ^---------------------^ ^----------------^ ^------^
-	                        d1                 d2             d3
+	                            d1                    d2            d3
 }
 ```
 
 There are three directives above:
 
-- `form=access_token,token`
-- `header=x-api-token`
-- `required`
+- d1: `form=access_token,token`
+- d2: `header=x-api-token`
+- d3: `required`
 
 A directive consists of two parts separated by an equal sign (`=`). The left part is the name of an executor who was designed to run this directive. The right part is a list of arguments separated by commas (`,`) which will be passed to the corresponding executor as its arguments.
 
