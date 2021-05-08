@@ -107,9 +107,9 @@ First, set up the middleware for your handlers. We recommend using [alice](https
 
 ```go
 func init() {
-	mux.Handle("/users", alice.New(
+	http.Handle("/users", alice.New(
 		httpin.NewInput(ListUsersInput{}),
-	).ThenFunc(ListUsers)).Methods("GET")
+	).ThenFunc(ListUsers))
 }
 ```
 

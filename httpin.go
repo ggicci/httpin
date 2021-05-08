@@ -15,11 +15,12 @@ const (
 )
 
 type core struct {
-	inputType reflect.Type
-	tree      *FieldResolver
+	inputType       reflect.Type
+	tree            *FieldResolver
+	errorStatusCode int
 }
 
-func New(inputStruct interface{}) (*core, error) {
+func New(inputStruct interface{}, opts ...option) (*core, error) {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
@@ -29,7 +30,11 @@ func New(inputStruct interface{}) (*core, error) {
 	}
 
 	engine := &core{
-		inputType: typ,
+		inputType:       typ,
+		errorStatusCode: 422,
+	}
+	for _, opt := range opts {
+		opt(engine)
 	}
 
 	if err := engine.build(); err != nil {
