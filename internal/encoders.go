@@ -1,4 +1,4 @@
-package httpin
+package internal
 
 import "reflect"
 

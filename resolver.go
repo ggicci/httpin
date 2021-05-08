@@ -12,7 +12,7 @@ type FieldResolver struct {
 	Type       reflect.Type
 	Field      reflect.StructField
 	Path       []string
-	Directives []*Directive
+	Directives []*directive
 	Fields     []*FieldResolver
 }
 
@@ -29,7 +29,7 @@ func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 		inheritableContext := context.Background()
 		for _, dir := range r.Directives {
 			directiveContext := &DirectiveContext{
-				Directive: *dir,
+				directive: *dir,
 				Request:   req,
 				ValueType: r.Type,
 				Value:     rv,
@@ -116,14 +116,14 @@ func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*Fiel
 //    <direction> := <executor>[=<arg_1>[,<arg_2>...[,<arg_N>]]]
 //
 // For short, use `;` as directions' delimiter, use `,` as arguments' delimiter.
-func parseStructTag(field reflect.StructField) ([]*Directive, error) {
-	directives := make([]*Directive, 0)
+func parseStructTag(field reflect.StructField) ([]*directive, error) {
+	directives := make([]*directive, 0)
 	inTag := field.Tag.Get("in")
 	if inTag == "" {
 		return directives, nil // skip
 	}
 	for _, key := range strings.Split(inTag, ";") {
-		directive, err := BuildDirective(key)
+		directive, err := buildDirective(key)
 		if err != nil {
 			return nil, err
 		}

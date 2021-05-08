@@ -10,14 +10,16 @@ type ContextKey int
 
 const (
 	Input ContextKey = iota // the primary key to get the input object in the context injected by httpin
+
+	FieldSet
 )
 
-type Core struct {
+type core struct {
 	inputType reflect.Type
 	tree      *FieldResolver
 }
 
-func New(inputStruct interface{}, opts ...CoreOption) (*Core, error) {
+func New(inputStruct interface{}) (*core, error) {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
@@ -26,18 +28,21 @@ func New(inputStruct interface{}, opts ...CoreOption) (*Core, error) {
 		return nil, UnsupportedTypeError{Type: typ}
 	}
 
-	core := &Core{
+	engine := &core{
 		inputType: typ,
 	}
 
-	if err := core.build(); err != nil {
+	if err := engine.build(); err != nil {
 		return nil, fmt.Errorf("httpin: %w", err)
 	}
 
-	return core, nil
+	return engine, nil
 }
 
-func (e *Core) ReadRequest(req *http.Request) (interface{}, error) {
+func (e *core) Decode(req *http.Request) (interface{}, error) {
+	if err := req.ParseForm(); err != nil {
+		return nil, err
+	}
 	rv, err := e.tree.resolve(req)
 	if err != nil {
 		return nil, fmt.Errorf("httpin: %w", err)
@@ -46,7 +51,7 @@ func (e *Core) ReadRequest(req *http.Request) (interface{}, error) {
 }
 
 // build builds extractors for the exported fields of the input struct.
-func (e *Core) build() error {
+func (e *core) build() error {
 	tree, err := buildResolverTree(e.inputType)
 	if err != nil {
 		return err

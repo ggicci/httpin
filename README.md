@@ -45,7 +45,7 @@ type ListUsersInput struct {
 }
 
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
-	interfaceInput, err := httpin.New(ListUsersInput{}).ReadRequest(r)
+	interfaceInput, err := httpin.New(ListUsersInput{}).Decode(r)
 	if err != nil {
 		// err can be *httpin.InvalidField
 		return

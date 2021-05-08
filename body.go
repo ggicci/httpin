@@ -1,6 +1,6 @@
 package httpin
 
-func BodyDecoder(ctx *DirectiveContext) error {
+func bodyDecoder(ctx *DirectiveContext) error {
 	// TODO(ggicci): implement this
 	return nil
 }

@@ -156,7 +156,7 @@ func TestCore(t *testing.T) {
 
 		core, err := New(ChaosQuery{})
 		So(err, ShouldBeNil)
-		got, err := core.ReadRequest(r)
+		got, err := core.Decode(r)
 		So(err, ShouldBeNil)
 		So(got, ShouldResemble, expected)
 	})
@@ -185,7 +185,7 @@ func TestCore(t *testing.T) {
 		}
 		core, err := New(ProductQuery{})
 		So(err, ShouldBeNil)
-		got, err := core.ReadRequest(r)
+		got, err := core.Decode(r)
 		So(err, ShouldBeNil)
 		So(got, ShouldResemble, expected)
 	})
@@ -202,7 +202,7 @@ func TestCore(t *testing.T) {
 		}
 		core, err := New(&ProductQuery{}) // struct pointer also works
 		So(err, ShouldBeNil)
-		got, err := core.ReadRequest(r)
+		got, err := core.Decode(r)
 		So(got, ShouldBeNil)
 		So(errors.Is(err, ErrMissingField), ShouldBeTrue)
 
@@ -230,7 +230,7 @@ func TestCore(t *testing.T) {
 		}
 		core, err := New(ProductQuery{})
 		So(err, ShouldBeNil)
-		got, err := core.ReadRequest(r)
+		got, err := core.Decode(r)
 		So(err, ShouldBeNil)
 		So(got, ShouldResemble, expected)
 	})
@@ -244,7 +244,7 @@ func TestCore(t *testing.T) {
 		}
 		core, err := New(ThingWithUnsupportedCustomType{})
 		So(err, ShouldBeNil)
-		got, err := core.ReadRequest(r)
+		got, err := core.Decode(r)
 		So(got, ShouldBeNil)
 		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
 	})
@@ -260,7 +260,7 @@ func TestCore(t *testing.T) {
 		}
 		core, err := New(ThingWithUnsupportedCustomTypeOfSliceField{})
 		So(err, ShouldBeNil)
-		got, err := core.ReadRequest(r)
+		got, err := core.Decode(r)
 		So(got, ShouldBeNil)
 		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
 	})

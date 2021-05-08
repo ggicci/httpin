@@ -6,21 +6,21 @@ import (
 	"reflect"
 )
 
-// FormValueExtractor implements the "form" executor who extracts values from
+// formValueExtractor implements the "form" executor who extracts values from
 // the forms of an HTTP request.
-func FormValueExtractor(ctx *DirectiveContext) error {
+func formValueExtractor(ctx *DirectiveContext) error {
 	return extractFromKVS(ctx, ctx.Request.Form, false)
 }
 
-// HeaderValueExtractor implements the "header" executor who extracts values
+// headerValueExtractor implements the "header" executor who extracts values
 // from the HTTP headers.
-func HeaderValueExtractor(ctx *DirectiveContext) error {
+func headerValueExtractor(ctx *DirectiveContext) error {
 	return extractFromKVS(ctx, ctx.Request.Header, true)
 }
 
 func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, headerKey bool) error {
-	for _, key := range ctx.Directive.Argv {
-		debug("    > execute directive %q with key %q\n", ctx.Directive.Executor, key)
+	for _, key := range ctx.directive.Argv {
+		debug("    > execute directive %q with key %q\n", ctx.directive.Executor, key)
 		if headerKey {
 			key = http.CanonicalHeaderKey(key)
 		}
@@ -32,7 +32,7 @@ func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, headerKey bo
 }
 
 func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key string) error {
-	if ctx.Context.Value(fieldSet) == true {
+	if ctx.Context.Value(FieldSet) == true {
 		debug("    > field already set, skip\n")
 		return nil
 	}
@@ -62,7 +62,7 @@ func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key s
 		ctx.Value.Elem().Set(reflect.ValueOf(interfaceValue))
 	}
 
-	ctx.DeliverContextValue(fieldSet, true)
+	ctx.DeliverContextValue(FieldSet, true)
 	return nil
 }
 
@@ -90,6 +90,6 @@ func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]strin
 	}
 
 	ctx.Value.Elem().Set(theSlice)
-	ctx.DeliverContextValue(fieldSet, true)
+	ctx.DeliverContextValue(FieldSet, true)
 	return nil
 }
