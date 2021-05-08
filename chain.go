@@ -5,13 +5,11 @@ import (
 	"net/http"
 )
 
-// Middleware is a constructor for making a chain, which acts as a list of
-// http.Handler constructors. We recommend using
-// https://github.com/justinas/alice to chain your HTTP middleware functions
-// and the app handler.
-type Middleware func(http.Handler) http.Handler
-
-func NewInput(inputStruct interface{}) Middleware {
+// NewInput creates a "Middleware Constructor" for making a chain, which acts as
+// a list of http.Handler constructors. We recommend using
+// https://github.com/justinas/alice to chain your HTTP middleware functions and
+// the app handler.
+func NewInput(inputStruct interface{}) func(http.Handler) http.Handler {
 	core, err := New(inputStruct)
 	if err != nil {
 		panic(err)
