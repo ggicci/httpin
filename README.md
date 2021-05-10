@@ -39,7 +39,7 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 ```
 
   </td>
-  <td style="vertical-align:top">
+  <td>
 
 ```go
 type ListUsersInput struct {
