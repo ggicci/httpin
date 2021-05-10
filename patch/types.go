@@ -15,7 +15,9 @@ func (t Bool) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Bool) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int struct {
@@ -28,7 +30,9 @@ func (t Int) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int8 struct {
@@ -41,7 +45,9 @@ func (t Int8) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int8) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int16 struct {
@@ -54,7 +60,9 @@ func (t Int16) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int16) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int32 struct {
@@ -67,7 +75,9 @@ func (t Int32) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int32) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int64 struct {
@@ -80,7 +90,9 @@ func (t Int64) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int64) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint struct {
@@ -93,7 +105,9 @@ func (t Uint) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint8 struct {
@@ -106,7 +120,9 @@ func (t Uint8) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint8) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint16 struct {
@@ -119,7 +135,9 @@ func (t Uint16) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint16) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint32 struct {
@@ -132,7 +150,9 @@ func (t Uint32) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint32) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint64 struct {
@@ -145,7 +165,9 @@ func (t Uint64) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint64) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Float32 struct {
@@ -158,7 +180,9 @@ func (t Float32) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Float32) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Float64 struct {
@@ -171,33 +195,9 @@ func (t Float64) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Float64) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
-}
-
-type Complex64 struct {
-	Value complex64
-	Valid bool
-}
-
-func (t Complex64) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.Value)
-}
-
-func (t *Complex64) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
-}
-
-type Complex128 struct {
-	Value complex128
-	Valid bool
-}
-
-func (t Complex128) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.Value)
-}
-
-func (t *Complex128) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type String struct {
@@ -210,7 +210,9 @@ func (t String) MarshalJSON() ([]byte, error) {
 }
 
 func (t *String) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Time struct {
@@ -223,7 +225,9 @@ func (t Time) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Time) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type BoolArray struct {
@@ -236,7 +240,9 @@ func (t BoolArray) MarshalJSON() ([]byte, error) {
 }
 
 func (t *BoolArray) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type IntArray struct {
@@ -249,7 +255,9 @@ func (t IntArray) MarshalJSON() ([]byte, error) {
 }
 
 func (t *IntArray) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int8Array struct {
@@ -262,7 +270,9 @@ func (t Int8Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int8Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int16Array struct {
@@ -275,7 +285,9 @@ func (t Int16Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int16Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int32Array struct {
@@ -288,7 +300,9 @@ func (t Int32Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int32Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Int64Array struct {
@@ -301,7 +315,9 @@ func (t Int64Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Int64Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type UintArray struct {
@@ -314,7 +330,9 @@ func (t UintArray) MarshalJSON() ([]byte, error) {
 }
 
 func (t *UintArray) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint8Array struct {
@@ -327,7 +345,9 @@ func (t Uint8Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint8Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint16Array struct {
@@ -340,7 +360,9 @@ func (t Uint16Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint16Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint32Array struct {
@@ -353,7 +375,9 @@ func (t Uint32Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint32Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Uint64Array struct {
@@ -366,7 +390,9 @@ func (t Uint64Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Uint64Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Float32Array struct {
@@ -379,7 +405,9 @@ func (t Float32Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Float32Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type Float64Array struct {
@@ -392,33 +420,9 @@ func (t Float64Array) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Float64Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
-}
-
-type Complex64Array struct {
-	Value []complex64
-	Valid bool
-}
-
-func (t Complex64Array) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.Value)
-}
-
-func (t *Complex64Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
-}
-
-type Complex128Array struct {
-	Value []complex128
-	Valid bool
-}
-
-func (t Complex128Array) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.Value)
-}
-
-func (t *Complex128Array) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type StringArray struct {
@@ -431,7 +435,9 @@ func (t StringArray) MarshalJSON() ([]byte, error) {
 }
 
 func (t *StringArray) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
 }
 
 type TimeArray struct {
@@ -444,5 +450,14 @@ func (t TimeArray) MarshalJSON() ([]byte, error) {
 }
 
 func (t *TimeArray) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &t.Value)
+	err := json.Unmarshal(data, &t.Value)
+	t.Valid = pass(err)
+	return err
+}
+
+func pass(err error) bool {
+	if err == nil {
+		return true
+	}
+	return false
 }
