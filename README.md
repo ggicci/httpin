@@ -122,7 +122,7 @@ Second, fetch your input with only **ONE LINE** of code.
 
 ```go
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
-	input := r.Context().Value(httpin.Input).(*UserQuery)
+	input := r.Context().Value(httpin.Input).(*ListUsersInput)
 
 	// Do sth.
 }
