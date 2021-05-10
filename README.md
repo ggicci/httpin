@@ -20,41 +20,44 @@ HTTP Input for Go - Decode an HTTP request into a custom struct
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
 	page, err := strconv.ParseInt(r.FormValue("page"), 10, 64)
 	if err != nil {
-		// ... invalid page
+		// Invalid parameter: page.
 		return
 	}
-
 	perPage, err := strconv.ParseInt(r.FormValue("per_page"), 10, 64)
 	if err != nil {
-		// ... invalid per_page
+		// Invalid parameter: per_page.
+		return
+	}
+	isMember, err := strconv.ParseBool(r.FormValue("is_member"))
+	if err != nil {
+		// Invalid parameter: is_member.
 		return
 	}
 
-	isVip, _ := strconv.ParseBool(r.FormValue("is_vip"))
-
-	// do sth.
+	// Do sth.
 }
 ```
 
   </td>
-  <td>
+  <td style="vertical-align:top">
 
 ```go
 type ListUsersInput struct {
-	Page    int  `in:"form=page"`
-	PerPage int  `in:"form=per_page"`
-	IsVip   bool `in:"form=is_vip"`
+	Page     int  `in:"form=page"`
+	PerPage  int  `in:"form=per_page"`
+	IsMember bool `in:"form=is_member"`
 }
 
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
-	interfaceInput, err := httpin.New(ListUsersInput{}).Decode(r)
+	inputInterface, err := httpin.New(ListUsersInput{}).Decode(r)
 	if err != nil {
-		// err can be *httpin.InvalidField
+		// Error occurred, `err` can be type of *httpin.InvalidFieldError
+		// Do sth.
 		return
 	}
 
 	input := interfaceInput.(*ListUsersInput)
-	// do sth.
+	// Do sth.
 }
 ```
 
@@ -105,7 +108,7 @@ type ListUsersInput struct {
 
 ### Use middleware handlers to reduce much more trivial code
 
-First, set up the middleware for your handlers. We recommend using [alice](https://github.com/justinas/alice) to chain your HTTP middleware functions.
+First, set up the middleware for your handlers (**bind Input vs. Handler**). We recommend using [alice](https://github.com/justinas/alice) to chain your HTTP middleware functions.
 
 ```go
 func init() {
@@ -115,16 +118,17 @@ func init() {
 }
 ```
 
-Second, fetch your input with **only one line** of code.
+Second, fetch your input with only **ONE LINE** of code.
 
 ```go
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
 	input := r.Context().Value(httpin.Input).(*UserQuery)
-	// do sth.
+
+	// Do sth.
 }
 ```
 
-### Extend `httpin` by adding custom directives
+### 🔥 Extend `httpin` by adding custom directives
 
 Know the concept of a `Directive`:
 
