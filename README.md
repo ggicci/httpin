@@ -130,7 +130,6 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ### 🔥 Extend `httpin` by adding custom directives
 
-<a id="concept-directive"></a>
 Know the concept of a `Directive`:
 
 ```go
@@ -186,3 +185,7 @@ type Authorization struct {
 ```
 
 The directives will run in the order as they defined in the struct tag.
+
+## Articles
+
+- [Decode HTTP Query Params into a Struct in Golang](https://ggicci.medium.com/decode-http-query-params-into-a-struct-in-golang-bbb07168ed14)
