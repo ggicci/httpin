@@ -72,7 +72,7 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 - [x] Builtin decoders used by `form` and `header` directives for basic types, e.g. `bool`, `int`, `int64`, `float32`, `time.Time`, ... [full list](./decoders.go)
 - [x] Decode a field by inspecting a set of keys from the same source
 - [x] Decode a field from multiple sources, e.g. both query and headers
-- [ ] Register or replace decoders for both builtin basic types and custom types
+- [x] Register or replace decoders for both builtin basic types and custom types
 - [x] Define input struct with embedded struct fields
 - [x] Builtin directive `required` to tag a field as **required**
 - [ ] Builtin encoders for basic types

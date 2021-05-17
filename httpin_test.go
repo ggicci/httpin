@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
@@ -263,6 +264,21 @@ func TestCore(t *testing.T) {
 		got, err := core.Decode(r)
 		So(got, ShouldBeNil)
 		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
+	})
+
+	Convey("Custom decoder should work", t, func() {
+		var boolType = reflect.TypeOf(bool(true))
+		RegisterDecoder(boolType, DecoderFunc(DecodeCustomBool))
+		type BoolInput struct {
+			IsMember bool `in:"form=is_member"`
+		}
+		core, _ := New(BoolInput{})
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{"is_member": {"yes"}}
+		got, err := core.Decode(r)
+		So(err, ShouldBeNil)
+		So(got, ShouldResemble, &BoolInput{IsMember: true})
+		delete(decoders, boolType) // remove the custom decoder
 	})
 }
 
