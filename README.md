@@ -67,17 +67,17 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ## Features
 
-- [x] Builtin directive `form` to decode a field from HTTP query, i.e. `http.Request.Form`
-- [x] Builtin directive `header` to decode a field from HTTP headers, e.g. `http.Request.Header`
+- [x] Builtin directive `form` to decode a field from HTTP query (URL params), i.e. `http.Request.Form`
+- [x] Builtin directive `header` to decode a field from HTTP headers, i.e. `http.Request.Header`
 - [x] Builtin decoders used by `form` and `header` directives for basic types, e.g. `bool`, `int`, `int64`, `float32`, `time.Time`, ... [full list](./decoders.go)
 - [x] Decode a field by inspecting a set of keys from the same source
 - [x] Decode a field from multiple sources, e.g. both query and headers
-- [x] Register or replace decoders for both builtin basic types and custom types
-- [x] Define input struct with embedded struct fields
+- [x] Register custom type decoders
+- [x] Define an input struct with embedded struct fields
 - [x] Builtin directive `required` to tag a field as **required**
 - [ ] Builtin encoders for basic types
-- [ ] Register or replace encoders for both builtin basic types and custom types
-- [x] Register custom directive executors to extend the field resolving abilities, see directive [required](./required.go) as an example and think about implementing your own directives like `trim`, `to_lowercase`, `base58_to_int`, etc.
+- [ ] Register custom type encoders
+- [x] Register custom directive executors to extend the ability of field resolving, see directive [required](./required.go) as an example and think about implementing your own directives like `trim`, `to_lowercase`, `base58_to_int`, etc.
 
 ## Sample User Defined Input Structs
 
@@ -130,6 +130,7 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ### 🔥 Extend `httpin` by adding custom directives
 
+<a id="concept-directive"></a>
 Know the concept of a `Directive`:
 
 ```go
