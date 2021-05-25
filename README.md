@@ -75,8 +75,6 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 - [x] Register custom type decoders
 - [x] Define an input struct with embedded struct fields
 - [x] Builtin directive `required` to tag a field as **required**
-- [ ] Builtin encoders for basic types
-- [ ] Register custom type encoders
 - [x] Register custom directive executors to extend the ability of field resolving, see directive [required](./required.go) as an example and think about implementing your own directives like `trim`, `to_lowercase`, `base58_to_int`, etc.
 
 ## Sample User Defined Input Structs
@@ -104,9 +102,7 @@ type ListUsersInput struct {
 }
 ```
 
-## Advanced
-
-### Use middleware handlers to reduce much more trivial code
+## Integrate with Go Native http.Handler (Use Middleware)
 
 First, set up the middleware for your handlers (**bind Input vs. Handler**). We recommend using [alice](https://github.com/justinas/alice) to chain your HTTP middleware functions.
 
@@ -127,6 +123,12 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 	// Do sth.
 }
 ```
+
+## Integrate with Popular Go Web Frameworks
+
+Please read the [wiki](https://github.com/ggicci/httpin/wiki) for more information about using `httpin` in popular Go web frameworks, e.g. gin, fiber, revel, etc.
+
+## Advanced
 
 ### 🔥 Extend `httpin` by adding custom directives
 
@@ -185,7 +187,3 @@ type Authorization struct {
 ```
 
 The directives will run in the order as they defined in the struct tag.
-
-## Articles
-
-- [Decode HTTP Query Params into a Struct in Golang](https://ggicci.medium.com/decode-http-query-params-into-a-struct-in-golang-bbb07168ed14)
