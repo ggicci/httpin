@@ -2,6 +2,8 @@
 
 [![codecov](https://codecov.io/gh/ggicci/httpin/branch/main/graph/badge.svg?token=RT61L9ngHj)](https://codecov.io/gh/ggicci/httpin)
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/ggicci/httpin.svg)](https://pkg.go.dev/github.com/ggicci/httpin)
+
 HTTP Input for Go - Decode an HTTP request into a custom struct
 
 **Define the struct for your input and then fetch your data!**
