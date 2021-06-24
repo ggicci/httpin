@@ -76,7 +76,7 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 - [x] Compose an input struct by embedding struct fields
 - [x] Builtin directive `required` to tag a field as **required**
 - [x] Register custom directive executors to extend the ability of field resolving, see directive [required](./required.go) as an example and think about implementing your own directives like `trim`, `to_lowercase`, `base58_to_int`, etc.
-- [x] Easy integrations with popular Go web frameworks and other useful packages
+- [x] Easily integrating with popular Go web frameworks and packages
 
 ## Sample User Defined Input Structs
 
@@ -125,7 +125,7 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 }
 ```
 
-## Integrate with Popular Go Web Frameworks and Utilities
+## Integrate with Popular Go Web Frameworks and Components
 
 ### Frameworks
 
@@ -133,7 +133,7 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 - [revel/revel](wiki/Integrate-with-revel)
 - [gofiber/fiber](wiki/Integrate-with-fiber)
 
-### Utilities
+### Components
 
 - [HTTP Router: gorilla/mux](wiki/Integrate-with-gorilla-mux)
 
