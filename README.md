@@ -129,13 +129,13 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ### Frameworks
 
-- [gin-gonic/gin](wiki/Integrate-with-gin)
-- [revel/revel](wiki/Integrate-with-revel)
-- [gofiber/fiber](wiki/Integrate-with-fiber)
+- [gin-gonic/gin](https://github.com/ggicci/httpin/wiki/Integrate-with-gin)
+- [revel/revel](https://github.com/ggicci/httpin/wiki/Integrate-with-revel)
+- [gofiber/fiber](https://github.com/ggicci/httpin/wiki/Integrate-with-fiber)
 
 ### Components
 
-- [HTTP Router: gorilla/mux](wiki/Integrate-with-gorilla-mux)
+- [HTTP Router: gorilla/mux](https://github.com/ggicci/httpin/wiki/Integrate-with-gorilla-mux)
 
 ## Advanced
 
