@@ -22,6 +22,10 @@ type core struct {
 
 func New(inputStruct interface{}, opts ...option) (*core, error) {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
+	if typ == nil {
+		return nil, fmt.Errorf("httpin: nil input type")
+	}
+
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}

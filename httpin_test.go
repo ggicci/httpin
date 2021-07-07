@@ -266,6 +266,34 @@ func TestCore(t *testing.T) {
 		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
 	})
 
+	Convey("Meet invalid value for a key", t, func() {
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{
+			"created_at": {"1991-11-10T08:00:00+08:00"},
+			"is_soldout": {"zero"}, // invalid
+		}
+		core, err := New(ProductQuery{})
+		So(err, ShouldBeNil)
+		_, err = core.Decode(r)
+		So(err, ShouldBeError)
+		var fieldErorr *InvalidFieldError
+		So(errors.As(err, &fieldErorr), ShouldBeTrue)
+		So(fieldErorr.Field, ShouldEqual, "IsSoldout")
+	})
+
+	Convey("Meet invalid values for a key (of slice type)", t, func() {
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{
+			"created_at": {"1991-11-10T08:00:00+08:00"},
+			"sort_desc":  {"true", "zero", "0"}, // invalid value "zero"
+		}
+		core, err := New(ProductQuery{})
+		So(err, ShouldBeNil)
+		_, err = core.Decode(r)
+		So(err, ShouldBeError)
+		So(err.Error(), ShouldContainSubstring, "at index 1")
+	})
+
 	Convey("Custom decoder should work", t, func() {
 		var boolType = reflect.TypeOf(bool(true))
 		RegisterDecoder(boolType, DecoderFunc(DecodeCustomBool))
@@ -280,40 +308,4 @@ func TestCore(t *testing.T) {
 		So(got, ShouldResemble, &BoolInput{IsMember: true})
 		delete(decoders, boolType) // remove the custom decoder
 	})
-}
-
-func TestKV_SetFieldErrorOfBasicTypes(t *testing.T) {
-	// type testcase struct {
-	// 	key      string
-	// 	value    []string
-	// 	expected error
-	// }
-	// badCases := []testcase{
-	// 	{"bool", []string{"a"}, &httpin.InvalidField{Name: "BoolValue", TagKey: "query", Tag: "bool", Value: `["a"]`}},
-	// 	{"int", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"int8", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"int16", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"int32", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"int64", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"uint", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"uint8", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"uint16", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"uint32", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"uint64", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"float32", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"float64", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"complex64", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"complex128", []string{"a"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["a"]`}},
-	// 	{"string", []string{""}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `[""]`}},
-	// 	{"time", []string{"1991-11-10"}, &httpin.InvalidField{Name: "", TagKey: "query", Tag: "", Value: `["1991-11-10"]`}},
-	// }
-
-	// for _, badCase := range badCases {
-	// 	kvTest(
-	// 		t,
-	// 		map[string][]string{badCase.key: badCase.value},
-	// 		ChaosQuery{},
-	// 		badCase.expected,
-	// 	)
-	// }
 }

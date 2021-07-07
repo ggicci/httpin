@@ -16,10 +16,6 @@ type FieldResolver struct {
 	Fields     []*FieldResolver
 }
 
-func (r *FieldResolver) IsRoot() bool {
-	return r.Field.Name == ""
-}
-
 func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	rv := reflect.New(r.Type)
 	debug("resolve: %s (of %s)\n", r.Field.Name, r.Type)
@@ -38,7 +34,7 @@ func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 			debug("  > execute directive: %s with %v\n", dir.Executor, dir.Argv)
 			if err := dir.Execute(directiveContext); err != nil {
 				return rv, &InvalidFieldError{
-					Field:         r.Field.Name,
+					Field:         r.Field.Name, // TODO(ggicci): use JSON field name?
 					Source:        dir.Executor,
 					Value:         nil, // FIXME(ggicci): add source data
 					ErrorMessage:  err.Error(),

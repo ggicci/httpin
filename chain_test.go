@@ -22,6 +22,10 @@ func EchoHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func TestChain(t *testing.T) {
+	Convey("Should panic on invalid input", t, func() {
+		So(func() { NewInput(nil) }, ShouldPanic)
+	})
+
 	Convey("Decode request successfully", t, func() {
 		r, err := http.NewRequest("GET", "/", nil)
 		So(err, ShouldBeNil)
