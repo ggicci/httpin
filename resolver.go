@@ -2,6 +2,7 @@ package httpin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -33,10 +34,19 @@ func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 			}
 			debug("  > execute directive: %s with %v\n", dir.Executor, dir.Argv)
 			if err := dir.Execute(directiveContext); err != nil {
+				var (
+					fe       fieldError
+					gotValue interface{}
+				)
+
+				if errors.As(err, &fe) {
+					gotValue = fe.Value
+				}
+
 				return rv, &InvalidFieldError{
-					Field:         r.Field.Name, // TODO(ggicci): use JSON field name?
+					Field:         r.Field.Name,
 					Source:        dir.Executor,
-					Value:         nil, // FIXME(ggicci): add source data
+					Value:         gotValue,
 					ErrorMessage:  err.Error(),
 					internalError: err,
 				}

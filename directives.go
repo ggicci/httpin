@@ -99,7 +99,6 @@ func buildDirective(directiveStr string) (*directive, error) {
 		return nil, fmt.Errorf("%w: %q", ErrUnregisteredExecutor, dir.Executor)
 	}
 
-	// TODO(ggicci): hook custom validators, e.g. dir.Validate()
 	return dir, nil
 }
 

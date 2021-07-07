@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrMissingField         = errors.New("field required but missing")
+	ErrMissingField         = errors.New("missing required field")
 	ErrUnsupporetedType     = errors.New("unsupported type")
 	ErrUnregisteredExecutor = errors.New("unregistered executor")
 )
@@ -46,4 +46,14 @@ func (f *InvalidFieldError) Error() string {
 
 func (f *InvalidFieldError) Unwrap() error {
 	return f.internalError
+}
+
+type fieldError struct {
+	Key           string
+	Value         interface{}
+	internalError error
+}
+
+func (e fieldError) Error() string {
+	return e.internalError.Error()
 }
