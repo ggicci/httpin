@@ -210,6 +210,7 @@ func TestCore(t *testing.T) {
 		var invalidField *InvalidFieldError
 		So(errors.As(err, &invalidField), ShouldBeTrue)
 		So(invalidField.Source, ShouldEqual, "required")
+		So(invalidField.Value, ShouldBeNil)
 	})
 
 	Convey("Non-required fields can be absent", t, func() {
@@ -276,9 +277,11 @@ func TestCore(t *testing.T) {
 		So(err, ShouldBeNil)
 		_, err = core.Decode(r)
 		So(err, ShouldBeError)
-		var fieldErorr *InvalidFieldError
-		So(errors.As(err, &fieldErorr), ShouldBeTrue)
-		So(fieldErorr.Field, ShouldEqual, "IsSoldout")
+		var invalidField *InvalidFieldError
+		So(errors.As(err, &invalidField), ShouldBeTrue)
+		So(invalidField.Field, ShouldEqual, "IsSoldout")
+		So(invalidField.Source, ShouldEqual, "form")
+		So(invalidField.Value, ShouldEqual, "zero")
 	})
 
 	Convey("Meet invalid values for a key (of slice type)", t, func() {
@@ -290,7 +293,11 @@ func TestCore(t *testing.T) {
 		core, err := New(ProductQuery{})
 		So(err, ShouldBeNil)
 		_, err = core.Decode(r)
-		So(err, ShouldBeError)
+		var invalidField *InvalidFieldError
+		So(errors.As(err, &invalidField), ShouldBeTrue)
+		So(invalidField.Field, ShouldEqual, "SortDesc")
+		So(invalidField.Source, ShouldEqual, "form")
+		So(invalidField.Value, ShouldResemble, []string{"true", "zero", "0"})
 		So(err.Error(), ShouldContainSubstring, "at index 1")
 	})
 
