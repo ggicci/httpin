@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"sync"
 )
 
 type ContextKey int
@@ -14,13 +15,22 @@ const (
 	FieldSet
 )
 
-type core struct {
-	inputType       reflect.Type
-	tree            *FieldResolver
+var builtEngines sync.Map
+
+type Engine struct {
+	// core
+	inputType reflect.Type
+	tree      *FieldResolver
+
+	// options
 	errorStatusCode int
 }
 
-func New(inputStruct interface{}, opts ...option) (*core, error) {
+func copyEngine(engine *Engine) *Engine {
+	return &Engine{inputType: engine.inputType, tree: engine.tree}
+}
+
+func New(inputStruct interface{}, opts ...option) (*Engine, error) {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
 	if typ == nil {
 		return nil, fmt.Errorf("httpin: nil input type")
@@ -33,22 +43,40 @@ func New(inputStruct interface{}, opts ...option) (*core, error) {
 		return nil, UnsupportedTypeError{Type: typ}
 	}
 
-	engine := &core{
-		inputType:       typ,
-		errorStatusCode: 422,
-	}
-	for _, opt := range opts {
-		opt(engine)
+	var engine *Engine
+
+	builtEngine, built := builtEngines.Load(typ)
+	if !built {
+		// Build the engine core if not built yet.
+		engine = &Engine{
+			inputType:       typ,
+			errorStatusCode: 422,
+		}
+		if err := engine.build(); err != nil {
+			return nil, fmt.Errorf("httpin: %w", err)
+		}
+		builtEngines.Store(typ, engine)
+	} else {
+		// Load the engine core and get a copy.
+		engine = copyEngine(builtEngine.(*Engine))
 	}
 
-	if err := engine.build(); err != nil {
-		return nil, fmt.Errorf("httpin: %w", err)
+	// Apply default options and user custom options to the engine.
+	var allOptions []option
+	defaultOptions := []option{
+		WithErrorStatusCode(422),
+	}
+	allOptions = append(allOptions, defaultOptions...)
+	allOptions = append(allOptions, opts...)
+
+	for _, opt := range allOptions {
+		opt(engine)
 	}
 
 	return engine, nil
 }
 
-func (e *core) Decode(req *http.Request) (interface{}, error) {
+func (e *Engine) Decode(req *http.Request) (interface{}, error) {
 	if err := req.ParseForm(); err != nil {
 		return nil, err
 	}
@@ -60,7 +88,7 @@ func (e *core) Decode(req *http.Request) (interface{}, error) {
 }
 
 // build builds extractors for the exported fields of the input struct.
-func (e *core) build() error {
+func (e *Engine) build() error {
 	tree, err := buildResolverTree(e.inputType)
 	if err != nil {
 		return err

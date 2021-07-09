@@ -1,9 +1,9 @@
 package httpin
 
-type option func(*core)
+type option func(*Engine)
 
 func WithErrorStatusCode(code int) option {
-	return func(c *core) {
+	return func(c *Engine) {
 		c.errorStatusCode = code
 	}
 }

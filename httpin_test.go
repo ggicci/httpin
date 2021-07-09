@@ -88,17 +88,31 @@ type ThingWithUnsupportedCustomTypeOfSliceField struct {
 	IdList []ObjectID `in:"form=id[]"`
 }
 
-func TestCore(t *testing.T) {
-	Convey("New core with non-struct type", t, func() {
+func TestEngine(t *testing.T) {
+	Convey("New engine with non-struct type", t, func() {
 		core, err := New(string("hello"))
 		So(core, ShouldBeNil)
 		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
 	})
 
-	Convey("New core with unregistered executor", t, func() {
+	Convey("New engine with unregistered executor", t, func() {
 		core, err := New(ThingWithInvalidDirectives{})
 		So(core, ShouldBeNil)
 		So(errors.Is(err, ErrUnregisteredExecutor), ShouldBeTrue)
+	})
+
+	Convey("New engine with same type should hit cache", t, func() {
+		core1, err := New(ProductQuery{})
+		So(err, ShouldBeNil)
+		core2, err := New(ProductQuery{})
+		So(err, ShouldBeNil)
+		core3, err := New(&ProductQuery{})
+		So(err, ShouldBeNil)
+		core4, err := New(&ProductQuery{}, WithErrorStatusCode(400))
+		So(err, ShouldBeNil)
+		So(core1.tree, ShouldPointTo, core2.tree)
+		So(core2.tree, ShouldPointTo, core3.tree)
+		So(core3.tree, ShouldPointTo, core4.tree)
 	})
 
 	Convey("Very basic and normal case", t, func() {
