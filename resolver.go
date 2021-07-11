@@ -19,7 +19,6 @@ type FieldResolver struct {
 
 func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	rv := reflect.New(r.Type)
-	debug("resolve: %s (of %s)\n", r.Field.Name, r.Type)
 
 	// Execute directives.
 	if len(r.Directives) > 0 {
@@ -32,7 +31,6 @@ func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 				Value:     rv,
 				Context:   inheritableContext,
 			}
-			debug("  > execute directive: %s with %v\n", dir.Executor, dir.Argv)
 			if err := dir.Execute(directiveContext); err != nil {
 				var (
 					fe       fieldError

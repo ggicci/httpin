@@ -8,7 +8,6 @@ import (
 
 func ExtractFromKVS(ctx *DirectiveContext, kvs map[string][]string, isHeaderKey bool) error {
 	for _, key := range ctx.directive.Argv {
-		debug("    > execute directive %q with key %q\n", ctx.directive.Executor, key)
 		if isHeaderKey {
 			key = http.CanonicalHeaderKey(key)
 		}
@@ -21,7 +20,6 @@ func ExtractFromKVS(ctx *DirectiveContext, kvs map[string][]string, isHeaderKey 
 
 func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key string) error {
 	if ctx.Context.Value(FieldSet) == true {
-		debug("    > field already set, skip\n")
 		return nil
 	}
 
@@ -37,7 +35,6 @@ func extractFromKVSWithKey(ctx *DirectiveContext, kvs map[string][]string, key s
 
 	formValues, exists := kvs[key]
 	if !exists {
-		debug("    > key %q not found in %s\n", key, ctx.Executor)
 		return nil
 	}
 	var got string
@@ -64,7 +61,6 @@ func extractFromKVSWithKeyForSlice(ctx *DirectiveContext, kvs map[string][]strin
 
 	formValues, exists := kvs[key]
 	if !exists {
-		debug("    > key %q not found in %s\n", key, ctx.Executor)
 		return nil
 	}
 

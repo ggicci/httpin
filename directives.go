@@ -43,7 +43,6 @@ func ReplaceDirectiveExecutor(name string, exe DirectiveExecutor) {
 		panic(fmt.Sprintf("nil executor: %q", name))
 	}
 	executors[name] = exe
-	debug("directive executor replaced: %q\n", name)
 }
 
 // DirectiveExecutorFunc is an adpator to allow to use of ordinary functions as
