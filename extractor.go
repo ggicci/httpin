@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func ExtractFromKVS(ctx *DirectiveContext, kvs map[string][]string, isHeaderKey bool) error {
+func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, isHeaderKey bool) error {
 	for _, key := range ctx.directive.Argv {
 		if isHeaderKey {
 			key = http.CanonicalHeaderKey(key)

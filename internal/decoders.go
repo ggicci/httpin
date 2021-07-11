@@ -7,38 +7,38 @@ import (
 	"time"
 )
 
-type Decoder interface {
+type TypeDecoder interface {
 	Decode([]byte) (interface{}, error)
 }
 
-type DecoderFunc func([]byte) (interface{}, error)
+type TypeDecoderFunc func([]byte) (interface{}, error)
 
 // Decode calls fn(data).
-func (fn DecoderFunc) Decode(data []byte) (interface{}, error) {
+func (fn TypeDecoderFunc) Decode(data []byte) (interface{}, error) {
 	return fn(data)
 }
 
-var builtinDecoders = map[reflect.Type]Decoder{
-	reflect.TypeOf(true):               DecoderFunc(DecodeBool),
-	reflect.TypeOf(int(0)):             DecoderFunc(DecodeInt),
-	reflect.TypeOf(int8(0)):            DecoderFunc(DecodeInt8),
-	reflect.TypeOf(int16(0)):           DecoderFunc(DecodeInt16),
-	reflect.TypeOf(int32(0)):           DecoderFunc(DecodeInt32),
-	reflect.TypeOf(int64(0)):           DecoderFunc(DecodeInt64),
-	reflect.TypeOf(uint(0)):            DecoderFunc(DecodeUint),
-	reflect.TypeOf(uint8(0)):           DecoderFunc(DecodeUint8),
-	reflect.TypeOf(uint16(0)):          DecoderFunc(DecodeUint16),
-	reflect.TypeOf(uint32(0)):          DecoderFunc(DecodeUint32),
-	reflect.TypeOf(uint64(0)):          DecoderFunc(DecodeUint64),
-	reflect.TypeOf(float32(0.0)):       DecoderFunc(DecodeFloat32),
-	reflect.TypeOf(float64(0.0)):       DecoderFunc(DecodeFloat64),
-	reflect.TypeOf(complex64(0 + 1i)):  DecoderFunc(DecodeComplex64),
-	reflect.TypeOf(complex128(0 + 1i)): DecoderFunc(DecodeComplex128),
-	reflect.TypeOf(string("0")):        DecoderFunc(DecodeString),
-	reflect.TypeOf(time.Now()):         DecoderFunc(DecodeTime),
+var builtinDecoders = map[reflect.Type]TypeDecoder{
+	reflect.TypeOf(true):               TypeDecoderFunc(DecodeBool),
+	reflect.TypeOf(int(0)):             TypeDecoderFunc(DecodeInt),
+	reflect.TypeOf(int8(0)):            TypeDecoderFunc(DecodeInt8),
+	reflect.TypeOf(int16(0)):           TypeDecoderFunc(DecodeInt16),
+	reflect.TypeOf(int32(0)):           TypeDecoderFunc(DecodeInt32),
+	reflect.TypeOf(int64(0)):           TypeDecoderFunc(DecodeInt64),
+	reflect.TypeOf(uint(0)):            TypeDecoderFunc(DecodeUint),
+	reflect.TypeOf(uint8(0)):           TypeDecoderFunc(DecodeUint8),
+	reflect.TypeOf(uint16(0)):          TypeDecoderFunc(DecodeUint16),
+	reflect.TypeOf(uint32(0)):          TypeDecoderFunc(DecodeUint32),
+	reflect.TypeOf(uint64(0)):          TypeDecoderFunc(DecodeUint64),
+	reflect.TypeOf(float32(0.0)):       TypeDecoderFunc(DecodeFloat32),
+	reflect.TypeOf(float64(0.0)):       TypeDecoderFunc(DecodeFloat64),
+	reflect.TypeOf(complex64(0 + 1i)):  TypeDecoderFunc(DecodeComplex64),
+	reflect.TypeOf(complex128(0 + 1i)): TypeDecoderFunc(DecodeComplex128),
+	reflect.TypeOf(string("0")):        TypeDecoderFunc(DecodeString),
+	reflect.TypeOf(time.Now()):         TypeDecoderFunc(DecodeTime),
 }
 
-func DecoderOf(t reflect.Type) Decoder {
+func DecoderOf(t reflect.Type) TypeDecoder {
 	return builtinDecoders[t]
 }
 

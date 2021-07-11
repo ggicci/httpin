@@ -7,34 +7,34 @@ import (
 	"github.com/ggicci/httpin/internal"
 )
 
-// Decoder is the interface implemented by types that can decode bytes to
+// TypeDecoder is the interface implemented by types that can decode bytes to
 // themselves.
-type Decoder = internal.Decoder
+type TypeDecoder = internal.TypeDecoder
 
-// DecoderFunc is an adaptor to allow the use of ordinary functions as httpin
-// decoders.
-type DecoderFunc = internal.DecoderFunc
+// TypeDecoderFunc is an adaptor to allow the use of ordinary functions as httpin
+// TypeDecoders.
+type TypeDecoderFunc = internal.TypeDecoderFunc
 
-var decoders = map[reflect.Type]Decoder{} // custom decoders
+var decoders = map[reflect.Type]TypeDecoder{} // custom decoders
 
-// RegisterDecoder registers a decoder to decode the specific type. Panics on conflicts.
-func RegisterDecoder(typ reflect.Type, decoder Decoder) {
+// RegisterTypeDecoder registers a specific type decoder. Panics on conflicts.
+func RegisterTypeDecoder(typ reflect.Type, decoder TypeDecoder) {
 	if _, ok := decoders[typ]; ok {
-		panic(fmt.Sprintf("duplicate decoder for type %q", typ))
+		panic(fmt.Errorf("%w: %q", ErrDuplicateTypeDecoder, typ))
 	}
-	ReplaceDecoder(typ, decoder)
+	ReplaceTypeDecoder(typ, decoder)
 }
 
-// ReplaceDecoder replaces a decoder to decode the specific type.
-func ReplaceDecoder(typ reflect.Type, decoder Decoder) {
+// ReplaceTypeDecoder replaces a specific type decoder.
+func ReplaceTypeDecoder(typ reflect.Type, decoder TypeDecoder) {
 	if decoder == nil {
-		panic("nil decoder")
+		panic(fmt.Errorf("%w: %q", typ, ErrNilTypeDecoder))
 	}
 	decoders[typ] = decoder
 }
 
 // decoderOf retrieves a decoder by type.
-func decoderOf(t reflect.Type) Decoder {
+func decoderOf(t reflect.Type) TypeDecoder {
 	dec := decoders[t]
 	if dec != nil {
 		return dec

@@ -31,7 +31,7 @@ type DirectiveExecutor interface {
 // taken or nil executor.
 func RegisterDirectiveExecutor(name string, exe DirectiveExecutor) {
 	if _, ok := executors[name]; ok {
-		panic(fmt.Sprintf("duplicate executor: %q", name))
+		panic(fmt.Errorf("%w: %q", ErrDuplicateExecutor, name))
 	}
 	ReplaceDirectiveExecutor(name, exe)
 }
@@ -40,7 +40,7 @@ func RegisterDirectiveExecutor(name string, exe DirectiveExecutor) {
 // on duplicate names.
 func ReplaceDirectiveExecutor(name string, exe DirectiveExecutor) {
 	if exe == nil {
-		panic(fmt.Sprintf("nil executor: %q", name))
+		panic(fmt.Errorf("%w: %q", ErrNilExecutor, name))
 	}
 	executors[name] = exe
 }

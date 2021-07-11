@@ -12,24 +12,26 @@ type ContextKey int
 const (
 	Input ContextKey = iota // the primary key to get the input object in the context injected by httpin
 
+	// Set this context value to true to indicate that the field has been set.
+	// When multiple executors were applied to a field, if the field value were set by
+	// an executor, the latter executors may skip running by consulting this context value.
 	FieldSet
 )
 
 var builtEngines sync.Map
 
+// Engine holds the information on how to decode a request to an instance of a
+// concrete struct type.
 type Engine struct {
 	// core
 	inputType reflect.Type
-	tree      *FieldResolver
+	tree      *fieldResolver
 
 	// options
 	errorStatusCode int
 }
 
-func copyEngine(engine *Engine) *Engine {
-	return &Engine{inputType: engine.inputType, tree: engine.tree}
-}
-
+// New builds an HTTP request decoder for the specified struct type with custom options.
 func New(inputStruct interface{}, opts ...option) (*Engine, error) {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
 	if typ == nil {
@@ -43,22 +45,22 @@ func New(inputStruct interface{}, opts ...option) (*Engine, error) {
 		return nil, UnsupportedTypeError{Type: typ}
 	}
 
-	var engine *Engine
+	var core *Engine
 
 	builtEngine, built := builtEngines.Load(typ)
 	if !built {
 		// Build the engine core if not built yet.
-		engine = &Engine{
+		core = &Engine{
 			inputType:       typ,
 			errorStatusCode: 422,
 		}
-		if err := engine.build(); err != nil {
+		if err := core.build(); err != nil {
 			return nil, fmt.Errorf("httpin: %w", err)
 		}
-		builtEngines.Store(typ, engine)
+		builtEngines.Store(typ, core)
 	} else {
 		// Load the engine core and get a copy.
-		engine = copyEngine(builtEngine.(*Engine))
+		core = copyEngineCore(builtEngine.(*Engine))
 	}
 
 	// Apply default options and user custom options to the engine.
@@ -70,12 +72,13 @@ func New(inputStruct interface{}, opts ...option) (*Engine, error) {
 	allOptions = append(allOptions, opts...)
 
 	for _, opt := range allOptions {
-		opt(engine)
+		opt(core)
 	}
 
-	return engine, nil
+	return core, nil
 }
 
+// Decode decodes an HTTP request to a struct instance.
 func (e *Engine) Decode(req *http.Request) (interface{}, error) {
 	if err := req.ParseForm(); err != nil {
 		return nil, err
@@ -85,6 +88,10 @@ func (e *Engine) Decode(req *http.Request) (interface{}, error) {
 		return nil, fmt.Errorf("httpin: %w", err)
 	}
 	return rv.Interface(), nil
+}
+
+func copyEngineCore(eng *Engine) *Engine {
+	return &Engine{inputType: eng.inputType, tree: eng.tree}
 }
 
 // build builds extractors for the exported fields of the input struct.

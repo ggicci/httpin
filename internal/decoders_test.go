@@ -13,7 +13,7 @@ type Thing struct{}
 func TestBuiltinDecoders(t *testing.T) {
 
 	Convey("DecoderFunc implements Decoder interface", t, func() {
-		v, err := DecoderFunc(DecodeBool).Decode([]byte("true"))
+		v, err := TypeDecoderFunc(DecodeBool).Decode([]byte("true"))
 		So(v, ShouldBeTrue)
 		So(err, ShouldBeNil)
 	})

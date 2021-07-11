@@ -25,19 +25,19 @@ func TestDecoders(t *testing.T) {
 	boolType := reflect.TypeOf(bool(true))
 
 	Convey("Register nil decoder", t, func() {
-		So(func() { RegisterDecoder(boolType, nil) }, ShouldPanic)
+		So(func() { RegisterTypeDecoder(boolType, nil) }, ShouldPanic)
 	})
 	delete(decoders, boolType) // remove the custom decoder
 
 	Convey("Register duplicate decoder", t, func() {
-		So(func() { RegisterDecoder(boolType, DecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
-		So(func() { RegisterDecoder(boolType, DecoderFunc(DecodeCustomBool)) }, ShouldPanic)
+		So(func() { RegisterTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
+		So(func() { RegisterTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool)) }, ShouldPanic)
 	})
 	delete(decoders, boolType) // remove the custom decoder
 
 	Convey("Replace a decoder", t, func() {
-		So(func() { ReplaceDecoder(boolType, DecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
-		So(func() { ReplaceDecoder(boolType, DecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
+		So(func() { ReplaceTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
+		So(func() { ReplaceTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
 	})
 	delete(decoders, boolType) // remove the custom decoder
 }

@@ -9,15 +9,15 @@ import (
 	"strings"
 )
 
-type FieldResolver struct {
+type fieldResolver struct {
 	Type       reflect.Type
 	Field      reflect.StructField
 	Path       []string
 	Directives []*directive
-	Fields     []*FieldResolver
+	Fields     []*fieldResolver
 }
 
-func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
+func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	rv := reflect.New(r.Type)
 
 	// Execute directives.
@@ -68,8 +68,8 @@ func (r *FieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 
 // buildResolverTree builds a tree of resolvers for the specified struct type.
 // Which helps resolving fields data from input sources.
-func buildResolverTree(t reflect.Type) (*FieldResolver, error) {
-	root := &FieldResolver{Type: t}
+func buildResolverTree(t reflect.Type) (*fieldResolver, error) {
+	root := &fieldResolver{Type: t}
 	for i := 0; i < t.NumField(); i++ {
 		fieldResolver, err := buildFieldResolver(root, t.Field(i))
 		if err != nil {
@@ -81,7 +81,7 @@ func buildResolverTree(t reflect.Type) (*FieldResolver, error) {
 	return root, nil
 }
 
-func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*FieldResolver, error) {
+func buildFieldResolver(parent *fieldResolver, field reflect.StructField) (*fieldResolver, error) {
 	directives, err := parseStructTag(field)
 	if err != nil {
 		return nil, fmt.Errorf("parse struct tag failed: %w", err)
@@ -90,7 +90,7 @@ func buildFieldResolver(parent *FieldResolver, field reflect.StructField) (*Fiel
 	path := make([]string, len(parent.Path)+1)
 	copy(path, parent.Path)
 	path[len(path)-1] = field.Name
-	root := &FieldResolver{
+	root := &fieldResolver{
 		Type:       t,
 		Field:      field,
 		Path:       path,

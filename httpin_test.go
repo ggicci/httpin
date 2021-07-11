@@ -317,7 +317,7 @@ func TestEngine(t *testing.T) {
 
 	Convey("Custom decoder should work", t, func() {
 		var boolType = reflect.TypeOf(bool(true))
-		RegisterDecoder(boolType, DecoderFunc(DecodeCustomBool))
+		RegisterTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool))
 		type BoolInput struct {
 			IsMember bool `in:"form=is_member"`
 		}

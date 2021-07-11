@@ -10,6 +10,10 @@ var (
 	ErrMissingField         = errors.New("missing required field")
 	ErrUnsupporetedType     = errors.New("unsupported type")
 	ErrUnregisteredExecutor = errors.New("unregistered executor")
+	ErrDuplicateTypeDecoder = errors.New("duplicate type decoder")
+	ErrNilTypeDecoder       = errors.New("nil type decoder")
+	ErrDuplicateExecutor    = errors.New("duplicate executor")
+	ErrNilExecutor          = errors.New("nil executor")
 )
 
 type UnsupportedTypeError struct {
@@ -17,7 +21,7 @@ type UnsupportedTypeError struct {
 }
 
 func (e UnsupportedTypeError) Error() string {
-	return fmt.Sprintf("unsupported type: %q", e.Type.String())
+	return fmt.Sprintf("unsupported type: %q", e.Type)
 }
 
 func (e UnsupportedTypeError) Unwrap() error {

@@ -7,9 +7,11 @@ import "net/http"
 type MuxVarsFunc func(*http.Request) map[string]string
 
 // UseGorillaMux registers a new directive executor which can extract path
-// variables from the URL.
+// variables from the URL. Which works as an accompany to gorilla's mux package.
 //
-// Example: UseGorillaMux("path", mux.Vars)
+// Example:
+//
+//    UseGorillaMux("path", mux.Vars)
 //
 //    type GetUserInput struct {
 //       UserID `httpin:"path=user_id"`
@@ -28,5 +30,5 @@ func (mux *gorillaMuxVarsExtractor) Execute(ctx *DirectiveContext) error {
 		kvs[key] = []string{value}
 	}
 
-	return ExtractFromKVS(ctx, kvs, false)
+	return extractFromKVS(ctx, kvs, false)
 }
