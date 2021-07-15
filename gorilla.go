@@ -4,7 +4,8 @@ package httpin
 
 import "net/http"
 
-type MuxVarsFunc func(*http.Request) map[string]string
+// GorillaMuxVarsFunc is mux.Vars
+type GorillaMuxVarsFunc func(*http.Request) map[string]string
 
 // UseGorillaMux registers a new directive executor which can extract path
 // variables from the URL. Which works as an accompany to gorilla's mux package.
@@ -16,12 +17,12 @@ type MuxVarsFunc func(*http.Request) map[string]string
 //    type GetUserInput struct {
 //       UserID `httpin:"path=user_id"`
 //    }
-func UseGorillaMux(executor string, fnVars MuxVarsFunc) {
+func UseGorillaMux(executor string, fnVars GorillaMuxVarsFunc) {
 	RegisterDirectiveExecutor(executor, &gorillaMuxVarsExtractor{Vars: fnVars})
 }
 
 type gorillaMuxVarsExtractor struct {
-	Vars MuxVarsFunc
+	Vars GorillaMuxVarsFunc
 }
 
 func (mux *gorillaMuxVarsExtractor) Execute(ctx *DirectiveContext) error {
