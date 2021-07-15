@@ -1,6 +1,7 @@
 package httpin
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,8 +10,18 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+type GetPostOfUserV2Input struct {
+	Username string `in:"gochi=username"`
+	PostID   int64  `in:"gochi=pid"`
+}
+
+func GetPostOfUserV2Handler(rw http.ResponseWriter, r *http.Request) {
+	var input = r.Context().Value(Input).(*GetPostOfUserV2Input)
+	json.NewEncoder(rw).Encode(input)
+}
+
 func TestGochiURLParam(t *testing.T) {
-	UseGochiURLParam("path", chi.URLParam) // register the "path" executor
+	UseGochiURLParam("gochi", chi.URLParam) // register the "gochi" executor
 
 	Convey("Gochi: can extract URLParam", t, func() {
 		rw := httptest.NewRecorder()
@@ -18,7 +29,10 @@ func TestGochiURLParam(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		router := chi.NewRouter()
-		router.With(NewInput(GetPostOfUserInput{})).Get("/{username}/posts/{pid}", GetPostOfUserHandler)
+		router.With(
+			NewInput(GetPostOfUserV2Input{}),
+		).Get("/{username}/posts/{pid}", GetPostOfUserV2Handler)
+
 		router.ServeHTTP(rw, r)
 		So(rw.Code, ShouldEqual, 200)
 		expected := `{"Username":"ggicci","PostID":1024}` + "\n"
