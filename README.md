@@ -49,14 +49,7 @@ type ListUsersInput struct {
 }
 
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
-	inputInterface, err := httpin.New(ListUsersInput{}).Decode(r)
-	if err != nil {
-		// Error occurred, `err` can be type of *httpin.InvalidFieldError
-		// Do sth.
-		return
-	}
-
-	input := interfaceInput.(*ListUsersInput)
+	input := r.Context().Value(httpin.Input).(*ListUsersInput)
 	// Do sth.
 }
 ```
@@ -129,9 +122,9 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ### Frameworks
 
+- [go-chi/chi](https://github.com/ggicci/httpin/wiki/Integrate-with-gochi)
 - [gin-gonic/gin](https://github.com/ggicci/httpin/wiki/Integrate-with-gin)
-- [revel/revel](https://github.com/ggicci/httpin/wiki/Integrate-with-revel)
-- [gofiber/fiber](https://github.com/ggicci/httpin/wiki/Integrate-with-fiber)
+- ...
 
 ### Components
 
