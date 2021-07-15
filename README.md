@@ -120,15 +120,10 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ## Integrate with Popular Go Web Frameworks and Components
 
-### Frameworks
-
-- [go-chi/chi](https://github.com/ggicci/httpin/wiki/Integrate-with-gochi)
 - [gin-gonic/gin](https://github.com/ggicci/httpin/wiki/Integrate-with-gin)
+- [go-chi/chi](https://github.com/ggicci/httpin/wiki/Integrate-with-gochi)
+- [gorilla/mux](https://github.com/ggicci/httpin/wiki/Integrate-with-gorilla-mux)
 - ...
-
-### Components
-
-- [HTTP Router: gorilla/mux](https://github.com/ggicci/httpin/wiki/Integrate-with-gorilla-mux)
 
 ## Advanced
 
