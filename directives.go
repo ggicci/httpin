@@ -17,7 +17,6 @@ func init() {
 
 	RegisterDirectiveExecutor("form", DirectiveExecutorFunc(formValueExtractor))
 	RegisterDirectiveExecutor("header", DirectiveExecutorFunc(headerValueExtractor))
-	RegisterDirectiveExecutor("body", DirectiveExecutorFunc(bodyDecoder))
 	RegisterDirectiveExecutor("required", DirectiveExecutorFunc(required))
 }
 

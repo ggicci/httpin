@@ -17,10 +17,42 @@ type fieldResolver struct {
 	Fields     []*fieldResolver
 }
 
+func (r *fieldResolver) isBodyResolverAnnotation() bool {
+	return r.Type == typeJSONBody || r.Type == typeXMLBody
+}
+
+func (r *fieldResolver) isRoot() bool {
+	return r.Field.Name == ""
+}
+
 func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	rv := reflect.New(r.Type)
 
-	// Execute directives.
+	// Resolve HTTP request body if necessary.
+	if r.isRoot() {
+		// Check if there's an annotation field.
+		var bodyType reflect.Type
+		for _, field := range r.Fields {
+			if field.isBodyResolverAnnotation() {
+				bodyType = field.Type
+				break
+			}
+		}
+		switch bodyType {
+		case typeJSONBody:
+			if err := decodeJSONBody(req, rv); err != nil {
+				return rv, fmt.Errorf("decode JSON body: %w", err)
+			}
+			return rv, nil
+		case typeXMLBody:
+			if err := decodeXMLBody(req, rv); err != nil {
+				return rv, fmt.Errorf("decode XML body: %w", err)
+			}
+			return rv, nil
+		}
+	}
+
+	// Then execute directives.
 	if len(r.Directives) > 0 {
 		inheritableContext := context.Background()
 		for _, dir := range r.Directives {
@@ -82,22 +114,31 @@ func buildResolverTree(t reflect.Type) (*fieldResolver, error) {
 }
 
 func buildFieldResolver(parent *fieldResolver, field reflect.StructField) (*fieldResolver, error) {
-	directives, err := parseStructTag(field)
-	if err != nil {
-		return nil, fmt.Errorf("parse struct tag failed: %w", err)
-	}
 	t := field.Type
 	path := make([]string, len(parent.Path)+1)
 	copy(path, parent.Path)
 	path[len(path)-1] = field.Name
+
 	root := &fieldResolver{
 		Type:       t,
 		Field:      field,
 		Path:       path,
-		Directives: directives,
+		Directives: make([]*directive, 0),
 	}
 
-	if field.Anonymous && t.Kind() == reflect.Struct && len(directives) == 0 {
+	// Skip parsing struct tags if met body resolver annotation field.
+	if root.isBodyResolverAnnotation() {
+		return root, nil
+	}
+
+	// Parse the struct tag and build the directives.
+	if directives, err := parseStructTag(field); err != nil {
+		return nil, fmt.Errorf("parse struct tag failed: %w", err)
+	} else {
+		root.Directives = directives
+	}
+
+	if field.Anonymous && t.Kind() == reflect.Struct && len(root.Directives) == 0 {
 		for i := 0; i < t.NumField(); i++ {
 			fieldResolver, err := buildFieldResolver(root, t.Field(i))
 			if err != nil {

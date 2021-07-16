@@ -59,8 +59,6 @@ type ProductQuery struct {
 	SortDesc  []bool    `in:"form=sort_desc"`
 	Pagination
 	Authorization
-
-	Patch map[string]interface{} `in:"body=json"`
 }
 
 type ObjectID struct {
