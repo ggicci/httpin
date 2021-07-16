@@ -10,13 +10,13 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type GetPostOfUserV2Input struct {
-	Username string `in:"gochi=username"`
-	PostID   int64  `in:"gochi=pid"`
+type GetArticleOfUserInput struct {
+	Author    string `in:"gochi=author"` // equivalent to chi.URLParam("author")
+	ArticleID int64  `in:"gochi=articleID"`
 }
 
-func GetPostOfUserV2Handler(rw http.ResponseWriter, r *http.Request) {
-	var input = r.Context().Value(Input).(*GetPostOfUserV2Input)
+func GetArticleOfUser(rw http.ResponseWriter, r *http.Request) {
+	var input = r.Context().Value(Input).(*GetArticleOfUserInput)
 	json.NewEncoder(rw).Encode(input)
 }
 
@@ -25,17 +25,17 @@ func TestGochiURLParam(t *testing.T) {
 
 	Convey("Gochi: can extract URLParam", t, func() {
 		rw := httptest.NewRecorder()
-		r, err := http.NewRequest("GET", "/ggicci/posts/1024", nil)
+		r, err := http.NewRequest("GET", "/ggicci/articles/1024", nil)
 		So(err, ShouldBeNil)
 
 		router := chi.NewRouter()
 		router.With(
-			NewInput(GetPostOfUserV2Input{}),
-		).Get("/{username}/posts/{pid}", GetPostOfUserV2Handler)
+			NewInput(GetArticleOfUserInput{}),
+		).Get("/{author}/articles/{articleID}", GetArticleOfUser)
 
 		router.ServeHTTP(rw, r)
 		So(rw.Code, ShouldEqual, 200)
-		expected := `{"Username":"ggicci","PostID":1024}` + "\n"
+		expected := `{"Author":"ggicci","ArticleID":1024}` + "\n"
 		So(rw.Body.String(), ShouldEqual, expected)
 	})
 }
