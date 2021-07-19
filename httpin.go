@@ -16,6 +16,8 @@ const (
 	// When multiple executors were applied to a field, if the field value were set by
 	// an executor, the latter executors may skip running by consulting this context value.
 	FieldSet
+
+	StopRecursion
 )
 
 var builtEngines sync.Map

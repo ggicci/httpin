@@ -8,7 +8,7 @@ import "net/http"
 type GochiURLParamFunc func(r *http.Request, key string) string
 
 func UseGochiURLParam(executor string, fn GochiURLParamFunc) {
-	RegisterDirectiveExecutor(executor, &gochiURLParamExtractor{URLParam: fn})
+	RegisterDirectiveExecutor(executor, &gochiURLParamExtractor{URLParam: fn}, nil)
 }
 
 type gochiURLParamExtractor struct {

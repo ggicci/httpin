@@ -67,11 +67,14 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 - [x] Decode a field from multiple sources, e.g. both query and headers, `in:"form=access_token;header=x-api-token"`
 - [x] Register custom type decoders by implementing `httpin.Decoder` interface
 - [x] Compose an input struct by embedding struct fields
-- [x] Builtin directive `required` to tag a field as **required**
+- [x] Builtin directive `required` to tag a field as required
+- [x] Builtin directive `body` to parse HTTP request body as `JSON` or `XML`
 - [x] Register custom directive executors to extend the ability of field resolving, see directive [required](./required.go) as an example and think about implementing your own directives like `trim`, `to_lowercase`, `base58_to_int`, etc.
 - [x] Easily integrating with popular Go web frameworks and packages
 
-## Sample User Defined Input Structs
+## Example (Use http.Handler)
+
+First, set up the middleware for your handlers (**bind Input vs. Handler**). We recommend using [alice](https://github.com/justinas/alice) to chain your HTTP middleware functions.
 
 ```go
 type Authorization struct {
@@ -94,13 +97,7 @@ type ListUsersInput struct {
 	Pagination    // Embedded field works
 	Authorization // Embedded field works
 }
-```
 
-## Integrate with Go Native http.Handler (Use Middleware)
-
-First, set up the middleware for your handlers (**bind Input vs. Handler**). We recommend using [alice](https://github.com/justinas/alice) to chain your HTTP middleware functions.
-
-```go
 func init() {
 	http.Handle("/users", alice.New(
 		httpin.NewInput(ListUsersInput{}),
@@ -118,12 +115,47 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 }
 ```
 
-## Integrate with Popular Go Web Frameworks and Components
+## Integrate with Popular Go Web Frameworks and Packages
 
 - [gin-gonic/gin](https://github.com/ggicci/httpin/wiki/Integrate-with-gin)
 - [go-chi/chi](https://github.com/ggicci/httpin/wiki/Integrate-with-gochi)
 - [gorilla/mux](https://github.com/ggicci/httpin/wiki/Integrate-with-gorilla-mux)
 - ...
+
+## Parse HTTP Request Body
+
+There're two ways of parsing HTTP request body into your input struct.
+
+### Parse HTTP request body into the input struct (body -> input)
+
+Embed one of our _body decoder annotations_ into your input struct:
+
+```go
+// POST /users with JSON body
+type CreateUserInput struct {
+	httpin.JSONBody        // annotation
+	Username        string `json:"username"`
+	Gender          int    `json:"gender"`
+}
+```
+
+- `httpin.JSONBody`: parse request body in JSON format
+- `httpin.XMLBody`: parse request body in XML format
+
+### Parse HTTP request body into a field of the input struct (body -> input.field)
+
+Use `body` directive.
+
+```go
+// PATCH /users/:uid with JSON body
+type UpdateUserProfileInput struct {
+	UserID int64 `in:"path=uid"` // get user id from path variable
+	Patch  struct {
+		Username string `json:"username"`
+		Gender   int    `json:"gender"`
+	} `in:"body=json"` // use body=xml to decode in XML format
+}
+```
 
 ## Advanced
 
@@ -172,7 +204,7 @@ var MyLowercaseDirectiveExecutor = httpin.DirectiveExecutorFunc(toLower)
 Seconds, register it to `httpin`:
 
 ```go
-httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor)
+httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor, nil)
 ```
 
 Finally, you can use your own directives in the struct tags:
