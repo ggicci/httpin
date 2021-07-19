@@ -18,7 +18,7 @@ type GorillaMuxVarsFunc func(*http.Request) map[string]string
 //       UserID `httpin:"path=user_id"`
 //    }
 func UseGorillaMux(executor string, fnVars GorillaMuxVarsFunc) {
-	RegisterDirectiveExecutor(executor, &gorillaMuxVarsExtractor{Vars: fnVars})
+	RegisterDirectiveExecutor(executor, &gorillaMuxVarsExtractor{Vars: fnVars}, nil)
 }
 
 type gorillaMuxVarsExtractor struct {

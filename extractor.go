@@ -7,7 +7,7 @@ import (
 )
 
 func extractFromKVS(ctx *DirectiveContext, kvs map[string][]string, isHeaderKey bool) error {
-	for _, key := range ctx.directive.Argv {
+	for _, key := range ctx.Directive.Argv {
 		if isHeaderKey {
 			key = http.CanonicalHeaderKey(key)
 		}

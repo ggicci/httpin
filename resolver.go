@@ -13,51 +13,23 @@ type fieldResolver struct {
 	Type       reflect.Type
 	Field      reflect.StructField
 	Path       []string
-	Directives []*directive
+	Directives []*Directive
 	Fields     []*fieldResolver
 }
 
-func (r *fieldResolver) isBodyResolverAnnotation() bool {
-	return r.Type == typeJSONBody || r.Type == typeXMLBody
-}
-
-func (r *fieldResolver) isRoot() bool {
-	return r.Field.Name == ""
+func (r *fieldResolver) isBodyDecoderAnnotation() bool {
+	return r.Type == bodyTypeAnnotationJSON || r.Type == bodyTypeAnnotationXML
 }
 
 func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	rv := reflect.New(r.Type)
-
-	// Resolve HTTP request body if necessary.
-	if r.isRoot() {
-		// Check if there's an annotation field.
-		var bodyType reflect.Type
-		for _, field := range r.Fields {
-			if field.isBodyResolverAnnotation() {
-				bodyType = field.Type
-				break
-			}
-		}
-		switch bodyType {
-		case typeJSONBody:
-			if err := decodeJSONBody(req, rv); err != nil {
-				return rv, fmt.Errorf("decode JSON body: %w", err)
-			}
-			return rv, nil
-		case typeXMLBody:
-			if err := decodeXMLBody(req, rv); err != nil {
-				return rv, fmt.Errorf("decode XML body: %w", err)
-			}
-			return rv, nil
-		}
-	}
 
 	// Then execute directives.
 	if len(r.Directives) > 0 {
 		inheritableContext := context.Background()
 		for _, dir := range r.Directives {
 			directiveContext := &DirectiveContext{
-				directive: *dir,
+				Directive: *dir,
 				Request:   req,
 				ValueType: r.Type,
 				Value:     rv,
@@ -83,6 +55,12 @@ func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 			}
 			inheritableContext = directiveContext.Context
 		}
+
+		// When all directives got executed, check context value of "StopRecursion"
+		// to determine whether we should resolve the "children fields" further.
+		if stopRecusrion, ok := inheritableContext.Value(StopRecursion).(bool); ok && stopRecusrion {
+			return rv, nil
+		}
 	}
 
 	if len(r.Fields) > 0 { // struct
@@ -102,11 +80,26 @@ func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 // Which helps resolving fields data from input sources.
 func buildResolverTree(t reflect.Type) (*fieldResolver, error) {
 	root := &fieldResolver{Type: t}
+
+	var typeOfBody reflect.Type
 	for i := 0; i < t.NumField(); i++ {
 		fieldResolver, err := buildFieldResolver(root, t.Field(i))
 		if err != nil {
-			return root, err
+			return nil, err
 		}
+
+		// Check if there's a body decoder annotation field.
+		if fieldResolver.isBodyDecoderAnnotation() {
+			if typeOfBody != nil {
+				return nil, fmt.Errorf("%w: %s", ErrDuplicateAnnotationField, fieldResolver.Field.Name)
+			}
+
+			// Inject a "body" directive to the root.
+			typeOfBody = fieldResolver.Type
+			dir, _ := buildDirective(fmt.Sprintf("body=%s", bodyTypeString(typeOfBody)))
+			root.Directives = []*Directive{dir}
+		}
+
 		root.Fields = append(root.Fields, fieldResolver)
 	}
 
@@ -123,11 +116,11 @@ func buildFieldResolver(parent *fieldResolver, field reflect.StructField) (*fiel
 		Type:       t,
 		Field:      field,
 		Path:       path,
-		Directives: make([]*directive, 0),
+		Directives: make([]*Directive, 0),
 	}
 
 	// Skip parsing struct tags if met body resolver annotation field.
-	if root.isBodyResolverAnnotation() {
+	if root.isBodyDecoderAnnotation() {
 		return root, nil
 	}
 
@@ -162,8 +155,8 @@ func buildFieldResolver(parent *fieldResolver, field reflect.StructField) (*fiel
 //    <direction> := <executor>[=<arg_1>[,<arg_2>...[,<arg_N>]]]
 //
 // For short, use `;` as directions' delimiter, use `,` as arguments' delimiter.
-func parseStructTag(field reflect.StructField) ([]*directive, error) {
-	directives := make([]*directive, 0)
+func parseStructTag(field reflect.StructField) ([]*Directive, error) {
+	directives := make([]*Directive, 0)
 	inTag := field.Tag.Get("in")
 	if inTag == "" {
 		return directives, nil // skip

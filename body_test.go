@@ -1,8 +1,10 @@
 package httpin
 
 import (
+	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -23,19 +25,105 @@ type BodyPayload struct {
 	Languages []*LanguageLevel `json:"languages" xml:"languages"`
 }
 
-type JSONBodyPayload struct {
+type JSONBodyPayloadWithAnnotation struct {
 	JSONBody
 	BodyPayload
 }
 
-type XMLBodyPayload struct {
+type XMLBodyPayloadWithAnnotation struct {
 	XMLBody
 	BodyPayload
 }
 
+type JSONBodyPayloadWithBodyDirective struct {
+	Page     int          `in:"form=page"`
+	PageSize int          `in:"form=page_size"`
+	Body     *BodyPayload `in:"body=json"`
+}
+
+type ThingWithDuplicateAnnotations struct {
+	JSONBody
+	XMLBody
+	Page int `in:"form=page"`
+}
+
+type ThingWithInvalidBodyType struct {
+	Username string `in:"form=username"`
+
+	Patch map[string]interface{} `in:"body=yaml"`
+}
+
+type ThingWithEmptyBodyType struct {
+	Username string `in:"form=username"`
+
+	Patch map[string]interface{} `in:"body"`
+}
+
+func TestAnnotationField(t *testing.T) {
+	Convey("annotate: duplicate annotations", t, func() {
+		resolver, err := buildResolverTree(reflect.TypeOf(ThingWithDuplicateAnnotations{}))
+		So(resolver, ShouldBeNil)
+		So(err, ShouldBeError)
+		So(errors.Is(err, ErrDuplicateAnnotationField), ShouldBeTrue)
+	})
+}
+
+func TestNormalizeBodyDirective(t *testing.T) {
+	Convey("body directive: empty body type defaults to json", t, func() {
+		resolver, err := buildResolverTree(reflect.TypeOf(ThingWithEmptyBodyType{}))
+		So(err, ShouldBeNil)
+		So(resolver.Fields[1].Directives[0].Argv[0], ShouldEqual, "json")
+	})
+
+	Convey("body directive: unknown body type", t, func() {
+		resolver, err := buildResolverTree(reflect.TypeOf(ThingWithInvalidBodyType{}))
+		So(resolver, ShouldBeNil)
+		So(err, ShouldBeError)
+		So(errors.Is(err, ErrUnknownBodyType), ShouldBeTrue)
+	})
+}
+
 func TestJSONBody(t *testing.T) {
-	Convey("json: parse HTTP body in JSON", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(JSONBodyPayload{}))
+	Convey("body: parse HTTP body (in JSON) into a field of the input struct", t, func() {
+		resolver, err := buildResolverTree(reflect.TypeOf(JSONBodyPayloadWithBodyDirective{}))
+		So(err, ShouldBeNil)
+		So(resolver, ShouldNotBeNil)
+		r, _ := http.NewRequest("GET", "https://example.com", nil)
+
+		r.Form = make(url.Values)
+		r.Form.Set("page", "4")
+		r.Form.Set("page_size", "30")
+		r.Body = io.NopCloser(strings.NewReader(`{
+			"name": "Elia",
+			"is_native": false,
+			"age": 14,
+			"hobbies": ["Gaming", "Drawing"],
+			"languages": [
+				{"lang": "English", "level": 10},
+				{"lang": "Japanese", "level": 3}
+			]
+		}`))
+
+		res, err := resolver.resolve(r)
+		So(err, ShouldBeNil)
+		So(res.Interface(), ShouldResemble, &JSONBodyPayloadWithBodyDirective{
+			Page:     4,
+			PageSize: 30,
+			Body: &BodyPayload{
+				Name:     "Elia",
+				Age:      14,
+				IsNative: false,
+				Hobbies:  []string{"Gaming", "Drawing"},
+				Languages: []*LanguageLevel{
+					{"English", 10},
+					{"Japanese", 3},
+				},
+			},
+		})
+	})
+
+	Convey("body: parse HTTP body (in JSON) to the input struct, use annotation", t, func() {
+		resolver, err := buildResolverTree(reflect.TypeOf(JSONBodyPayloadWithAnnotation{}))
 		So(err, ShouldBeNil)
 		So(resolver, ShouldNotBeNil)
 		r, _ := http.NewRequest("GET", "https://example.com", nil)
@@ -52,7 +140,7 @@ func TestJSONBody(t *testing.T) {
 		}`))
 		res, err := resolver.resolve(r)
 		So(err, ShouldBeNil)
-		So(res.Interface(), ShouldResemble, &JSONBodyPayload{
+		So(res.Interface(), ShouldResemble, &JSONBodyPayloadWithAnnotation{
 			BodyPayload: BodyPayload{
 				Name:     "Elia",
 				Age:      14,
@@ -68,8 +156,8 @@ func TestJSONBody(t *testing.T) {
 }
 
 func TestXMLBody(t *testing.T) {
-	Convey("json: parse HTTP body in XML", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(XMLBodyPayload{}))
+	Convey("body: parse HTTP body (in XML) to the input struct, use annotation", t, func() {
+		resolver, err := buildResolverTree(reflect.TypeOf(XMLBodyPayloadWithAnnotation{}))
 		So(err, ShouldBeNil)
 		So(resolver, ShouldNotBeNil)
 		r, _ := http.NewRequest("GET", "https://example.com", nil)
@@ -91,7 +179,7 @@ func TestXMLBody(t *testing.T) {
 	 </BodyPayload>`))
 		res, err := resolver.resolve(r)
 		So(err, ShouldBeNil)
-		So(res.Interface(), ShouldResemble, &XMLBodyPayload{
+		So(res.Interface(), ShouldResemble, &XMLBodyPayloadWithAnnotation{
 			BodyPayload: BodyPayload{
 				Name:     "Elia",
 				Age:      14,
@@ -103,5 +191,27 @@ func TestXMLBody(t *testing.T) {
 				},
 			},
 		})
+	})
+}
+
+func TestBodyDecoderDecodeFailed(t *testing.T) {
+	Convey("body: parse request body in JSON failed", t, func() {
+		resolver, err := buildResolverTree(reflect.TypeOf(JSONBodyPayloadWithAnnotation{}))
+		So(err, ShouldBeNil)
+		So(resolver, ShouldNotBeNil)
+		r, _ := http.NewRequest("GET", "https://example.com", nil)
+
+		r.Body = io.NopCloser(strings.NewReader(`{"name": "Elia"`))
+		_, err = resolver.resolve(r)
+		So(err, ShouldBeError)
+	})
+}
+
+func Test_bodyTypeString(t *testing.T) {
+	Convey("bodyTypeString should panic on unknown body type", t, func() {
+		type yamlBody struct{}
+		So(func() {
+			bodyTypeString(reflect.TypeOf(yamlBody{}))
+		}, ShouldPanic)
 	})
 }

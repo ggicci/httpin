@@ -7,13 +7,15 @@ import (
 )
 
 var (
-	ErrMissingField         = errors.New("missing required field")
-	ErrUnsupporetedType     = errors.New("unsupported type")
-	ErrUnregisteredExecutor = errors.New("unregistered executor")
-	ErrDuplicateTypeDecoder = errors.New("duplicate type decoder")
-	ErrNilTypeDecoder       = errors.New("nil type decoder")
-	ErrDuplicateExecutor    = errors.New("duplicate executor")
-	ErrNilExecutor          = errors.New("nil executor")
+	ErrMissingField             = errors.New("missing required field")
+	ErrUnsupporetedType         = errors.New("unsupported type")
+	ErrUnregisteredExecutor     = errors.New("unregistered executor")
+	ErrDuplicateTypeDecoder     = errors.New("duplicate type decoder")
+	ErrNilTypeDecoder           = errors.New("nil type decoder")
+	ErrDuplicateExecutor        = errors.New("duplicate executor")
+	ErrNilExecutor              = errors.New("nil executor")
+	ErrUnknownBodyType          = errors.New("unknown body type")
+	ErrDuplicateAnnotationField = errors.New("duplicate annotation field")
 )
 
 type UnsupportedTypeError struct {

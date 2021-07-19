@@ -172,7 +172,7 @@ var MyLowercaseDirectiveExecutor = httpin.DirectiveExecutorFunc(toLower)
 Seconds, register it to `httpin`:
 
 ```go
-httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor)
+httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor, nil)
 ```
 
 Finally, you can use your own directives in the struct tags:
