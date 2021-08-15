@@ -86,6 +86,11 @@ type ThingWithUnsupportedCustomTypeOfSliceField struct {
 	IdList []ObjectID `in:"form=id[]"`
 }
 
+type ThingWithUnexportedFields struct {
+	Name    string `in:"form=name"`
+	display string // unexported field
+}
+
 func TestEngine(t *testing.T) {
 	Convey("New engine with non-struct type", t, func() {
 		core, err := New(string("hello"))
@@ -197,6 +202,21 @@ func TestEngine(t *testing.T) {
 			},
 		}
 		core, err := New(ProductQuery{})
+		So(err, ShouldBeNil)
+		got, err := core.Decode(r)
+		So(err, ShouldBeNil)
+		So(got, ShouldResemble, expected)
+	})
+
+	Convey("Unexported fields should be ignored", t, func() {
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{
+			"name": []string{"ggicci"},
+		}
+		expected := &ThingWithUnexportedFields{
+			Name: "ggicci",
+		}
+		core, err := New(ThingWithUnexportedFields{})
 		So(err, ShouldBeNil)
 		got, err := core.Decode(r)
 		So(err, ShouldBeNil)
