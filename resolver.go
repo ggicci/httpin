@@ -65,6 +65,10 @@ func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 
 	if len(r.Fields) > 0 { // struct
 		for i, fr := range r.Fields {
+			if fr.Field.PkgPath != "" {
+				continue // skip unexported field
+			}
+
 			field, err := fr.resolve(req)
 			if err != nil {
 				return rv, err
