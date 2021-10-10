@@ -43,9 +43,9 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ```go
 type ListUsersInput struct {
-	Page     int  `in:"form=page"`
-	PerPage  int  `in:"form=per_page"`
-	IsMember bool `in:"form=is_member"`
+	Page     int  `in:"query=page"`
+	PerPage  int  `in:"query=per_page"`
+	IsMember bool `in:"query=is_member"`
 }
 
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
@@ -60,12 +60,12 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ## Features
 
-- [x] Builtin directive `form` to decode a field from HTTP form values, i.e. `http.Request.Form`
-- [x] Builtin directive `query` to decode a field from HTTP querystring parameters, i.e. `http.Request.URL.Query()`
+- [x] Builtin directive `query` to decode a field from URL querystring parameters, i.e. `http.Request.URL.Query()`
 - [x] Builtin directive `header` to decode a field from HTTP headers, i.e. `http.Request.Header`
-- [x] Builtin decoders used by `form`, `query`, and `header` directives for basic types, e.g. `bool`, `int`, `int64`, `float32`, `time.Time`, ... [full list](./internal/decoders.go)
-- [x] Decode a field by inspecting a set of keys from the same source, e.g. `in:"form=per_page,page_size"`
-- [x] Decode a field from multiple sources, e.g. both form, querystring, and headers, `in:"form=access_token;query=token;header=x-api-token"`
+- [x] Builtin directive `form` to decode a field from HTTP form values, i.e. `http.Request.Form`, which contains the parsed form data, **including both the URL field's query parameters and the PATCH, POST, or PUT form data**, and **Request body parameters take precedence over URL query string values in Request.Form**. So it works as a superset of `query`, please read [#6](https://github.com/ggicci/httpin/pull/6) for more details.
+- [x] Builtin decoders used by `query`, `header` and `form` directives for basic types, e.g. `bool`, `int`, `int64`, `float32`, `time.Time`, ... [full list](./internal/decoders.go)
+- [x] Decode a field by inspecting a set of keys from the same source, e.g. `in:"query=per_page,page_size"`
+- [x] Decode a field from multiple sources, e.g. both form, querystring, and headers, `in:"query=access_token;form=token;header=x-api-token"`
 - [x] Register custom type decoders by implementing `httpin.Decoder` interface
 - [x] Compose an input struct by embedding struct fields
 - [x] Builtin directive `required` to tag a field as required
@@ -80,20 +80,20 @@ First, set up the middleware for your handlers (**bind Input vs. Handler**). We 
 ```go
 type Authorization struct {
 	// Decode from multiple sources, the former with higher priority
-	Token string `in:"form=access_token;header=x-api-token;required"`
+	Token string `in:"query=access_token;header=x-api-token;required"`
 }
 
 type Pagination struct {
-	Page int `in:"form=page"`
+	Page int `in:"query=page"`
 
 	// Decode from multiple keys in the same source, the former with higher priority
-	PerPage int `in:"form=per_page,page_size"`
+	PerPage int `in:"query=per_page,page_size"`
 }
 
 type ListUsersInput struct {
-	Gender   string `in:"form=gender"`
-	AgeRange []int  `in:"form=age_range"`
-	IsMember bool   `in:"form=is_member"`
+	Gender   string `in:"query=gender"`
+	AgeRange []int  `in:"query=age_range"`
+	IsMember bool   `in:"query=is_member"`
 
 	Pagination    // Embedded field works
 	Authorization // Embedded field works
