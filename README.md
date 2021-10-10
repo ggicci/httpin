@@ -60,11 +60,12 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 
 ## Features
 
-- [x] Builtin directive `form` to decode a field from HTTP query (URL params), i.e. `http.Request.Form`
+- [x] Builtin directive `form` to decode a field from HTTP form values, i.e. `http.Request.Form`
+- [x] Builtin directive `query` to decode a field from HTTP querystring parameters, i.e. `http.Request.URL.Query()`
 - [x] Builtin directive `header` to decode a field from HTTP headers, i.e. `http.Request.Header`
-- [x] Builtin decoders used by `form` and `header` directives for basic types, e.g. `bool`, `int`, `int64`, `float32`, `time.Time`, ... [full list](./internal/decoders.go)
+- [x] Builtin decoders used by `form`, `query`, and `header` directives for basic types, e.g. `bool`, `int`, `int64`, `float32`, `time.Time`, ... [full list](./internal/decoders.go)
 - [x] Decode a field by inspecting a set of keys from the same source, e.g. `in:"form=per_page,page_size"`
-- [x] Decode a field from multiple sources, e.g. both query and headers, `in:"form=access_token;header=x-api-token"`
+- [x] Decode a field from multiple sources, e.g. both form, querystring, and headers, `in:"form=access_token;query=token;header=x-api-token"`
 - [x] Register custom type decoders by implementing `httpin.Decoder` interface
 - [x] Compose an input struct by embedding struct fields
 - [x] Builtin directive `required` to tag a field as required

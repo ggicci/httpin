@@ -19,6 +19,7 @@ func init() {
 
 	// Built-in Directives
 	RegisterDirectiveExecutor("form", DirectiveExecutorFunc(formValueExtractor), nil)
+	RegisterDirectiveExecutor("query", DirectiveExecutorFunc(queryValueExtractor), nil)
 	RegisterDirectiveExecutor("header", DirectiveExecutorFunc(headerValueExtractor), nil)
 	RegisterDirectiveExecutor(
 		"body",
