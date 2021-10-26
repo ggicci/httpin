@@ -1,0 +1,34 @@
+---
+sidebar_position: 1
+---
+
+import InputOutputTable from "../../src/components/InputOutputTable"
+import data from "./data/query"
+
+# query
+
+**query** is a [directive](/advanced/concepts#directives) who decodes a field from URL querystring parameters, i.e. [`http.Request.URL.Query()`](https://pkg.go.dev/net/url#URL.Query).
+
+## Definition
+
+```yaml
+Name: "query"
+Args: KEY1 [,KEY2 [,KEY3, ...]]
+```
+
+**query** will examine values of the keys one by one (KEY1 -> KEY2 -> ...), the **first non-empty** value will be used to set the corresponding field of the input struct.
+
+## Usage
+
+```go
+type ListUsersInput struct {
+	IsMember bool  `in:"query=is_member"`
+	AgeRange []int `in:"query=age_range[],age_range`
+}
+```
+
+<InputOutputTable
+  inputTitle={data.inputOutput.inputTitle}
+  outputTitle={data.inputOutput.outputTitle}
+  rows={data.inputOutput.rows}
+></InputOutputTable>

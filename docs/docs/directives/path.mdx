@@ -1,0 +1,35 @@
+---
+sidebar_position: 5
+---
+
+# path
+
+**path** is a [directive](/advanced/concepts#directives) who decodes a field from the path of the request URI, aka. path variables.
+
+:::danger
+
+**httpin** doesn't provide a builtin **path** directive, because **httpin** doesn't provide routing functionality.
+But **httpin** can be easily integrated with other packages that provide routing functionality, to decode path variables.
+
+:::
+
+You can quickly implement a **path** directive with the following code (routing package specific):
+
+- go-chi/chi
+
+```go
+httpin.UseGochiURLParam("path", chi.URLParam)
+```
+
+- gorilla/mux
+
+```go
+httpin.UseGorillaMux("path", mux.Vars)
+```
+
+You could visit the pages under the **Integrations** section in the sidebar to find more details on how to integrate **httpin** with other packages.
+
+If you can't find the package you wanted in the list, you could either open an issue on the [**Github**](https://github.com/ggicci/httpin/issues)
+or visit [custom 🔌](/directives/custom) to learn to implement a "path" directive of your own.
+
+We also hope that you can make contributions to the **httpin** project to make it great! Thanks in advance ❤️

@@ -71,6 +71,6 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 | Code Readability     | 😟 Poor                                    | **Highly readable**                                                                            |
 | Maintainability      | 😡 Poor                                    | 😍 **Highly maintainable**                                                                     |
 
-## ⭕ Example Project
+## 🌟 Example Project
 
-You could visit https://github.com/ggicci/httpin-example/blob/main/main.go for a more detailed example.
+You could visit https://github.com/ggicci/httpin-example/blob/main/main.go for the complete code.

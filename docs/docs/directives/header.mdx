@@ -1,0 +1,39 @@
+---
+sidebar_position: 2
+---
+
+import InputOutputTable from "../../src/components/InputOutputTable"
+import data from "./data/header"
+
+# header
+
+**header** is a [directive](/advanced/concepts#directives) who decodes a field from HTTP headers, i.e. [`http.Request.Header`](https://pkg.go.dev/net/http#Header).
+
+## Definition
+
+```yaml
+Name: "header"
+Args: KEY1 [,KEY2 [,KEY3, ...]]
+```
+
+**header** will examine values of the keys one by one (KEY1 -> KEY2 -> ...), the **first non-empty** value will be used to set the corresponding field of the input struct.
+
+:::caution
+
+The keys will be normalized, see [`CanonicalHeaderKey`](https://pkg.go.dev/net/http#CanonicalHeaderKey), e.g. the header key of `Content-Type` and `content-type` are the same, which works like case-insensitive.
+
+:::
+
+## Usage
+
+```go
+type TokenInput struct {
+	Token string `in:"header=x-api-token,Authorization"`
+}
+```
+
+<InputOutputTable
+  inputTitle={data.inputOutput.inputTitle}
+  outputTitle={data.inputOutput.outputTitle}
+  rows={data.inputOutput.rows}
+></InputOutputTable>

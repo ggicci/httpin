@@ -1,0 +1,33 @@
+---
+sidebar_position: 6
+---
+
+import InputOutputTable from "../../src/components/InputOutputTable"
+import data from "./data/required"
+
+# required
+
+**required** is a [directive](/advanced/concepts#directives) who tags a field as required.
+
+## Definition
+
+```yaml
+Name: "required"
+Args: (no args)
+```
+
+**required** always works as an accompany with some other directives, it checks if the field were set by the former directives. When the field were not set by the former directives, an error [ErrMissingField](https://github.com/ggicci/httpin/blob/470f5bc720a91a64cb4355e77398bd582e87c3ba/errors.go#L10) will occur.
+
+## Usage
+
+```go
+type TokenInput struct {
+	Token string `in:"query=access_token;required"`
+}
+```
+
+<InputOutputTable
+  inputTitle={data.inputOutput.inputTitle}
+  outputTitle={data.inputOutput.outputTitle}
+  rows={data.inputOutput.rows}
+></InputOutputTable>

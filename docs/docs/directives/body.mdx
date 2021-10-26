@@ -1,0 +1,74 @@
+---
+sidebar_position: 4
+---
+
+import InputOutputTable from "../../src/components/InputOutputTable"
+import data from "./data/body"
+
+# body
+
+**body** is a [directive](/advanced/concepts#directives) who decodes a field from the body of the request, i.e. [`http.Request.Body`](https://pkg.go.dev/net/http#Request), **JSON** and **XML** formats are supported.
+
+## Definition
+
+```yaml
+Name: "body"
+Args: BODY_TYPE
+```
+
+**body** will read the content of the request body and parses it as `BODY_TYPE` into the corresponding field of the struct. Supported BODY_TYPE are:
+
+- **json**: parses the body as an JSON object
+- **xml**: parses the body as an XML object
+
+If BODY_TYPE were not specified, `json` will be used.
+
+## Usage
+
+```go
+type User struct {
+	Login  string `json:"login"`
+	Gender string `json:"gender"`
+}
+
+type CreateUserInput struct {
+	Payload *User `in:"body=json"` // use "body=xml" for XML formatted body
+}
+```
+
+<InputOutputTable
+  inputTitle={data.inputOutput.inputTitle}
+  outputTitle={data.inputOutput.outputTitle}
+  rows={data.inputOutput.rows}
+></InputOutputTable>
+
+## Body Annotations
+
+There're two _body decoder annotations_ that can be used to read the body of the request:
+
+- `httpin.JSONBody`: parses the body as an JSON object
+- `httpin.XMLBody`: parses the body as an XML object
+
+You can embed one of them into your struct like the following:
+
+```go
+type CreateUserInput struct {
+	httpin.JSONBody
+	Login  string `json:"login"`
+	Gender string `json:"gender"`
+}
+```
+
+or
+
+```go
+type User struct {
+	Login  string `json:"login"`
+	Gender string `json:"gender"`
+}
+
+type CreateUserInput struct {
+	httpin.JSONBody
+	*User
+}
+```

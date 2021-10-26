@@ -1,0 +1,56 @@
+---
+sidebar_position: 3
+---
+
+import InputOutputTable from "../../src/components/InputOutputTable"
+import data from "./data/form"
+
+# form
+
+**form** is a [directive](/advanced/concepts#directives) who decodes a field from HTTP form data, i.e. [`http.Request.Form`](https://pkg.go.dev/net/http#Request).
+
+## Definition
+
+```yaml
+Name: "form"
+Args: KEY1 [,KEY2 [,KEY3, ...]]
+```
+
+**form** will examine values of the keys one by one (KEY1 -> KEY2 -> ...), the **first non-empty** value will be used to set the corresponding field of the input struct.
+
+:::caution
+
+In most cases, the `form` directive just works like [`query`](/directives/query). Because it also visit data from the URL querystring.
+But if the form data sent by the client was of [`application/x-www-form-urlencoded`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST) content type, `form` will visit the form data first,
+and then visit the URL querystring.
+
+For more details, please refer to [GH-5 add a query directive to pull values from querystring params #6](https://github.com/ggicci/httpin/pull/6#issuecomment-939273364) and the following quotes.
+
+:::
+
+From the Go documentation:
+
+> Form contains the parsed form data, including both the URL field's query parameters and the PATCH, POST, or PUT form data.
+> This field is only available after ParseForm is called.
+
+And for [`http.Request.ParseForm`](https://pkg.go.dev/net/http#Request.ParseForm), it is:
+
+> ParseForm populates r.Form and r.PostForm.
+> For all requests, ParseForm parses the raw query from the URL and updates r.Form.
+> For POST, PUT, and PATCH requests, it also reads the request body, parses it as a form and puts the results into both r.PostForm and r.Form.
+> Request body parameters take precedence over URL query string values in r.Form.
+
+## Usage
+
+```go
+type Profile struct {
+	Role     string `in:"form=role"`
+	Hireable bool   `in:"form=hireable"`
+}
+```
+
+<InputOutputTable
+  inputTitle={data.inputOutput.inputTitle}
+  outputTitle={data.inputOutput.outputTitle}
+  rows={data.inputOutput.rows}
+></InputOutputTable>
