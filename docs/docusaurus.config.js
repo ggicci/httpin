@@ -1,8 +1,8 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const lightCodeTheme = require("prism-react-renderer/themes/github");
-const darkCodeTheme = require("prism-react-renderer/themes/dracula");
+const lightCodeTheme = require("prism-react-renderer/themes/github")
+const darkCodeTheme = require("prism-react-renderer/themes/dracula")
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -16,6 +16,7 @@ const config = {
   organizationName: "ggicci", // Usually your GitHub org/user name.
   projectName: "httpin", // Usually your repo name.
   trailingSlash: false,
+  scripts: [],
 
   presets: [
     [
@@ -39,6 +40,7 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
+        hideOnScroll: false,
         title: "httpin",
         logo: {
           alt: "site logo",
@@ -46,9 +48,16 @@ const config = {
         },
         items: [
           {
-            href: "https://github.com/ggicci/httpin",
-            label: "GitHub",
+            href: "https://www.buymeacoffee.com/ggicci",
             position: "right",
+            className: "header-bmc-link",
+            "aria-label": "Buy me a coffee",
+          },
+          {
+            href: "https://github.com/ggicci/httpin",
+            position: "right",
+            className: "header-github-link",
+            "aria-label": "Github repository",
           },
         ],
       },
@@ -61,6 +70,6 @@ const config = {
         darkTheme: darkCodeTheme,
       },
     }),
-};
+}
 
-module.exports = config;
+module.exports = config
