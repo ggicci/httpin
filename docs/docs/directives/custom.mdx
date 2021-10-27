@@ -4,4 +4,45 @@ sidebar_position: 100
 
 # custom 🔌
 
-TODO(@ggicci)
+You can extend **httpin** by adding your custom directives.
+
+Firstly you should understand the concepts of [**Directive**](/advanced/concepts#directive) and [**Directive Executor**](/advanced/concepts#directive-executor).
+
+To add your custom directive, you need to:
+
+## 1. Create a Directive Executor
+
+by implementing the [`httpin.DirectiveExecutor`](https://pkg.go.dev/github.com/ggicci/httpin#DirectiveExecutor) interface:
+
+```go {13}
+func toLower(ctx *DirectiveContext) error {
+	if ctx.ValueType.Kind() != reflect.String {
+		return errors.New("not a string")
+	}
+
+	currentValue := ctx.Value.Elem().String()
+	newValue := strings.ToLower(currentValue)
+	ctx.Value.Elem().SetString(newValue)
+	return nil
+}
+
+// Adapt to the httpin.DirectiveExecutor interface.
+var MyLowercaseDirectiveExecutor = httpin.DirectiveExecutorFunc(toLower)
+```
+
+## 2. Register your Directive to httpin
+
+by calling [`httpin.RegisterDirectiveExecutor`](https://pkg.go.dev/github.com/ggicci/httpin#RegisterDirectiveExecutor):
+
+```go
+httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor, nil)
+```
+
+## 3. Use your Directive
+
+```go {2}
+type LoginFormInput struct {
+	Login string `in:"form=login;required;to_lowercase"`
+	Pass  string `in:"form=login;required"`
+}
+```
