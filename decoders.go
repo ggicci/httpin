@@ -28,7 +28,7 @@ func RegisterTypeDecoder(typ reflect.Type, decoder TypeDecoder) {
 // ReplaceTypeDecoder replaces a specific type decoder.
 func ReplaceTypeDecoder(typ reflect.Type, decoder TypeDecoder) {
 	if decoder == nil {
-		panic(fmt.Errorf("%w: %q", typ, ErrNilTypeDecoder))
+		panic(fmt.Errorf("%q: %w", typ, ErrNilTypeDecoder))
 	}
 	decoders[typ] = decoder
 }
