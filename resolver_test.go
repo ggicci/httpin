@@ -35,3 +35,13 @@ func TestFieldResolver(t *testing.T) {
 		t.Logf("ProductQuery: %s\n", bs)
 	})
 }
+
+func TestResolverWithMissingRequiredField(t *testing.T) {
+	Convey("A resolver with a missing required field", t, func() {
+		resolver, err := buildResolverTree(reflect.TypeOf(ProductQuery{}))
+		r, _ := http.NewRequest("GET", "https://example.com", nil)
+		_, err = resolver.resolve(r)
+		So(err, ShouldNotBeNil)
+		So(err.Error(), ShouldEqual,"invalid field \"created_at\": missing required field")
+	})
+}
