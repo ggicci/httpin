@@ -46,7 +46,7 @@ func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 				}
 
 				return rv, &InvalidFieldError{
-					Field:         r.Field.Name,
+					Field:         r.fieldKeys(),
 					Source:        dir.Executor,
 					Value:         gotValue,
 					ErrorMessage:  err.Error(),
@@ -78,6 +78,25 @@ func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	}
 
 	return rv, nil
+}
+
+func (r *fieldResolver) fieldKeys() string {
+	if len(r.Directives) == 0 {
+		return ""
+	}
+
+	if len(r.Directives) <= 1 {
+		return strings.Join(r.Directives[0].Argv, "|")
+	}
+
+	keys := make([]string, 0)
+	for _, d := range r.Directives {
+		for _, a := range d.Argv {
+			keys = append(keys, fmt.Sprintf("%s:%s", d.Executor, a))
+		}
+	}
+
+	return strings.Join(keys, "|")
 }
 
 // buildResolverTree builds a tree of resolvers for the specified struct type.

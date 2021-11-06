@@ -42,6 +42,6 @@ func TestResolverWithMissingRequiredField(t *testing.T) {
 		r, _ := http.NewRequest("GET", "https://example.com", nil)
 		_, err = resolver.resolve(r)
 		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldEqual,"invalid field \"created_at\": missing required field")
+		So(err.Error(), ShouldEqual,"invalid field \"form:created_at\": missing required field")
 	})
 }
