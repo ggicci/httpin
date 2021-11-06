@@ -332,7 +332,7 @@ func TestEngine(t *testing.T) {
 		So(err, ShouldBeError)
 		var invalidField *InvalidFieldError
 		So(errors.As(err, &invalidField), ShouldBeTrue)
-		So(invalidField.Field, ShouldEqual, "IsSoldout")
+		So(invalidField.Field, ShouldEqual, "is_soldout")
 		So(invalidField.Source, ShouldEqual, "form")
 		So(invalidField.Value, ShouldEqual, "zero")
 	})
@@ -348,7 +348,7 @@ func TestEngine(t *testing.T) {
 		_, err = core.Decode(r)
 		var invalidField *InvalidFieldError
 		So(errors.As(err, &invalidField), ShouldBeTrue)
-		So(invalidField.Field, ShouldEqual, "SortDesc")
+		So(invalidField.Field, ShouldEqual, "sort_desc")
 		So(invalidField.Source, ShouldEqual, "form")
 		So(invalidField.Value, ShouldResemble, []string{"true", "zero", "0"})
 		So(err.Error(), ShouldContainSubstring, "at index 1")

@@ -59,7 +59,7 @@ func TestChain(t *testing.T) {
 		So(rw.Code, ShouldEqual, 400)
 		var out map[string]interface{}
 		So(json.NewDecoder(rw.Body).Decode(&out), ShouldBeNil)
-		So(out["field"], ShouldEqual, "Token")
+		So(out["field"], ShouldEqual, "form:access_token|header:x-api-key")
 		So(out["source"], ShouldEqual, "required")
 		So(out["error"], ShouldEqual, ErrMissingField.Error())
 	})
