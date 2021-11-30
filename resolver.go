@@ -49,8 +49,9 @@ func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 					Field:         r.Field.Name,
 					Source:        dir.Executor,
 					Value:         gotValue,
-					ErrorMessage:  err.Error(),
 					internalError: err,
+					ErrorMessage:  err.Error(),
+					Directives:    r.Directives,
 				}
 			}
 			inheritableContext = directiveContext.Context

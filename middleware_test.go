@@ -2,6 +2,8 @@ package httpin
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,7 +23,17 @@ func EchoHandler(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(input)
 }
 
-func TestChain(t *testing.T) {
+func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
+	var invalidFieldError *InvalidFieldError
+	if errors.As(err, &invalidFieldError) {
+		rw.WriteHeader(http.StatusBadRequest) // status: 400
+		io.WriteString(rw, invalidFieldError.Error())
+		return
+	}
+	http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError) // status: 500
+}
+
+func TestMiddleware(t *testing.T) {
 	Convey("Should panic on invalid input", t, func() {
 		So(func() { NewInput(nil) }, ShouldPanic)
 	})
@@ -43,7 +55,25 @@ func TestChain(t *testing.T) {
 		So(rw.Body.String(), ShouldEqual, expected)
 	})
 
-	Convey("Decode request failed", t, func() {
+	Convey("Decode request failed with default error handler", t, func() {
+		r, err := http.NewRequest("GET", "/", nil)
+		So(err, ShouldBeNil)
+
+		var params = url.Values{}
+		params.Add("saying", "TO THINE OWE SELF BE TRUE")
+		r.URL.RawQuery = params.Encode()
+
+		rw := httptest.NewRecorder()
+		handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
+		handler.ServeHTTP(rw, r)
+		var out map[string]interface{}
+		So(json.NewDecoder(rw.Body).Decode(&out), ShouldBeNil)
+		So(out["field"], ShouldEqual, "Token")
+		So(out["source"], ShouldEqual, "required")
+		So(out["error"], ShouldEqual, ErrMissingField.Error())
+	})
+
+	Convey("Decode request failed with custom error handler", t, func() {
 		r, err := http.NewRequest("GET", "/", nil)
 		So(err, ShouldBeNil)
 
@@ -53,14 +83,10 @@ func TestChain(t *testing.T) {
 
 		rw := httptest.NewRecorder()
 		handler := alice.New(
-			NewInput(EchoInput{}, WithErrorStatusCode(400)),
+			NewInput(EchoInput{}, WithErrorHandler(CustomErrorHandler)),
 		).ThenFunc(EchoHandler)
 		handler.ServeHTTP(rw, r)
 		So(rw.Code, ShouldEqual, 400)
-		var out map[string]interface{}
-		So(json.NewDecoder(rw.Body).Decode(&out), ShouldBeNil)
-		So(out["field"], ShouldEqual, "Token")
-		So(out["source"], ShouldEqual, "required")
-		So(out["error"], ShouldEqual, ErrMissingField.Error())
+		So(rw.Body.String(), ShouldContainSubstring, `invalid field "Token":`)
 	})
 }

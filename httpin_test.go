@@ -117,7 +117,7 @@ func TestEngine(t *testing.T) {
 		So(err, ShouldBeNil)
 		core3, err := New(&ProductQuery{})
 		So(err, ShouldBeNil)
-		core4, err := New(&ProductQuery{}, WithErrorStatusCode(400))
+		core4, err := New(&ProductQuery{}, WithErrorHandler(CustomErrorHandler))
 		So(err, ShouldBeNil)
 		So(core1.tree, ShouldPointTo, core2.tree)
 		So(core2.tree, ShouldPointTo, core3.tree)

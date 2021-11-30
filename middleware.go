@@ -7,11 +7,14 @@ import (
 	"net/http"
 )
 
+type middleware = func(http.Handler) http.Handler
+type ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error)
+
 // NewInput creates a "Middleware Constructor" for making a chain, which acts as
 // a list of http.Handler constructors. We recommend using
 // https://github.com/justinas/alice to chain your HTTP middleware functions and
 // the app handler.
-func NewInput(inputStruct interface{}, opts ...option) func(http.Handler) http.Handler {
+func NewInput(inputStruct interface{}, opts ...Option) middleware {
 	engine, err := New(inputStruct, opts...)
 	if err != nil {
 		panic(err)
@@ -23,16 +26,7 @@ func NewInput(inputStruct interface{}, opts ...option) func(http.Handler) http.H
 			// Once failed, the request should end here.
 			input, err := engine.Decode(r)
 			if err != nil {
-				var invalidFieldError *InvalidFieldError
-				if errors.As(err, &invalidFieldError) {
-					rw.Header().Add("Content-Type", "application/json")
-					// Tweak this by applying option `httpin.WithErrorStatusCode` to `http.New` or `http.NewInput`.
-					rw.WriteHeader(engine.errorStatusCode)
-					json.NewEncoder(rw).Encode(invalidFieldError)
-					return
-				}
-
-				http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				engine.errorHandler(rw, r, err)
 				return
 			}
 
@@ -41,4 +35,16 @@ func NewInput(inputStruct interface{}, opts ...option) func(http.Handler) http.H
 			next.ServeHTTP(rw, r.WithContext(ctx))
 		})
 	}
+}
+
+func defaultErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
+	var invalidFieldError *InvalidFieldError
+	if errors.As(err, &invalidFieldError) {
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusUnprocessableEntity) // status: 422
+		json.NewEncoder(rw).Encode(invalidFieldError)
+		return
+	}
+
+	http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError) // status: 500
 }
