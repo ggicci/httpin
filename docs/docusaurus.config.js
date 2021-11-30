@@ -36,6 +36,8 @@ const config = {
     ],
   ],
 
+  plugins: ["@docusaurus/plugin-google-gtag"],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -68,6 +70,10 @@ const config = {
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
+      },
+      gtag: {
+        trackingID: "G-C93QME0ETP",
+        anonymizeIP: true,
       },
     }),
 }
