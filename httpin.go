@@ -64,10 +64,8 @@ func New(inputStruct interface{}, opts ...Option) (*Engine, error) {
 
 	// Apply default options and user custom options to the engine.
 	var allOptions []Option
-	defaultOptions := []Option{
-		WithErrorHandler(defaultErrorHandler),
-	}
-	allOptions = append(allOptions, defaultOptions...)
+	// defaultOptions := []Option{}
+	// allOptions = append(allOptions, defaultOptions...)
 	allOptions = append(allOptions, opts...)
 
 	for _, opt := range allOptions {
@@ -103,4 +101,12 @@ func (e *Engine) build() error {
 	}
 	e.tree = tree
 	return nil
+}
+
+func (e *Engine) getErrorHandler() ErrorHandler {
+	if e.errorHandler != nil {
+		return e.errorHandler
+	}
+
+	return globalCustomErrorHandler
 }

@@ -3,12 +3,12 @@ package httpin
 type Option func(*Engine) error
 
 // WithErrorHandler overrides the default error handler.
-func WithErrorHandler(h ErrorHandler) Option {
+func WithErrorHandler(custom ErrorHandler) Option {
 	return func(c *Engine) error {
-		if h == nil {
+		if custom == nil {
 			return ErrNilErrorHandler
 		}
-		c.errorHandler = h
+		c.errorHandler = custom
 		return nil
 	}
 }

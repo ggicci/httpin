@@ -90,3 +90,25 @@ func TestMiddleware(t *testing.T) {
 		So(rw.Body.String(), ShouldContainSubstring, `invalid field "Token":`)
 	})
 }
+
+func TestReplaceDefaultErrorHandler(t *testing.T) {
+	Convey("Given a nil handler should panic", t, func() {
+		So(func() { ReplaceDefaultErrorHandler(nil) }, ShouldPanic)
+	})
+
+	Convey("Replace default error handler globally", t, func() {
+		r, err := http.NewRequest("GET", "/", nil)
+		So(err, ShouldBeNil)
+
+		var params = url.Values{}
+		params.Add("saying", "TO THINE OWE SELF BE TRUE")
+		r.URL.RawQuery = params.Encode()
+		rw := httptest.NewRecorder()
+		handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
+		// NOTE: replace global error handler after NewInput should work
+		ReplaceDefaultErrorHandler(CustomErrorHandler)
+
+		handler.ServeHTTP(rw, r)
+		So(rw.Code, ShouldEqual, 400)
+	})
+}

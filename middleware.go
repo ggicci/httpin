@@ -4,7 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+)
+
+var (
+	globalCustomErrorHandler ErrorHandler = defaultErrorHandler
 )
 
 type middleware = func(http.Handler) http.Handler
@@ -26,7 +31,7 @@ func NewInput(inputStruct interface{}, opts ...Option) middleware {
 			// Once failed, the request should end here.
 			input, err := engine.Decode(r)
 			if err != nil {
-				engine.errorHandler(rw, r, err)
+				engine.getErrorHandler()(rw, r, err)
 				return
 			}
 
@@ -35,6 +40,13 @@ func NewInput(inputStruct interface{}, opts ...Option) middleware {
 			next.ServeHTTP(rw, r.WithContext(ctx))
 		})
 	}
+}
+
+func ReplaceDefaultErrorHandler(custom ErrorHandler) {
+	if custom == nil {
+		panic(fmt.Errorf("httpin: %v", ErrNilErrorHandler))
+	}
+	globalCustomErrorHandler = custom
 }
 
 func defaultErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
