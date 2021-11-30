@@ -1,12 +1,14 @@
 package httpin
 
-type option func(*Engine)
+type Option func(*Engine) error
 
-// WithErrorStatusCode configures the HTTP status code sent to the client when
-// decoding a request failed. Which is used in the `NewInput` middleware.
-// The default value is 422.
-func WithErrorStatusCode(code int) option {
-	return func(c *Engine) {
-		c.errorStatusCode = code
+// WithErrorHandler overrides the default error handler.
+func WithErrorHandler(h ErrorHandler) Option {
+	return func(c *Engine) error {
+		if h == nil {
+			return ErrNilErrorHandler
+		}
+		c.errorHandler = h
+		return nil
 	}
 }

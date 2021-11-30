@@ -30,11 +30,11 @@ type Engine struct {
 	tree      *fieldResolver
 
 	// options
-	errorStatusCode int
+	errorHandler ErrorHandler
 }
 
 // New builds an HTTP request decoder for the specified struct type with custom options.
-func New(inputStruct interface{}, opts ...option) (*Engine, error) {
+func New(inputStruct interface{}, opts ...Option) (*Engine, error) {
 	typ := reflect.TypeOf(inputStruct) // retrieve type information
 	if typ == nil {
 		return nil, fmt.Errorf("httpin: nil input type")
@@ -52,10 +52,7 @@ func New(inputStruct interface{}, opts ...option) (*Engine, error) {
 	builtEngine, built := builtEngines.Load(typ)
 	if !built {
 		// Build the engine core if not built yet.
-		core = &Engine{
-			inputType:       typ,
-			errorStatusCode: 422,
-		}
+		core = &Engine{inputType: typ}
 		if err := core.build(); err != nil {
 			return nil, fmt.Errorf("httpin: %w", err)
 		}
@@ -66,15 +63,17 @@ func New(inputStruct interface{}, opts ...option) (*Engine, error) {
 	}
 
 	// Apply default options and user custom options to the engine.
-	var allOptions []option
-	defaultOptions := []option{
-		WithErrorStatusCode(422),
+	var allOptions []Option
+	defaultOptions := []Option{
+		WithErrorHandler(defaultErrorHandler),
 	}
 	allOptions = append(allOptions, defaultOptions...)
 	allOptions = append(allOptions, opts...)
 
 	for _, opt := range allOptions {
-		opt(core)
+		if err := opt(core); err != nil {
+			return nil, fmt.Errorf("httpin: invalid option: %w", err)
+		}
 	}
 
 	return core, nil

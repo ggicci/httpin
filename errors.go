@@ -16,6 +16,7 @@ var (
 	ErrNilExecutor              = errors.New("nil executor")
 	ErrUnknownBodyType          = errors.New("unknown body type")
 	ErrDuplicateAnnotationField = errors.New("duplicate annotation field")
+	ErrNilErrorHandler          = errors.New("nil error handler")
 )
 
 type UnsupportedTypeError struct {
@@ -42,8 +43,13 @@ type InvalidFieldError struct {
 	Value interface{} `json:"value"`
 
 	// internalError is the underlying error thrown by the directive executor.
-	internalError error  `json:"-"`
-	ErrorMessage  string `json:"error"`
+	internalError error
+
+	// ErrorMessage is the string representation of `internalError`.
+	ErrorMessage string `json:"error"`
+
+	// directives is the list of directives bound to the field.
+	Directives []*Directive `json:"-"`
 }
 
 func (f *InvalidFieldError) Error() string {
