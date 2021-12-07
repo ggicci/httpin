@@ -2,7 +2,10 @@
 
 package httpin
 
-import "net/http"
+import (
+	"mime/multipart"
+	"net/http"
+)
 
 // GorillaMuxVarsFunc is mux.Vars
 type GorillaMuxVarsFunc func(*http.Request) map[string]string
@@ -31,5 +34,10 @@ func (mux *gorillaMuxVarsExtractor) Execute(ctx *DirectiveContext) error {
 		kvs[key] = []string{value}
 	}
 
-	return extractFromKVS(ctx, kvs, false)
+	extractor := &Extractor{
+		Form: multipart.Form{
+			Value: kvs,
+		},
+	}
+	return extractor.Execute(ctx)
 }

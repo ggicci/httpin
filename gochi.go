@@ -2,7 +2,10 @@
 
 package httpin
 
-import "net/http"
+import (
+	"mime/multipart"
+	"net/http"
+)
 
 // GochiURLParamFunc is chi.URLParam
 type GochiURLParamFunc func(r *http.Request, key string) string
@@ -25,5 +28,10 @@ func (chi *gochiURLParamExtractor) Execute(ctx *DirectiveContext) error {
 		}
 	}
 
-	return extractFromKVS(ctx, kvs, false)
+	extractor := &Extractor{
+		Form: multipart.Form{
+			Value: kvs,
+		},
+	}
+	return extractor.Execute(ctx)
 }

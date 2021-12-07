@@ -2,6 +2,7 @@ package httpin
 
 import (
 	"fmt"
+	"mime"
 	"net/http"
 	"reflect"
 	"sync"
@@ -10,11 +11,16 @@ import (
 type ContextKey int
 
 const (
-	Input ContextKey = iota // the primary key to get the input object in the context injected by httpin
+	defaultMaxMemory = 32 << 20 // 32 MB
+
+	// Input is the key to get the input object from Request.Context() injected by httpin. e.g.
+	//
+	//     input := r.Context().Value(httpin.Input).(*InputStruct)
+	Input ContextKey = iota
 
 	// Set this context value to true to indicate that the field has been set.
 	// When multiple executors were applied to a field, if the field value were set by
-	// an executor, the latter executors may skip running by consulting this context value.
+	// an executor, the latter executors MAY skip running by consulting this context value.
 	FieldSet
 
 	StopRecursion
@@ -31,6 +37,7 @@ type Engine struct {
 
 	// options
 	errorHandler ErrorHandler
+	maxMemory    int64 // in bytes
 }
 
 // New builds an HTTP request decoder for the specified struct type with custom options.
@@ -64,8 +71,10 @@ func New(inputStruct interface{}, opts ...Option) (*Engine, error) {
 
 	// Apply default options and user custom options to the engine.
 	var allOptions []Option
-	// defaultOptions := []Option{}
-	// allOptions = append(allOptions, defaultOptions...)
+	defaultOptions := []Option{
+		WithMaxMemory(defaultMaxMemory),
+	}
+	allOptions = append(allOptions, defaultOptions...)
 	allOptions = append(allOptions, opts...)
 
 	for _, opt := range allOptions {
@@ -79,7 +88,15 @@ func New(inputStruct interface{}, opts ...Option) (*Engine, error) {
 
 // Decode decodes an HTTP request to a struct instance.
 func (e *Engine) Decode(req *http.Request) (interface{}, error) {
-	if err := req.ParseForm(); err != nil {
+	var err error
+	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
+	if ct == "multipart/form-data" {
+		err = req.ParseMultipartForm(e.maxMemory)
+	} else {
+		err = req.ParseForm()
+	}
+
+	if err != nil {
 		return nil, err
 	}
 	rv, err := e.tree.resolve(req)

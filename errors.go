@@ -12,11 +12,14 @@ var (
 	ErrUnregisteredExecutor     = errors.New("unregistered executor")
 	ErrDuplicateTypeDecoder     = errors.New("duplicate type decoder")
 	ErrNilTypeDecoder           = errors.New("nil type decoder")
+	ErrInvalidTypeDecoder       = errors.New("invalid type decoder")
 	ErrDuplicateExecutor        = errors.New("duplicate executor")
 	ErrNilExecutor              = errors.New("nil executor")
 	ErrUnknownBodyType          = errors.New("unknown body type")
 	ErrDuplicateAnnotationField = errors.New("duplicate annotation field")
 	ErrNilErrorHandler          = errors.New("nil error handler")
+	ErrInvalidMaxMemory         = errors.New("invalid max memory, must be positive")
+	ErrNilFile                  = errors.New("nil file")
 )
 
 type UnsupportedTypeError struct {
