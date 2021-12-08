@@ -13,22 +13,22 @@ func init() {
 type File struct {
 	multipart.File
 	Header *multipart.FileHeader
+	Valid  bool
 }
 
-func DecodeFile(meta *multipart.FileHeader) (interface{}, error) {
-	if meta == nil {
-		return nil, ErrNilFile
+func DecodeFile(fileHeader *multipart.FileHeader) (interface{}, error) {
+	var inFile File
+	if fileHeader == nil {
+		return inFile, ErrNilFile
 	}
 
-	file, err := meta.Open()
+	inFile.Header = fileHeader
+	file, err := fileHeader.Open()
 	if err != nil {
-		return nil, fmt.Errorf("open file: %w", err)
+		return inFile, fmt.Errorf("open file: %w", err)
 	}
 
-	inFile := File{
-		File:   file,
-		Header: meta,
-	}
-
+	inFile.File = file
+	inFile.Valid = true
 	return inFile, nil
 }
