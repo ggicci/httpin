@@ -11,6 +11,7 @@ import (
 type ContextKey int
 
 const (
+	minimumMaxMemory = 1 << 10  // 1KB
 	defaultMaxMemory = 32 << 20 // 32 MB
 
 	// Input is the key to get the input object from Request.Context() injected by httpin. e.g.

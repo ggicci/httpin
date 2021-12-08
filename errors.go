@@ -18,7 +18,7 @@ var (
 	ErrUnknownBodyType          = errors.New("unknown body type")
 	ErrDuplicateAnnotationField = errors.New("duplicate annotation field")
 	ErrNilErrorHandler          = errors.New("nil error handler")
-	ErrInvalidMaxMemory         = errors.New("invalid max memory, must be positive")
+	ErrMaxMemoryTooSmall        = errors.New("max memory too small")
 	ErrNilFile                  = errors.New("nil file")
 )
 

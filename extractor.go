@@ -49,6 +49,8 @@ func (e *Extractor) extract(ctx *DirectiveContext, key string) error {
 
 	values := e.Form.Value[key]
 	files := e.Form.File[key]
+
+	// Quick fail on empty input.
 	if len(values) == 0 && len(files) == 0 {
 		return nil
 	}
@@ -58,20 +60,15 @@ func (e *Extractor) extract(ctx *DirectiveContext, key string) error {
 		return e.extractMulti(ctx, key)
 	}
 
-	decoder := decoderOf(ctx.ValueType)
-	if decoder == nil {
-		return UnsupportedTypeError{ctx.ValueType}
-	}
-
-	switch dec := decoder.(type) {
+	switch decoder := decoderOf(ctx.ValueType).(type) {
 	case ValueTypeDecoder:
-		if gotValue, interfaceValue, err := decodeValueAt(dec, e.Form.Value[key], 0); err != nil {
+		if gotValue, interfaceValue, err := decodeValueAt(decoder, e.Form.Value[key], 0); err != nil {
 			return fieldError{key, gotValue, err}
 		} else {
 			ctx.Value.Elem().Set(reflect.ValueOf(interfaceValue))
 		}
 	case FileTypeDecoder:
-		if gotFile, interfaceValue, err := decodeFileAt(dec, e.Form.File[key], 0); err != nil {
+		if gotFile, interfaceValue, err := decodeFileAt(decoder, e.Form.File[key], 0); err != nil {
 			return fieldError{key, gotFile, err}
 		} else {
 			ctx.Value.Elem().Set(reflect.ValueOf(interfaceValue))
@@ -85,21 +82,18 @@ func (e *Extractor) extract(ctx *DirectiveContext, key string) error {
 }
 
 func (e *Extractor) extractMulti(ctx *DirectiveContext, key string) error {
-	elemType := ctx.ValueType.Elem()
-	decoder := decoderOf(elemType)
-	if decoder == nil {
-		return UnsupportedTypeError{ctx.ValueType}
-	}
+	var (
+		theSlice reflect.Value
+		elemType = ctx.ValueType.Elem()
+		values   = e.Form.Value[key]
+		files    = e.Form.File[key]
+	)
 
-	var theSlice reflect.Value
-	values := e.Form.Value[key]
-	files := e.Form.File[key]
-
-	switch dec := decoder.(type) {
+	switch decoder := decoderOf(elemType).(type) {
 	case ValueTypeDecoder:
 		theSlice = reflect.MakeSlice(ctx.ValueType, len(values), len(values))
 		for i := 0; i < len(values); i++ {
-			if _, interfaceValue, err := decodeValueAt(dec, values, i); err != nil {
+			if _, interfaceValue, err := decodeValueAt(decoder, values, i); err != nil {
 				return fieldError{key, values, fmt.Errorf("at index %d: %w", i, err)}
 			} else {
 				theSlice.Index(i).Set(reflect.ValueOf(interfaceValue))
@@ -108,7 +102,7 @@ func (e *Extractor) extractMulti(ctx *DirectiveContext, key string) error {
 	case FileTypeDecoder:
 		theSlice = reflect.MakeSlice(ctx.ValueType, len(files), len(files))
 		for i := 0; i < len(files); i++ {
-			if _, interfaceValue, err := decodeFileAt(dec, files, i); err != nil {
+			if _, interfaceValue, err := decodeFileAt(decoder, files, i); err != nil {
 				return fieldError{key, files, fmt.Errorf("at index %d: %w", i, err)}
 			} else {
 				theSlice.Index(i).Set(reflect.ValueOf(interfaceValue))
