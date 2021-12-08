@@ -235,7 +235,8 @@ func TestEngine(t *testing.T) {
 			"name": []string{"ggicci"},
 		}
 		expected := &ThingWithUnexportedFields{
-			Name: "ggicci",
+			Name:    "ggicci",
+			display: "",
 		}
 		core, err := New(ThingWithUnexportedFields{})
 		So(err, ShouldBeNil)
@@ -356,7 +357,7 @@ func TestEngine(t *testing.T) {
 
 	Convey("Custom decoder should work", t, func() {
 		var boolType = reflect.TypeOf(bool(true))
-		RegisterTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool))
+		RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool))
 		type BoolInput struct {
 			IsMember bool `in:"form=is_member"`
 		}

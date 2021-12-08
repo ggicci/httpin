@@ -1,7 +1,14 @@
 package httpin
 
+import "mime/multipart"
+
 // queryValueExtractor implements the "query" executor who extracts values from
 // the querystring of an HTTP request.
 func queryValueExtractor(ctx *DirectiveContext) error {
-	return extractFromKVS(ctx, ctx.Request.URL.Query(), false)
+	extractor := &Extractor{
+		Form: multipart.Form{
+			Value: ctx.Request.URL.Query(),
+		},
+	}
+	return extractor.Execute(ctx)
 }

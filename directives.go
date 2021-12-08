@@ -27,6 +27,7 @@ func init() {
 		DirectiveNormalizerFunc(bodyDirectiveNormalizer),
 	)
 	RegisterDirectiveExecutor("required", DirectiveExecutorFunc(required), nil)
+	// RegisterDirectiveExecutor("file", DirectiveExecutorFunc(fileValueExtractor), nil)
 }
 
 // DirectiveExecutor is the interface implemented by a "directive executor".

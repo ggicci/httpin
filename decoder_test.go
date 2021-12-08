@@ -10,8 +10,8 @@ import (
 )
 
 // DecodeCustomBool additionally parses "yes/no".
-func DecodeCustomBool(data []byte) (interface{}, error) {
-	sdata := strings.ToLower(string(data))
+func DecodeCustomBool(value string) (interface{}, error) {
+	sdata := strings.ToLower(value)
 	if sdata == "yes" {
 		return true, nil
 	}
@@ -29,15 +29,24 @@ func TestDecoders(t *testing.T) {
 	})
 	delete(decoders, boolType) // remove the custom decoder
 
+	var invalidDecoder = func(string) error {
+		return nil
+	}
+
+	Convey("Register invalid decoder", t, func() {
+		So(func() { RegisterTypeDecoder(boolType, invalidDecoder) }, ShouldPanic)
+	})
+	delete(decoders, boolType) // remove the custom decoder
+
 	Convey("Register duplicate decoder", t, func() {
-		So(func() { RegisterTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
-		So(func() { RegisterTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool)) }, ShouldPanic)
+		So(func() { RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
+		So(func() { RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool)) }, ShouldPanic)
 	})
 	delete(decoders, boolType) // remove the custom decoder
 
 	Convey("Replace a decoder", t, func() {
-		So(func() { ReplaceTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
-		So(func() { ReplaceTypeDecoder(boolType, TypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
+		So(func() { ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
+		So(func() { ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
 	})
 	delete(decoders, boolType) // remove the custom decoder
 }

@@ -20,4 +20,9 @@ func TestOptions(t *testing.T) {
 		_, err := New(ProductQuery{}, WithErrorHandler(nil))
 		So(errors.Is(err, ErrNilErrorHandler), ShouldBeTrue)
 	})
+
+	Convey("Use invalid max memory", t, func() {
+		_, err := New(ProductQuery{}, WithMaxMemory(100))
+		So(errors.Is(err, ErrMaxMemoryTooSmall), ShouldBeTrue)
+	})
 }

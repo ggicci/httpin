@@ -12,3 +12,13 @@ func WithErrorHandler(custom ErrorHandler) Option {
 		return nil
 	}
 }
+
+func WithMaxMemory(maxMemory int64) Option {
+	return func(c *Engine) error {
+		if maxMemory < minimumMaxMemory {
+			return ErrMaxMemoryTooSmall
+		}
+		c.maxMemory = maxMemory
+		return nil
+	}
+}
