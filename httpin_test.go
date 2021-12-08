@@ -235,7 +235,8 @@ func TestEngine(t *testing.T) {
 			"name": []string{"ggicci"},
 		}
 		expected := &ThingWithUnexportedFields{
-			Name: "ggicci",
+			Name:    "ggicci",
+			display: "",
 		}
 		core, err := New(ThingWithUnexportedFields{})
 		So(err, ShouldBeNil)
