@@ -8,7 +8,7 @@ import (
 // headerValueExtractor implements the "header" executor who extracts values
 // from the HTTP headers.
 func headerValueExtractor(ctx *DirectiveContext) error {
-	extractor := &Extractor{
+	extractor := &extractor{
 		Form: multipart.Form{
 			Value: ctx.Request.Header,
 		},

@@ -28,7 +28,7 @@ func (chi *gochiURLParamExtractor) Execute(ctx *DirectiveContext) error {
 		}
 	}
 
-	extractor := &Extractor{
+	extractor := &extractor{
 		Form: multipart.Form{
 			Value: kvs,
 		},

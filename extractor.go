@@ -7,13 +7,13 @@ import (
 	"reflect"
 )
 
-type Extractor struct {
+type extractor struct {
 	multipart.Form
 
 	KeyNormalizer func(string) string
 }
 
-func NewExtractor(r *http.Request) *Extractor {
+func newExtractor(r *http.Request) *extractor {
 	var form multipart.Form
 
 	if r.MultipartForm != nil {
@@ -24,13 +24,13 @@ func NewExtractor(r *http.Request) *Extractor {
 		}
 	}
 
-	return &Extractor{
+	return &extractor{
 		Form:          form,
 		KeyNormalizer: nil,
 	}
 }
 
-func (e *Extractor) Execute(ctx *DirectiveContext) error {
+func (e *extractor) Execute(ctx *DirectiveContext) error {
 	for _, key := range ctx.Directive.Argv {
 		if e.KeyNormalizer != nil {
 			key = e.KeyNormalizer(key)
@@ -42,7 +42,7 @@ func (e *Extractor) Execute(ctx *DirectiveContext) error {
 	return nil
 }
 
-func (e *Extractor) extract(ctx *DirectiveContext, key string) error {
+func (e *extractor) extract(ctx *DirectiveContext, key string) error {
 	if ctx.Context.Value(FieldSet) == true {
 		return nil
 	}
@@ -81,7 +81,7 @@ func (e *Extractor) extract(ctx *DirectiveContext, key string) error {
 	return nil
 }
 
-func (e *Extractor) extractMulti(ctx *DirectiveContext, key string) error {
+func (e *extractor) extractMulti(ctx *DirectiveContext, key string) error {
 	var (
 		theSlice reflect.Value
 		elemType = ctx.ValueType.Elem()

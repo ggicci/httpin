@@ -34,7 +34,7 @@ func (mux *gorillaMuxVarsExtractor) Execute(ctx *DirectiveContext) error {
 		kvs[key] = []string{value}
 	}
 
-	extractor := &Extractor{
+	extractor := &extractor{
 		Form: multipart.Form{
 			Value: kvs,
 		},
