@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"mime/multipart"
 	"reflect"
 	"testing"
 	"time"
@@ -202,5 +203,32 @@ func TestBuiltinDecoders(t *testing.T) {
 
 		_, err = DecodeTime("apple")
 		So(err, ShouldBeError)
+	})
+}
+
+func TestTypeDecoderAdapter(t *testing.T) {
+	Convey("Adapter: ValueTypeDecoderFunc", t, func() {
+
+		decoder := ValueTypeDecoderFunc(func(value string) (interface{}, error) {
+			return value + "!", nil
+		})
+
+		got, err := decoder.Decode("hello")
+		So(err, ShouldBeNil)
+		So(got, ShouldEqual, "hello!")
+	})
+
+	Convey("Adapter: FileTypeDecoderFunc", t, func() {
+		decoder := FileTypeDecoderFunc(func(file *multipart.FileHeader) (interface{}, error) {
+			return file.Filename, nil
+		})
+
+		fileHeader := &multipart.FileHeader{
+			Filename: "hello.txt",
+		}
+
+		got, err := decoder.Decode(fileHeader)
+		So(err, ShouldBeNil)
+		So(got, ShouldEqual, "hello.txt")
 	})
 }
