@@ -25,7 +25,7 @@ type UpdateGitHubIssueInput struct {
 
 func TestMultipartForm_DecodeFile_WithInvalidFileHeaders(t *testing.T) {
 	Convey("Decode file with nil header", t, func() {
-		gotInput, err := DecodeFile(nil)
+		gotInput, err := decodeFile(nil)
 		So(errors.Is(err, ErrNilFile), ShouldBeTrue)
 		got, ok := gotInput.(File)
 		So(ok, ShouldBeTrue)
@@ -37,7 +37,7 @@ func TestMultipartForm_DecodeFile_WithInvalidFileHeaders(t *testing.T) {
 			Filename: "avatar.png",
 			Size:     10,
 		}
-		gotInput, err := DecodeFile(fileHeader)
+		gotInput, err := decodeFile(fileHeader)
 		So(err, ShouldBeError)
 		got, ok := gotInput.(File)
 		So(ok, ShouldBeTrue)

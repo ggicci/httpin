@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	RegisterTypeDecoder(reflect.TypeOf(File{}), FileTypeDecoderFunc(DecodeFile))
+	RegisterTypeDecoder(reflect.TypeOf(File{}), FileTypeDecoderFunc(decodeFile))
 }
 
 type File struct {
@@ -16,7 +16,7 @@ type File struct {
 	Valid  bool
 }
 
-func DecodeFile(fileHeader *multipart.FileHeader) (interface{}, error) {
+func decodeFile(fileHeader *multipart.FileHeader) (interface{}, error) {
 	var inFile File
 	if fileHeader == nil {
 		return inFile, ErrNilFile
