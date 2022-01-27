@@ -5,13 +5,14 @@ slug: /
 
 # Getting Started
 
-httpin is a **Go** package for **Decoding an HTTP request into a custom struct**. We can decode
+httpin is a **Go** package for **decoding HTTP requests into structs**. We can decode
 
 - [Query parameters](/directives/query), e.g. `?name=john&is_member=true`
 - [Headers](/directives/header), e.g. `Authorization: xxx`
 - [Form data](/directives/form), e.g. `username=john&password=******`
 - [JSON/XML Body](/directives/body), e.g. `POST {"name":"john"}`
 - [Path variables](/directives/path), e.g. `/users/{username}`
+- [File uploads](/advanced/upload-files)
 
 and [more](/directives/custom) of an HTTP request into a struct in Go.
 

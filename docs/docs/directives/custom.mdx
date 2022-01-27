@@ -34,9 +34,13 @@ var MyLowercaseDirectiveExecutor = httpin.DirectiveExecutorFunc(toLower)
 
 by calling [`httpin.RegisterDirectiveExecutor`](https://pkg.go.dev/github.com/ggicci/httpin#RegisterDirectiveExecutor):
 
-```go
-httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor, nil)
+```go {2}
+func init() {
+	httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor, nil)
+}
 ```
+
+**NB**: make sure to register your directive executor before you start the server.
 
 ## 3. Use your Directive
 

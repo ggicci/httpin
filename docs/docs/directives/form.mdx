@@ -20,7 +20,7 @@ Args: KEY1 [,KEY2 [,KEY3, ...]]
 
 :::caution
 
-In most cases, the `form` directive just works like [`query`](/directives/query). Because it also visit data from the URL querystring.
+In most cases, the `form` directive just works like [`query`](/directives/query). Because it also visits data from the URL querystring.
 But if the form data sent by the client was of [`application/x-www-form-urlencoded`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST) content type, `form` will visit the form data first,
 and then visit the URL querystring.
 
@@ -35,10 +35,10 @@ From the Go documentation:
 
 And for [`http.Request.ParseForm`](https://pkg.go.dev/net/http#Request.ParseForm), it is:
 
-> ParseForm populates r.Form and r.PostForm.
-> For all requests, ParseForm parses the raw query from the URL and updates r.Form.
-> For POST, PUT, and PATCH requests, it also reads the request body, parses it as a form and puts the results into both r.PostForm and r.Form.
-> Request body parameters take precedence over URL query string values in r.Form.
+> `ParseForm` populates `r.Form` and `r.PostForm`.
+> For all requests, `ParseForm` parses the raw query from the URL and updates `r.Form`.
+> For POST, PUT, and PATCH requests, it also reads the request body, parses it as a form and puts the results into both `r.PostForm` and `r.Form`.
+> Request body parameters take precedence over URL query string values in `r.Form`.
 
 ## Usage
 
