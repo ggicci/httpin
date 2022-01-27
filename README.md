@@ -1,6 +1,6 @@
 # httpin
 
-[![Go](https://github.com/ggicci/httpin/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/ggicci/httpin/actions/workflows/go.yml) [![documentation](https://github.com/ggicci/httpin/actions/workflows/documentation.yml/badge.svg?branch=documentation)](https://github.com/ggicci/httpin/actions/workflows/documentation.yml) [![codecov](https://codecov.io/gh/ggicci/httpin/branch/main/graph/badge.svg?token=RT61L9ngHj)](https://codecov.io/gh/ggicci/httpin) [![Go Reference](https://pkg.go.dev/badge/github.com/ggicci/httpin.svg)](https://pkg.go.dev/github.com/ggicci/httpin)
+[![Go](https://github.com/ggicci/httpin/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/ggicci/httpin/actions/workflows/go.yml) [![documentation](https://github.com/ggicci/httpin/actions/workflows/documentation.yml/badge.svg?branch=documentation)](https://github.com/ggicci/httpin/actions/workflows/documentation.yml) [![codecov](https://codecov.io/gh/ggicci/httpin/branch/main/graph/badge.svg?token=RT61L9ngHj)](https://codecov.io/gh/ggicci/httpin) [![Go Reference](https://pkg.go.dev/badge/github.com/ggicci/httpin.svg)](https://pkg.go.dev/github.com/ggicci/httpin) [![Go Report Card](https://goreportcard.com/badge/github.com/ggicci/httpin)](https://goreportcard.com/report/github.com/ggicci/httpin)
 
 HTTP Input for Go - <b>Decode an HTTP request into a custom struct</b>
 
