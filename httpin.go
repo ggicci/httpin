@@ -1,3 +1,7 @@
+// Package httpin helps decoding HTTP requests to structs. Which supports
+// binding data from querystring (query params), HTTP headers, form data,
+// JSON/XML payloads, URL path params, and file uploads (multipart/form-data).
+
 package httpin
 
 import (
@@ -19,9 +23,10 @@ const (
 	//     input := r.Context().Value(httpin.Input).(*InputStruct)
 	Input ContextKey = iota
 
-	// Set this context value to true to indicate that the field has been set.
-	// When multiple executors were applied to a field, if the field value were set by
-	// an executor, the latter executors MAY skip running by consulting this context value.
+	// FieldSet is used by executors to tell whether a field has been set. When
+	// multiple executors were applied to a field, if the field value were set
+	// by a former executor, the latter executors MAY skip running by consulting
+	// this context value.
 	FieldSet
 
 	StopRecursion
