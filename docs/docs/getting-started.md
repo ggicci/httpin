@@ -22,6 +22,10 @@ and [more](/directives/custom) of an HTTP request into a struct in Go.
 go get github.com/ggicci/httpin
 ```
 
+## Thanks 🥰
+
+If you thought this package helpful, please consider [giving it a big star ⭐️](https://github.com/ggicci/httpin/stargazers). Thanks in advance!
+
 ## Quick View
 
 ### Before using httpin
