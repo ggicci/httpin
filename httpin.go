@@ -1,6 +1,6 @@
-// Package httpin helps decoding HTTP requests to structs. Which supports
-// binding data from querystring (query params), HTTP headers, form data,
-// JSON/XML payloads, URL path params, and file uploads (multipart/form-data).
+// Package httpin helps decoding an HTTP request to a custom struct by binding
+// data with querystring (query params), HTTP headers, form data, JSON/XML
+// payloads, URL path params, and file uploads (multipart/form-data).
 package httpin
 
 import (
