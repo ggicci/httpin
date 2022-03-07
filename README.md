@@ -97,3 +97,8 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 | ♻️ Code Repetition Rate | 😞 High                                    | 😍 **Lower**                                                                                   |
 | 📖 Code Readability     | 😟 Poor                                    | 🤩 **Highly readable**                                                                         |
 | 🔨 Maintainability      | 😡 Poor                                    | 🥰 **Highly maintainable**                                                                     |
+
+## Alternatives
+
+- [google/go-querystring](https://github.com/google/go-querystring): encoding structs into URL query parameters
+- [gorilla/schema](https://github.com/gorilla/schema): converts structs to and from form values
