@@ -1,0 +1,44 @@
+---
+sidebar_position: 7
+---
+
+import InputOutputTable from "../../src/components/InputOutputTable"
+import data from "./data/default"
+
+# default
+
+Introduced in v0.8.0.
+
+**default** is a [directive executor](/advanced/concepts#directive-executor) who sets unsetted fields to their default value.
+
+## Definition
+
+```yaml
+Name: "default"
+Args: VAL1 [,VAL2 [,VAL3, ...]]
+```
+
+:::caution
+
+For an array type of value, you can use comma to separate the items in the array.
+So the presence of comma in an array item can lead to unexpected behavior.
+
+:::
+
+**default** will examine if the field was already set by former directives. If not, it will set the field to the given value.
+
+## Usage
+
+```go
+type ListTasksQuery struct {
+	Page      int      `in:"query=page;default=1"`
+	PerPage   int      `in:"query=per_page;default=20"`
+	StateList []string `in:"query=state;default=pending,running"`
+}
+```
+
+<InputOutputTable
+  inputTitle={data.inputOutput.inputTitle}
+  outputTitle={data.inputOutput.outputTitle}
+  rows={data.inputOutput.rows}
+></InputOutputTable>
