@@ -1,3 +1,6 @@
+// directive: "body"
+// https://ggicci.github.io/httpin/directives/body
+
 package httpin
 
 import (

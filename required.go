@@ -1,3 +1,6 @@
+// directive: "required"
+// https://ggicci.github.io/httpin/directives/required
+
 package httpin
 
 // required implements the "required" executor who indicates that the field

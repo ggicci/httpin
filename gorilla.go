@@ -10,15 +10,14 @@ import (
 // GorillaMuxVarsFunc is mux.Vars
 type GorillaMuxVarsFunc func(*http.Request) map[string]string
 
-// UseGorillaMux registers a new directive executor which can extract path
-// variables from the URL. Which works as an accompany to gorilla's mux package.
+// UseGorillaMux registers a new directive executor which can extract values
+// from `mux.Vars`, i.e. path variables.
+// https://ggicci.github.io/httpin/integrations/gorilla
 //
-// Example:
+// Usage:
 //
-//    UseGorillaMux("path", mux.Vars)
-//
-//    type GetUserInput struct {
-//       UserID `httpin:"path=user_id"`
+//    func init() {
+//        httpin.UseGorillaMux("path", mux.Vars)
 //    }
 func UseGorillaMux(executor string, fnVars GorillaMuxVarsFunc) {
 	RegisterDirectiveExecutor(executor, &gorillaMuxVarsExtractor{Vars: fnVars}, nil)

@@ -1,3 +1,6 @@
+// directive: "header"
+// https://ggicci.github.io/httpin/directives/header
+
 package httpin
 
 import (

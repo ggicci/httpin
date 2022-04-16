@@ -1,3 +1,6 @@
+// directive: "query"
+// https://ggicci.github.io/httpin/directives/query
+
 package httpin
 
 import "mime/multipart"

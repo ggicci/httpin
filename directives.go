@@ -9,14 +9,11 @@ import (
 )
 
 var (
-	executors   map[string]DirectiveExecutor
-	normalizers map[string]DirectiveNormalizer
+	executors   = make(map[string]DirectiveExecutor)
+	normalizers = make(map[string]DirectiveNormalizer)
 )
 
 func init() {
-	executors = make(map[string]DirectiveExecutor)
-	normalizers = make(map[string]DirectiveNormalizer)
-
 	// Built-in Directives
 	RegisterDirectiveExecutor("form", DirectiveExecutorFunc(formValueExtractor), nil)
 	RegisterDirectiveExecutor("query", DirectiveExecutorFunc(queryValueExtractor), nil)
@@ -27,7 +24,7 @@ func init() {
 		DirectiveNormalizerFunc(bodyDirectiveNormalizer),
 	)
 	RegisterDirectiveExecutor("required", DirectiveExecutorFunc(required), nil)
-	// RegisterDirectiveExecutor("file", DirectiveExecutorFunc(fileValueExtractor), nil)
+	RegisterDirectiveExecutor("default", DirectiveExecutorFunc(defaultValueSetter), nil)
 }
 
 // DirectiveExecutor is the interface implemented by a "directive executor".
