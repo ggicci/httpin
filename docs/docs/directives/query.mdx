@@ -2,6 +2,7 @@
 sidebar_position: 1
 ---
 
+import GoPlay from "../../src/components/GoPlay"
 import InputOutputTable from "../../src/components/InputOutputTable"
 import data from "./data/query"
 
@@ -23,7 +24,7 @@ Args: KEY1 [,KEY2 [,KEY3, ...]]
 ```go
 type ListUsersInput struct {
 	IsMember bool  `in:"query=is_member"`
-	AgeRange []int `in:"query=age_range[],age_range`
+	AgeRange []int `in:"query=age_range[],age_range"`
 }
 ```
 
@@ -32,3 +33,44 @@ type ListUsersInput struct {
   outputTitle={data.inputOutput.outputTitle}
   rows={data.inputOutput.rows}
 ></InputOutputTable>
+
+## Run Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/ggicci/httpin"
+	"github.com/go-chi/chi/v5"
+)
+
+type ListUsersInput struct {
+	IsMember bool  `in:"query=is_member"`
+	AgeRange []int `in:"query=age_range[],age_range"`
+}
+
+func ListUsers(rw http.ResponseWriter, r *http.Request) {
+	input := r.Context().Value(httpin.Input).(*ListUsersInput)
+	fmt.Printf("input: %#v\n", input)
+}
+
+func main() {
+	router := chi.NewRouter()
+	router.With(
+		httpin.NewInput(ListUsersInput{}),
+	).Get("/users", ListUsers)
+
+	r, _ := http.NewRequest("GET", "/users?is_member=1&age_range=18&age_range=60", nil)
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>

@@ -1,0 +1,24 @@
+.toolbar > .button {
+  font-size: 0.75rem;
+  padding: 0.25rem 1.5rem;
+  border: 2px solid var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  margin-left: 0.5rem;
+}
+
+.toolbar > .button:first-child {
+  margin-left: 0;
+}
+
+.toolbar > .button:hover {
+  background-color: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.hidden {
+  display: none;
+}

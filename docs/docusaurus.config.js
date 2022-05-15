@@ -32,6 +32,10 @@ const config = {
         theme: {
           customCss: require.resolve("./src/css/custom.css"),
         },
+        gtag: {
+          trackingID: "G-C93QME0ETP",
+          anonymizeIP: true,
+        },
       }),
     ],
   ],
@@ -48,9 +52,9 @@ const config = {
         },
         items: [
           {
-            href: "https://www.buymeacoffee.com/ggicci",
+            href: "https://ko-fi.com/ggicci",
             position: "right",
-            className: "header-bmc-link",
+            className: "header-kofi-link",
             "aria-label": "Buy me a coffee",
           },
           {
@@ -68,10 +72,6 @@ const config = {
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
-      },
-      gtag: {
-        trackingID: "G-C93QME0ETP",
-        anonymizeIP: true,
       },
     }),
 }
