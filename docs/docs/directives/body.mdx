@@ -72,3 +72,29 @@ type CreateUserInput struct {
 	*User
 }
 ```
+
+## Custom Body Decoders
+
+Use one of the following methods to add/replace a new body decoder to **httpin**.
+
+1. [`RegisterBodyDecoder`](https://pkg.go.dev/github.com/ggicci/httpin#RegisterBodyDecoder)
+2. [`ReplaceBodyDecoder`](https://pkg.go.dev/github.com/ggicci/httpin#ReplaceBodyDecoder)
+
+For example, the default JSON decoder is borrowed from Go's standard [`encoding/json`](https://pkg.go.dev/encoding/json) package.
+If you want to use a different JSON decoder, you can replace it by using the following code:
+
+```go
+func init() {
+	httpin.ReplaceBodyDecoder("json", &myJSONDecoder{})
+}
+```
+
+You also can register a new body decoder by using the following code:
+
+```go
+func init() {
+	httpin.RegisterBodyDecoder("yaml", &myYAMLDecoder{})
+	// OR
+	httpin.ReplaceBodyDecoder("yaml", &myYAMLDecoder{})
+}
+```
