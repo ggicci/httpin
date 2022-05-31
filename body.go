@@ -36,6 +36,11 @@ var (
 	}
 )
 
+// RegisterBodyDecoder registers a new body decoder. Panic if the body type is already registered.
+//
+//    func init() {
+//        RegisterBodyDecoder("yaml", &myYAMLBodyDecoder{})
+//    }
 func RegisterBodyDecoder(bodyType string, decoder BodyDecoder) {
 	if _, ok := bodyDecoders[bodyType]; ok {
 		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateBodyDecoder, bodyType))
@@ -43,6 +48,11 @@ func RegisterBodyDecoder(bodyType string, decoder BodyDecoder) {
 	ReplaceBodyDecoder(bodyType, decoder)
 }
 
+// ReplaceBodyDecoder replaces or add the body decoder of the specified type.
+//
+//    func init() {
+//        ReplaceBodyDecoder("json", &myJSONBodyDecoder{})
+//    }
 func ReplaceBodyDecoder(bodyType string, decoder BodyDecoder) {
 	if bodyType == "" {
 		panic("httpin: body type cannot be empty")
