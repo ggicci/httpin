@@ -18,9 +18,14 @@ const (
 )
 
 type (
+	// JSONBody is the annotation for JSON body.
 	JSONBody struct{}
-	XMLBody  struct{}
 
+	// XMLBody is the annotation for XML body.
+	XMLBody struct{}
+
+	// BodyDecoder decodes the request body into the specified object. Common body types are:
+	// json, xml, yaml, and others.
 	BodyDecoder interface {
 		Decode(src io.Reader, dst interface{}) error
 	}
@@ -49,6 +54,9 @@ func RegisterBodyDecoder(bodyType string, decoder BodyDecoder) {
 }
 
 // ReplaceBodyDecoder replaces or add the body decoder of the specified type.
+// Which is useful when you want to override the default body decoder. For example,
+// the default JSON decoder is borrowed from encoding/json. You can replace it with
+// your own implementation, e.g. json-iterator/go.
 //
 //    func init() {
 //        ReplaceBodyDecoder("json", &myJSONBodyDecoder{})
