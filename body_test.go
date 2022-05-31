@@ -215,3 +215,51 @@ func Test_bodyTypeString(t *testing.T) {
 		}, ShouldPanic)
 	})
 }
+
+type yamlBodyDecoder struct{}
+
+func (de *yamlBodyDecoder) Decode(src io.Reader, dst interface{}) error {
+	// for test only
+	(*(*(dst.(*interface{}))).(*map[string]interface{})) = map[string]interface{}{
+		"version": 3,
+	}
+	return nil
+}
+
+type YamlInput struct {
+	Body map[string]interface{} `in:"body=yaml"`
+}
+
+type ThingWithUnknownBodyDecoder struct {
+	Body map[string]interface{} `in:"body=yml"`
+}
+
+func TestCustomBodyDecoder(t *testing.T) {
+	Convey("body: register new body decoder", t, func() {
+		So(func() { RegisterBodyDecoder("yaml", &yamlBodyDecoder{}) }, ShouldNotPanic)
+
+		resolver, err := buildResolverTree(reflect.TypeOf(YamlInput{}))
+		So(err, ShouldBeNil)
+		So(resolver, ShouldNotBeNil)
+		r, _ := http.NewRequest("GET", "https://example.com", nil)
+
+		r.Body = io.NopCloser(strings.NewReader(`version: "3"`))
+		res, err := resolver.resolve(r)
+		So(err, ShouldBeNil)
+		So(res.Interface(), ShouldResemble, &YamlInput{
+			Body: map[string]interface{}{
+				"version": 3,
+			},
+		})
+	})
+
+	Convey("body: panic on duplicate body decoder", t, func() {
+		So(func() { RegisterBodyDecoder("json", &yamlBodyDecoder{}) }, ShouldPanic)
+		So(func() { RegisterBodyDecoder("", &yamlBodyDecoder{}) }, ShouldPanic)
+	})
+
+	Convey("body: unknown body decoder", t, func() {
+		_, err := buildResolverTree(reflect.TypeOf(ThingWithUnknownBodyDecoder{}))
+		So(errors.Is(err, ErrUnknownBodyType), ShouldBeTrue)
+	})
+}

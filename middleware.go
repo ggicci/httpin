@@ -44,7 +44,7 @@ func NewInput(inputStruct interface{}, opts ...Option) middleware {
 
 func ReplaceDefaultErrorHandler(custom ErrorHandler) {
 	if custom == nil {
-		panic(fmt.Errorf("httpin: %v", ErrNilErrorHandler))
+		panic(fmt.Errorf("httpin: %w", ErrNilErrorHandler))
 	}
 	globalCustomErrorHandler = custom
 }

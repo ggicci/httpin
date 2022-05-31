@@ -20,6 +20,7 @@ var (
 	ErrNilErrorHandler          = errors.New("nil error handler")
 	ErrMaxMemoryTooSmall        = errors.New("max memory too small")
 	ErrNilFile                  = errors.New("nil file")
+	ErrDuplicateBodyDecoder     = errors.New("duplicate body decoder")
 )
 
 type UnsupportedTypeError struct {
