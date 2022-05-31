@@ -41,7 +41,7 @@ type DirectiveNormalizer interface {
 // taken or nil executor.
 func RegisterDirectiveExecutor(name string, exe DirectiveExecutor, norm DirectiveNormalizer) {
 	if _, ok := executors[name]; ok {
-		panic(fmt.Errorf("%w: %q", ErrDuplicateExecutor, name))
+		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateExecutor, name))
 	}
 	ReplaceDirectiveExecutor(name, exe, norm)
 }
@@ -50,7 +50,7 @@ func RegisterDirectiveExecutor(name string, exe DirectiveExecutor, norm Directiv
 // on duplicate names.
 func ReplaceDirectiveExecutor(name string, exe DirectiveExecutor, norm DirectiveNormalizer) {
 	if exe == nil {
-		panic(fmt.Errorf("%w: %q", ErrNilExecutor, name))
+		panic(fmt.Errorf("httpin: %w: %q", ErrNilExecutor, name))
 	}
 	executors[name] = exe
 	normalizers[name] = norm

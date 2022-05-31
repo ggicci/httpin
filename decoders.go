@@ -34,7 +34,7 @@ func isTypeDecoder(decoder interface{}) bool {
 // RegisterTypeDecoder registers a specific type decoder. Panics on conflicts.
 func RegisterTypeDecoder(typ reflect.Type, decoder interface{}) {
 	if _, ok := decoders[typ]; ok {
-		panic(fmt.Errorf("%w: %q", ErrDuplicateTypeDecoder, typ))
+		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateTypeDecoder, typ))
 	}
 
 	ReplaceTypeDecoder(typ, decoder)
@@ -43,11 +43,11 @@ func RegisterTypeDecoder(typ reflect.Type, decoder interface{}) {
 // ReplaceTypeDecoder replaces a specific type decoder.
 func ReplaceTypeDecoder(typ reflect.Type, decoder interface{}) {
 	if decoder == nil {
-		panic(fmt.Errorf("%w: %q", ErrNilTypeDecoder, typ))
+		panic(fmt.Errorf("httpin: %w: %q", ErrNilTypeDecoder, typ))
 	}
 
 	if !isTypeDecoder(decoder) {
-		panic(fmt.Errorf("%w: %q", ErrInvalidTypeDecoder, typ))
+		panic(fmt.Errorf("httpin: %w: %q", ErrInvalidTypeDecoder, typ))
 	}
 
 	decoders[typ] = decoder
