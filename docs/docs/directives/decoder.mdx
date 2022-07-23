@@ -1,0 +1,93 @@
+---
+sidebar_position: 8
+---
+
+import GoPlay from "../../src/components/GoPlay"
+import InputOutputTable from "../../src/components/InputOutputTable"
+import data from "./data/default"
+
+# decoder
+
+Introduced in v0.10.0.
+
+**decoder** is a **SPECIAL** [directive executor](/advanced/concepts#directive-executor)
+who overrides the decoder used to decode the value for the corresponding field.
+
+## Definition
+
+```yaml
+Name: "decoder"
+Args: DECODER_NAME
+```
+
+When there's a _decoder_ directive defined for a field, the specified named decoder will be used rather than
+being auto-selected by the field type.
+
+## Usage
+
+```go {7,14}
+func decodeDate(value string) (interface{}, error) {
+	return time.Parse("2006-01-02", value)
+}
+
+func init() {
+    // Before using the decoder, you need to register it.
+    httpin.RegisterNamedDecoder("date", httpin.ValueTypeDecoderFunc(decodeDate))
+}
+
+type ListUsersInput struct {
+	Gender string `in:"form=gender"`
+	// By default, the decoder is auto-selected by the field type, which is of `time.Time`.
+	// When decoder directive is set, the specified named decoder "date" will be used instead.
+	Birthday time.Time `in:"form=birthday;decoder=date"`
+}
+```
+
+## Run Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"time"
+
+	"github.com/ggicci/httpin"
+	"github.com/justinas/alice"
+)
+
+func init() {
+	httpin.RegisterNamedDecoder("date", httpin.ValueTypeDecoderFunc(decodeDate))
+}
+
+func decodeDate(value string) (interface{}, error) {
+	return time.Parse("2006-01-02", value)
+}
+
+type ListUsersInput struct {
+	Gender string `in:"form=gender"`
+	// By default, the decoder is auto-selected by the field type, which is of `time.Time`.
+	// When decoder directive is set, the specified named decoder "date" will be used instead.
+	Birthday time.Time `in:"form=birthday;decoder=date"`
+}
+
+func ListUsers(rw http.ResponseWriter, r *http.Request) {
+	input := r.Context().Value(httpin.Input).(*ListUsersInput)
+	fmt.Printf("input: %#v\n", input)
+}
+
+func main() {
+	http.Handle("/users", alice.New(
+		httpin.NewInput(ListUsersInput{}),
+	).ThenFunc(ListUsers))
+
+	r, _ := http.NewRequest("GET", "/users?gender=male&birthday=1991-11-10", nil)
+	rw := httptest.NewRecorder()
+}
+```
+
+</GoPlay>
