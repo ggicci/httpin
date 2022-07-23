@@ -11,7 +11,7 @@ import data from "./data/default"
 Introduced in v0.10.0.
 
 **decoder** is a **SPECIAL** [directive executor](/advanced/concepts#directive-executor)
-who overrides the decoder used to decode the value for the corresponding field.
+who overrides the decoder used to decode the value of the corresponding field.
 
 ## Definition
 
@@ -21,7 +21,7 @@ Args: DECODER_NAME
 ```
 
 When there's a _decoder_ directive defined for a field, the specified named decoder will be used rather than
-being auto-selected by the field type.
+the default one which is auto-selected by the type of the field.
 
 ## Usage
 
@@ -81,12 +81,14 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.Handle("/users", alice.New(
+	mux := http.NewServeMux()
+	mux.Handle("/users", alice.New(
 		httpin.NewInput(ListUsersInput{}),
 	).ThenFunc(ListUsers))
 
 	r, _ := http.NewRequest("GET", "/users?gender=male&birthday=1991-11-10", nil)
 	rw := httptest.NewRecorder()
+	mux.ServeHTTP(rw, r)
 }
 ```
 
