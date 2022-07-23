@@ -25,3 +25,16 @@ func WithMaxMemory(maxMemory int64) Option {
 		return nil
 	}
 }
+
+// WithTypeDecoder overrides the default type decoder.
+// The decoder can be type of ValueTypeDecoder or FileTypeDecoder.
+// func WithTypeDecoder(typ reflect.Type, decoder interface{}) Option {
+// 	ensureValidDecoder(typ, decoder)
+// 	return func(c *Engine) error {
+// 		if c.typeDecoders == nil {
+// 			c.typeDecoders = make(map[reflect.Type]interface{})
+// 		}
+// 		c.typeDecoders[typ] = decoder
+// 		return nil
+// 	}
+// }

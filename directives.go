@@ -11,6 +11,8 @@ import (
 var (
 	executors   = make(map[string]DirectiveExecutor)
 	normalizers = make(map[string]DirectiveNormalizer)
+
+	reservedExecutorNames = map[string]struct{}{"decoder": {}}
 )
 
 func init() {
@@ -25,6 +27,10 @@ func init() {
 	)
 	RegisterDirectiveExecutor("required", DirectiveExecutorFunc(required), nil)
 	RegisterDirectiveExecutor("default", DirectiveExecutorFunc(defaultValueSetter), nil)
+
+	// decoder is a special executor which does nothing, but is an indicator of
+	// overriding the decoder for a specific field.
+	RegisterDirectiveExecutor("decoder", DirectiveExecutorFunc(noop), nil)
 }
 
 // DirectiveExecutor is the interface implemented by a "directive executor".
@@ -51,6 +57,11 @@ func RegisterDirectiveExecutor(name string, exe DirectiveExecutor, norm Directiv
 func ReplaceDirectiveExecutor(name string, exe DirectiveExecutor, norm DirectiveNormalizer) {
 	if exe == nil {
 		panic(fmt.Errorf("httpin: %w: %q", ErrNilExecutor, name))
+	}
+	if _, ok := executors[name]; ok {
+		if _, ok := reservedExecutorNames[name]; ok {
+			panic(fmt.Errorf("httpin: %w: %q", ErrReservedExecutorName, name))
+		}
 	}
 	executors[name] = exe
 	normalizers[name] = norm
@@ -82,12 +93,18 @@ type DirectiveContext struct {
 	Value     reflect.Value
 	Request   *http.Request
 	Context   context.Context
+
+	resolver *fieldResolver
 }
 
 // DeliverContextValue binds a value to the specified key in the context. And it
 // will be delivered among the executors in the same field resolver.
 func (c *DirectiveContext) DeliverContextValue(key, value interface{}) {
 	c.Context = context.WithValue(c.Context, key, value)
+}
+
+func (c *DirectiveContext) decoderOf(t reflect.Type) interface{} {
+	return c.resolver.decoderOf(t)
 }
 
 // Directive defines the profile to locate an httpin.DirectiveExecutor instance
@@ -142,4 +159,13 @@ func (d *Directive) getExecutor() DirectiveExecutor {
 // getNormalizer locates the directive normalizer by its name.
 func (d *Directive) getNormalizer() DirectiveNormalizer {
 	return normalizers[d.Executor]
+}
+
+func (d *Directive) isDecoderSpecifier() bool {
+	return d.Executor == "decoder"
+}
+
+// noop is a no-operation directive executor.
+func noop(_ *DirectiveContext) error {
+	return nil
 }

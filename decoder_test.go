@@ -9,8 +9,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-// DecodeCustomBool additionally parses "yes/no".
-func DecodeCustomBool(value string) (interface{}, error) {
+// decodeCustomBool additionally parses "yes/no".
+func decodeCustomBool(value string) (interface{}, error) {
 	sdata := strings.ToLower(value)
 	if sdata == "yes" {
 		return true, nil
@@ -26,8 +26,10 @@ func TestDecoders(t *testing.T) {
 
 	Convey("Register nil decoder", t, func() {
 		So(func() { RegisterTypeDecoder(boolType, nil) }, ShouldPanic)
+		So(func() { RegisterNamedDecoder("myBool", nil) }, ShouldPanic)
 	})
-	delete(decoders, boolType) // remove the custom decoder
+	delete(decoders, boolType)      // remove the custom decoder
+	delete(namedDecoders, "mybool") // remove the custom decoder
 
 	var invalidDecoder = func(string) error {
 		return nil
@@ -35,18 +37,28 @@ func TestDecoders(t *testing.T) {
 
 	Convey("Register invalid decoder", t, func() {
 		So(func() { RegisterTypeDecoder(boolType, invalidDecoder) }, ShouldPanic)
+		So(func() { RegisterNamedDecoder("myBool", invalidDecoder) }, ShouldPanic)
 	})
-	delete(decoders, boolType) // remove the custom decoder
+	delete(decoders, boolType)      // remove the custom decoder
+	delete(namedDecoders, "mybool") // remove the custom decoder
 
 	Convey("Register duplicate decoder", t, func() {
-		So(func() { RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
-		So(func() { RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool)) }, ShouldPanic)
+		So(func() { RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
+		So(func() { RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldPanic)
+
+		So(func() { RegisterNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
+		So(func() { RegisterNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldPanic)
 	})
-	delete(decoders, boolType) // remove the custom decoder
+	delete(decoders, boolType)      // remove the custom decoder
+	delete(namedDecoders, "mybool") // remove the custom decoder
 
 	Convey("Replace a decoder", t, func() {
-		So(func() { ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
-		So(func() { ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool)) }, ShouldNotPanic)
+		So(func() { ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
+		So(func() { ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
+
+		So(func() { ReplaceNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
+		So(func() { ReplaceNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
 	})
-	delete(decoders, boolType) // remove the custom decoder
+	delete(decoders, boolType)      // remove the custom decoder
+	delete(namedDecoders, "mybool") // remove the custom decoder
 }

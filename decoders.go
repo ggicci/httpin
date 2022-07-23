@@ -23,7 +23,10 @@ type ValueTypeDecoderFunc = internal.ValueTypeDecoderFunc
 // httpin `FileTypeDecoder`s.
 type FileTypeDecoderFunc = internal.FileTypeDecoderFunc
 
-var decoders = make(map[reflect.Type]interface{}) // custom decoders
+var (
+	decoders      = make(map[reflect.Type]interface{}) // custom decoders
+	namedDecoders = make(map[string]interface{})       // custom decoders (registered by name)
+)
 
 func isTypeDecoder(decoder interface{}) bool {
 	_, isValueTypeDecoder := decoder.(ValueTypeDecoder)
@@ -42,6 +45,26 @@ func RegisterTypeDecoder(typ reflect.Type, decoder interface{}) {
 
 // ReplaceTypeDecoder replaces a specific type decoder.
 func ReplaceTypeDecoder(typ reflect.Type, decoder interface{}) {
+	ensureValidDecoder(typ, decoder)
+	decoders[typ] = decoder
+}
+
+// RegisterNamedDecoder registers a decoder by name. Panics on conflicts.
+func RegisterNamedDecoder(name string, decoder interface{}) {
+	if _, ok := namedDecoders[name]; ok {
+		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateNamedDecoder, name))
+	}
+
+	ReplaceNamedDecoder(name, decoder)
+}
+
+// ReplaceNamedDecoder replaces a decoder by name.
+func ReplaceNamedDecoder(name string, decoder interface{}) {
+	ensureValidDecoder(nil, decoder)
+	namedDecoders[name] = decoder
+}
+
+func ensureValidDecoder(typ reflect.Type, decoder interface{}) {
 	if decoder == nil {
 		panic(fmt.Errorf("httpin: %w: %q", ErrNilTypeDecoder, typ))
 	}
@@ -49,15 +72,18 @@ func ReplaceTypeDecoder(typ reflect.Type, decoder interface{}) {
 	if !isTypeDecoder(decoder) {
 		panic(fmt.Errorf("httpin: %w: %q", ErrInvalidTypeDecoder, typ))
 	}
-
-	decoders[typ] = decoder
 }
 
-// decoderOf retrieves a decoder by type.
+// decoderOf retrieves a decoder by type, from the global registerred decoders.
 func decoderOf(t reflect.Type) interface{} {
 	dec := decoders[t]
 	if dec != nil {
 		return dec
 	}
 	return internal.DecoderOf(t)
+}
+
+// decoderByName retrieves a decoder by name, from the global registerred named decoders.
+func decoderByName(name string) interface{} {
+	return namedDecoders[name]
 }

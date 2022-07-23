@@ -26,4 +26,9 @@ func TestDirectives(t *testing.T) {
 		So(func() { ReplaceDirectiveExecutor("noop", &NoopDirective{}, nil) }, ShouldNotPanic)
 		So(func() { ReplaceDirectiveExecutor("noop", &NoopDirective{}, nil) }, ShouldNotPanic)
 	})
+
+	Convey("Register executor name in reserved names should fail", t, func() {
+		So(func() { RegisterDirectiveExecutor("decoder", &NoopDirective{}, nil) }, ShouldPanic)
+		So(func() { ReplaceDirectiveExecutor("decoder", &NoopDirective{}, nil) }, ShouldPanic)
+	})
 }
