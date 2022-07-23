@@ -201,6 +201,12 @@ func TestBuiltinDecoders(t *testing.T) {
 		So(v.(time.Time).Location(), ShouldEqual, time.UTC)
 		So(err, ShouldBeNil)
 
+		v, err = DecodeTime("678088800.123456")
+		So(v, ShouldEqual, time.Date(1991, 6, 28, 6, 0, 0, 123456000, time.UTC))
+		So(v, ShouldHaveSameTypeAs, time.Time{})
+		So(v.(time.Time).Location(), ShouldEqual, time.UTC)
+		So(err, ShouldBeNil)
+
 		_, err = DecodeTime("apple")
 		So(err, ShouldBeError)
 	})

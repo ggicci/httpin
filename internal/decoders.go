@@ -176,10 +176,13 @@ func DecodeTime(value string) (interface{}, error) {
 		return t.UTC(), nil
 	}
 
-	// Try parsing value as int64 (timestamp).
-	// TODO(ggicci): can support float timestamp, e.g. 1618974933.284368
+	// Try parsing value as timestamp, both integer and float formats supported.
+	// e.g. "1618974933", "1618974933.284368".
 	if timestamp, err := strconv.ParseInt(value, 10, 64); err == nil {
 		return time.Unix(timestamp, 0).UTC(), nil
+	}
+	if timestamp, err := strconv.ParseFloat(value, 64); err == nil {
+		return time.Unix(0, int64(timestamp*float64(time.Second))).UTC(), nil
 	}
 
 	return time.Time{}, fmt.Errorf("invalid time value")
