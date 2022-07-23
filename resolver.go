@@ -15,6 +15,15 @@ type fieldResolver struct {
 	Path       []string
 	Directives []*Directive
 	Fields     []*fieldResolver
+
+	decoder interface{} // passed in by defining a "decoder" directive
+}
+
+func (r *fieldResolver) decoderOf(t reflect.Type) interface{} {
+	if r.decoder != nil {
+		return r.decoder
+	}
+	return decoderOf(t)
 }
 
 func (r *fieldResolver) isBodyDecoderAnnotation() bool {
@@ -34,6 +43,8 @@ func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 				ValueType: r.Type,
 				Value:     rv,
 				Context:   inheritableContext,
+
+				resolver: r,
 			}
 			if err := dir.Execute(directiveContext); err != nil {
 				var (
@@ -81,6 +92,27 @@ func (r *fieldResolver) resolve(req *http.Request) (reflect.Value, error) {
 	return rv, nil
 }
 
+func (r *fieldResolver) setDirectives(directives []*Directive) error {
+	var newDirectives []*Directive
+	for _, directive := range directives {
+		if directive.isDecoderSpecifier() { // decoder directive -> decoder
+			if len(directive.Argv) == 0 {
+				return ErrMissingDecoderName
+			}
+			// directive.Argv[0] should be the name of the decoder to set for the specific field.
+			decoder := decoderByName(directive.Argv[0])
+			if decoder == nil {
+				return ErrDecoderNotFound
+			}
+			r.decoder = decoder
+		} else {
+			newDirectives = append(newDirectives, directive)
+		}
+	}
+	r.Directives = newDirectives
+	return nil
+}
+
 // buildResolverTree builds a tree of resolvers for the specified struct type.
 // Which helps resolving fields data from input sources.
 func buildResolverTree(t reflect.Type) (*fieldResolver, error) {
@@ -102,7 +134,7 @@ func buildResolverTree(t reflect.Type) (*fieldResolver, error) {
 			// Inject a "body" directive to the root.
 			typeOfBody = fieldResolver.Type
 			dir, _ := buildDirective(fmt.Sprintf("body=%s", bodyTypeString(typeOfBody)))
-			root.Directives = []*Directive{dir}
+			_ = root.setDirectives([]*Directive{dir}) // error is ignored
 		}
 
 		root.Fields = append(root.Fields, fieldResolver)
@@ -133,7 +165,9 @@ func buildFieldResolver(parent *fieldResolver, field reflect.StructField) (*fiel
 	if directives, err := parseStructTag(field); err != nil {
 		return nil, fmt.Errorf("parse struct tag failed: %w", err)
 	} else {
-		root.Directives = directives
+		if err := root.setDirectives(directives); err != nil {
+			return nil, fmt.Errorf("parse struct tag failed: %w", err)
+		}
 	}
 
 	if field.Anonymous && t.Kind() == reflect.Struct && len(root.Directives) == 0 {

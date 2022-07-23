@@ -2,6 +2,7 @@ package httpin
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -10,6 +11,14 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+type MissingDecoderName struct {
+	Birthday time.Time `in:"form=birthday;decoder;required"`
+}
+
+type UnknownDecoderName struct {
+	Birthday time.Time `in:"form=birthday;decoder=decodeBirthday"`
+}
 
 func TestFieldResolver(t *testing.T) {
 	Convey("Build resolver tree", t, func() {
@@ -33,5 +42,17 @@ func TestFieldResolver(t *testing.T) {
 		So(rv.Elem().Interface(), ShouldHaveSameTypeAs, ProductQuery{})
 		bs, _ := json.Marshal(rv.Interface())
 		t.Logf("ProductQuery: %s\n", bs)
+	})
+
+	Convey("Parse decoder directive in struct tags, missing decoder name", t, func() {
+		_, err := buildResolverTree(reflect.TypeOf(MissingDecoderName{}))
+		So(err, ShouldNotBeNil)
+		So(errors.Is(err, ErrMissingDecoderName), ShouldBeTrue)
+	})
+
+	Convey("Parse decoder directive in struct tags, unknown name of decoder", t, func() {
+		_, err := buildResolverTree(reflect.TypeOf(UnknownDecoderName{}))
+		So(err, ShouldNotBeNil)
+		So(errors.Is(err, ErrDecoderNotFound), ShouldBeTrue)
 	})
 }

@@ -73,7 +73,6 @@ func New(inputStruct interface{}, opts ...Option) (*Engine, error) {
 		// Load the engine core and get a copy.
 		core = copyEngineCore(builtEngine.(*Engine))
 	}
-
 	// Apply default options and user custom options to the engine.
 	var allOptions []Option
 	defaultOptions := []Option{
@@ -111,10 +110,6 @@ func (e *Engine) Decode(req *http.Request) (interface{}, error) {
 	return rv.Interface(), nil
 }
 
-func copyEngineCore(eng *Engine) *Engine {
-	return &Engine{inputType: eng.inputType, tree: eng.tree}
-}
-
 // build builds extractors for the exported fields of the input struct.
 func (e *Engine) build() error {
 	tree, err := buildResolverTree(e.inputType)
@@ -131,4 +126,11 @@ func (e *Engine) getErrorHandler() ErrorHandler {
 	}
 
 	return globalCustomErrorHandler
+}
+
+func copyEngineCore(engine *Engine) *Engine {
+	return &Engine{
+		inputType: engine.inputType,
+		tree:      engine.tree,
+	}
 }

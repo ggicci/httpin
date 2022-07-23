@@ -60,6 +60,17 @@ type ThingWithUnexportedFields struct {
 	display string // unexported field
 }
 
+func decodeMyDate(value string) (interface{}, error) {
+	return time.Parse("2006-01-02", value)
+}
+
+type ThingWithNamedDecoder struct {
+	Name             string      `in:"form=name"`
+	Birthday         time.Time   `in:"form=birthday;decoder=decodeMyDate"`
+	EffectiveBetween []time.Time `in:"form=effective_between;decoder=decodeMyDate"`
+	CreatedBetween   []time.Time `in:"form=created_between"`
+}
+
 func TestEngine(t *testing.T) {
 	Convey("New engine with non-struct type", t, func() {
 		core, err := New(string("hello"))
@@ -82,9 +93,9 @@ func TestEngine(t *testing.T) {
 		So(err, ShouldBeNil)
 		core4, err := New(&ProductQuery{}, WithErrorHandler(CustomErrorHandler))
 		So(err, ShouldBeNil)
-		So(core1.tree, ShouldPointTo, core2.tree)
-		So(core2.tree, ShouldPointTo, core3.tree)
-		So(core3.tree, ShouldPointTo, core4.tree)
+		So(core1.tree, ShouldEqual, core2.tree)
+		So(core2.tree, ShouldEqual, core3.tree)
+		So(core3.tree, ShouldEqual, core4.tree)
 	})
 
 	Convey("Embedded field should work", t, func() {
@@ -198,7 +209,7 @@ func TestEngine(t *testing.T) {
 
 	Convey("Custom decoder should work", t, func() {
 		var boolType = reflect.TypeOf(bool(true))
-		RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(DecodeCustomBool))
+		RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool))
 		type BoolInput struct {
 			IsMember bool `in:"form=is_member"`
 		}
@@ -209,5 +220,34 @@ func TestEngine(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(got, ShouldResemble, &BoolInput{IsMember: true})
 		delete(decoders, boolType) // remove the custom decoder
+	})
+
+	Convey("Can specify a named decoder for a field rather than being auto-selected by field type", t, func() {
+		ReplaceNamedDecoder("decodeMyDate", ValueTypeDecoderFunc(decodeMyDate))
+
+		engine, err := New(ThingWithNamedDecoder{})
+		So(err, ShouldBeNil)
+
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{
+			"name":              {"Ggicci"},
+			"birthday":          {"1991-11-10"},
+			"effective_between": {"2021-04-12", "2025-04-12"},
+			"created_between":   {"2021-01-01T08:00:00+08:00", "2022-01-01T08:00:00+08:00"},
+		}
+		got, err := engine.Decode(r)
+		So(err, ShouldBeNil)
+		So(got, ShouldResemble, &ThingWithNamedDecoder{
+			Name:     "Ggicci",
+			Birthday: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
+			EffectiveBetween: []time.Time{
+				time.Date(2021, 4, 12, 0, 0, 0, 0, time.UTC),
+				time.Date(2025, 4, 12, 0, 0, 0, 0, time.UTC),
+			},
+			CreatedBetween: []time.Time{
+				time.Date(2021, 1, 1, 8, 0, 0, 0, time.FixedZone("E8", +8*3600)).UTC(),
+				time.Date(2022, 1, 1, 8, 0, 0, 0, time.FixedZone("E8", +8*3600)).UTC(),
+			},
+		})
 	})
 }

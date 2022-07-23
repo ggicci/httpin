@@ -60,7 +60,7 @@ func (e *extractor) extract(ctx *DirectiveContext, key string) error {
 		return e.extractMulti(ctx, key)
 	}
 
-	switch decoder := decoderOf(ctx.ValueType).(type) {
+	switch decoder := ctx.decoderOf(ctx.ValueType).(type) {
 	case ValueTypeDecoder:
 		if gotValue, interfaceValue, err := decodeValueAt(decoder, e.Form.Value[key], 0); err != nil {
 			return fieldError{key, gotValue, err}
@@ -89,7 +89,7 @@ func (e *extractor) extractMulti(ctx *DirectiveContext, key string) error {
 		files    = e.Form.File[key]
 	)
 
-	switch decoder := decoderOf(elemType).(type) {
+	switch decoder := ctx.decoderOf(elemType).(type) {
 	case ValueTypeDecoder:
 		theSlice = reflect.MakeSlice(ctx.ValueType, len(values), len(values))
 		for i := 0; i < len(values); i++ {
