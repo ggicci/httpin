@@ -77,3 +77,7 @@ type fieldError struct {
 func (e fieldError) Error() string {
 	return e.internalError.Error()
 }
+
+func (e fieldError) Unwrap() error {
+	return e.internalError
+}
