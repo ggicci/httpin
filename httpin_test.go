@@ -2,6 +2,7 @@ package httpin
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -69,6 +70,22 @@ type ThingWithNamedDecoder struct {
 	Birthday         time.Time   `in:"form=birthday;decoder=decodeMyDate"`
 	EffectiveBetween []time.Time `in:"form=effective_between;decoder=decodeMyDate"`
 	CreatedBetween   []time.Time `in:"form=created_between"`
+}
+
+type InvalidName struct {
+	Name string
+}
+
+func (e *InvalidName) Error() string {
+	return fmt.Sprintf("name '%s' is invalid", e.Name)
+}
+
+func decodeName(value string) (interface{}, error) {
+	return nil, &InvalidName{Name: value}
+}
+
+type ThingWithInvalidNamedDecoder struct {
+	Name string `in:"form=name;decoder=decodeName"`
 }
 
 func TestEngine(t *testing.T) {
@@ -249,5 +266,22 @@ func TestEngine(t *testing.T) {
 				time.Date(2022, 1, 1, 8, 0, 0, 0, time.FixedZone("E8", +8*3600)).UTC(),
 			},
 		})
+	})
+
+	Convey("Can unwrap custom errors from named decoder", t, func() {
+		ReplaceNamedDecoder("decodeName", ValueTypeDecoderFunc(decodeName))
+
+		engine, err := New(ThingWithInvalidNamedDecoder{})
+		So(err, ShouldBeNil)
+
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{
+			"name": {"Dragomeat"},
+		}
+		_, err = engine.Decode(r)
+		So(err, ShouldBeError)
+		var invalidName *InvalidName
+		So(errors.As(err, &invalidName), ShouldBeTrue)
+		So(invalidName.Name, ShouldEqual, "Dragomeat")
 	})
 }
