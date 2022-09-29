@@ -456,8 +456,5 @@ func (t *TimeArray) UnmarshalJSON(data []byte) error {
 }
 
 func pass(err error) bool {
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
