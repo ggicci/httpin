@@ -44,9 +44,10 @@ You **only** need to define a struct to receive/bind data from an HTTP request, 
 
 ```go
 type ListUsersInput struct {
-	Page     int  `in:"query=page"`
-	PerPage  int  `in:"query=per_page"`
-	IsMember bool `in:"query=is_member"`
+	Token    string `in:"query=access_token;header=x-access-token"`
+	Page     int    `in:"query=page;default=1"`
+	PerPage  int    `in:"query=per_page;default=20"`
+	IsMember bool   `in:"query=is_member"`
 }
 
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
@@ -98,7 +99,7 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 | 📖 Code Readability     | 😟 Poor                                    | 🤩 **Highly readable**                                                                         |
 | 🔨 Maintainability      | 😡 Poor                                    | 🥰 **Highly maintainable**                                                                     |
 
-## Alternatives
+## Alternatives and Similars
 
-- [google/go-querystring](https://github.com/google/go-querystring): encoding structs into URL query parameters
 - [gorilla/schema](https://github.com/gorilla/schema): converts structs to and from form values
+- [google/go-querystring](https://github.com/google/go-querystring): encoding structs into URL query parameters
