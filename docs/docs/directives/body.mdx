@@ -2,6 +2,7 @@
 sidebar_position: 4
 ---
 
+import GoPlay from "../../src/components/GoPlay"
 import InputOutputTable from "../../src/components/InputOutputTable"
 import data from "./data/body"
 
@@ -42,6 +43,60 @@ type CreateUserInput struct {
   rows={data.inputOutput.rows}
 ></InputOutputTable>
 
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+
+	"github.com/ggicci/httpin"
+	"github.com/go-chi/chi/v5"
+)
+
+type UpdateUserInput struct {
+	ID      string `in:"path=id"` // NOTE: register a path directive before using
+	Payload struct {
+		Display string `json:"display"`
+		Email   string `json:"email"`
+		IsAdmin bool   `json:"is_admin"`
+	} `in:"body=json"`
+}
+
+func UpdateUserHandler(rw http.ResponseWriter, r *http.Request) {
+	input := r.Context().Value(httpin.Input).(*UpdateUserInput)
+	fmt.Printf("input: %#v\n", input)
+}
+
+func init() {
+	httpin.UseGochiURLParam("path", chi.URLParam)
+}
+
+func main() {
+	router := chi.NewRouter()
+	router.With(
+		httpin.NewInput(UpdateUserInput{}),
+	).Put("/users/{id}", UpdateUserHandler)
+
+	r, _ := http.NewRequest("PUT", "/users/19911110", nil)
+	r.Body = io.NopCloser(strings.NewReader(`{
+			"display": "Ggicci Never Cry",
+			"email": "secret_@xxx.com",
+			"is_admin": true
+		}`))
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>
+
 ## Body Annotations
 
 There're two _body decoder annotations_ that can be used to read the body of the request:
@@ -72,6 +127,15 @@ type CreateUserInput struct {
 	*User
 }
 ```
+
+:::caution
+
+**Body Annotations** turns the whole struct into a target to which the request body
+will be decoded and populated. So it doesn't support a mix of body input and
+param input. Instead, embedding a struct into the input struct can achieve this.
+Check the demo code above.
+
+:::
 
 ## Custom Body Decoders
 
