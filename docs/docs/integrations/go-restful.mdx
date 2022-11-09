@@ -1,0 +1,66 @@
+---
+sidebar_position: 4
+---
+
+import GoPlay from "../../src/components/GoPlay"
+
+# go-restful
+
+[**go-restful**](https://github.com/emicklei/go-restful) is a
+
+> package for building REST-style Web Services using Go.
+
+## Integrations
+
+Convert `httpin.NewInput` middleware handler to `restful.Filter`.
+
+Use [HttpMiddlewareHandlerToFilter](https://pkg.go.dev/github.com/emicklei/go-restful/v3#HttpMiddlewareHandlerToFilter), which is introduced in [v3.9.0](https://github.com/emicklei/go-restful/tree/v3.9.0) by this [PR#505](https://github.com/emicklei/go-restful/pull/505).
+
+## Run Demo
+
+<GoPlay>
+
+```go {20,32}
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+
+	restful "github.com/emicklei/go-restful/v3"
+	"github.com/ggicci/httpin"
+)
+
+type ListUsersInput struct {
+	Gender   string `in:"query=gender"`
+	AgeRange []int  `in:"query=age_range"`
+	IsMember bool   `in:"query=is_member"`
+}
+
+func handleListUsers(request *restful.Request, response *restful.Response) {
+	// Retrieve you data in one line of code!
+	input := request.Request.Context().Value(httpin.Input).(*ListUsersInput)
+
+	fmt.Printf("input: %#v\n", input)
+}
+
+func main() {
+	ws := new(restful.WebService)
+
+	wsContainer := restful.NewContainer()
+	wsContainer.Add(ws)
+
+	// Bind input struct with handler.
+	ws.Route(ws.GET("/users").Filter(
+		restful.HttpMiddlewareHandlerToFilter(httpin.NewInput(ListUsersInput{})),
+	).To(handleListUsers))
+
+	r, _ := http.NewRequest("GET", "/users?gender=male&age_range=18&age_range=24&is_member=1", nil)
+
+	rw := httptest.NewRecorder()
+	wsContainer.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>

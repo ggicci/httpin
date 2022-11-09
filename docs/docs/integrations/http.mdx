@@ -1,0 +1,61 @@
+---
+sidebar_position: 0
+---
+
+import GoPlay from "../../src/components/GoPlay"
+
+# net/http
+
+Package [net/http](https://pkg.go.dev/net/http#Handler)
+
+> provides HTTP client and server implementations.
+
+## Integrations
+
+Chain httpin's Middlware to your `http.Handler`s. We recommend using [justinas/alice](https://github.com/justinas/alice) to chain your middlewares.
+
+## Run Demo
+
+<GoPlay>
+
+```go {20,27}
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/ggicci/httpin"
+	"github.com/justinas/alice"
+)
+
+type ListUsersInput struct {
+	Gender   string `in:"query=gender"`
+	AgeRange []int  `in:"query=age_range"`
+	IsMember bool   `in:"query=is_member"`
+}
+
+func ListUsers(rw http.ResponseWriter, r *http.Request) {
+	// Retrieve you data in one line of code!
+	input := r.Context().Value(httpin.Input).(*ListUsersInput)
+
+	fmt.Printf("input: %#v\n", input)
+}
+
+func init() {
+	// Bind input struct with handler.
+	http.Handle("/users", alice.New(
+		httpin.NewInput(ListUsersInput{}),
+	).ThenFunc(ListUsers))
+}
+
+func main() {
+	r, _ := http.NewRequest("GET", "/users?gender=male&age_range=18&age_range=24&is_member=1", nil)
+
+	rw := httptest.NewRecorder()
+	http.DefaultServeMux.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>

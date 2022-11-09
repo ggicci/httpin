@@ -1,0 +1,68 @@
+---
+sidebar_position: 1
+---
+
+import GoPlay from "../../src/components/GoPlay"
+
+# go-chi/chi
+
+[**go-chi/chi**](https://github.com/go-chi/chi) is
+
+> a lightweight, idiomatic and composable router for building Go HTTP services.
+
+## Integrations
+
+1. Chain `httpin.NewInput` middleware with `chi.With` method
+2. Enable `path` Directive by using `chi.URLParam` Method
+
+## Run Demo
+
+<GoPlay>
+
+```go {20,28,35}
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/ggicci/httpin"
+	"github.com/go-chi/chi/v5"
+)
+
+type ListUserReposInput struct {
+	Username   string `in:"path=username"`
+	Visibility string `in:"query=visibility"`
+	Fork       bool   `in:"query=fork"`
+}
+
+func ListUserRepos(rw http.ResponseWriter, r *http.Request) {
+	// Retrieve you data in one line of code!
+	input := r.Context().Value(httpin.Input).(*ListUserReposInput)
+
+	fmt.Printf("input: %#v\n", input)
+}
+
+func init() {
+	// Register a directive named "path" to retrieve values from `chi.URLParam`,
+	// i.e. decode path variables.
+	httpin.UseGochiURLParam("path", chi.URLParam)
+}
+
+func main() {
+	router := chi.NewRouter()
+
+	// Bind input struct with handler.
+	router.With(
+		httpin.NewInput(ListUserReposInput{}),
+	).Get("/users/{username}/repos", ListUserRepos)
+
+	r, _ := http.NewRequest("GET", "/users/ggicci/repos?visibility=public&fork=1", nil)
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>

@@ -1,0 +1,68 @@
+---
+sidebar_position: 2
+---
+
+import GoPlay from "../../src/components/GoPlay"
+
+# gorilla/mux 🦍
+
+[gorilla/mux](https://github.com/gorilla/mux) is
+
+> A powerful HTTP router and URL matcher for building Go web servers
+
+## Integrations
+
+1. Enable `path` directive by using `mux.Vars` method
+
+## Run Demo
+
+<GoPlay>
+
+```go {21,29,36}
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/ggicci/httpin"
+	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
+)
+
+type ListUserReposInput struct {
+	Username   string `in:"path=username"`
+	Visibility string `in:"query=visibility"`
+	Fork       bool   `in:"query=fork"`
+}
+
+func ListUserRepos(rw http.ResponseWriter, r *http.Request) {
+	// Retrieve you data in one line of code!
+	input := r.Context().Value(httpin.Input).(*ListUserReposInput)
+
+	fmt.Printf("input: %#v\n", input)
+}
+
+func init() {
+	// Register a directive named "path" to retrieve values from `mux.Vars`,
+	// i.e. decode path variables.
+	httpin.UseGorillaMux("path", mux.Vars)
+}
+
+func main() {
+	router := mux.NewRouter()
+
+	// Bind input struct with handler.
+	router.Handle("/users/{username}/repos", alice.New(
+		httpin.NewInput(ListUserReposInput{}),
+	).ThenFunc(ListUserRepos)).Methods("GET")
+
+	r, _ := http.NewRequest("GET", "/users/ggicci/repos?visibility=public&fork=1", nil)
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>

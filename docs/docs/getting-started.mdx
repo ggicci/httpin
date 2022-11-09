@@ -3,6 +3,8 @@ sidebar_position: 0
 slug: /
 ---
 
+import GoPlay from "../src/components/GoPlay"
+
 # Getting Started
 
 httpin is a **Go** package for **decoding HTTP requests into structs**. We can decode
@@ -28,33 +30,8 @@ If you thought this package helpful, please consider [giving it a big star ⭐�
 
 ## Quick View
 
-### Before using httpin
-
 ```go
-func ListUsers(rw http.ResponseWriter, r *http.Request) {
-	page, err := strconv.ParseInt(r.FormValue("page"), 10, 64)
-	if err != nil {
-		// Invalid parameter: page.
-		return
-	}
-	perPage, err := strconv.ParseInt(r.FormValue("per_page"), 10, 64)
-	if err != nil {
-		// Invalid parameter: per_page.
-		return
-	}
-	isMember, err := strconv.ParseBool(r.FormValue("is_member"))
-	if err != nil {
-		// Invalid parameter: is_member.
-		return
-	}
-
-	// Do sth.
-}
-```
-
-### Using httpin
-
-```go
+// Well define your data.
 type ListUsersInput struct {
 	Page     int  `in:"query=page"`
 	PerPage  int  `in:"query=per_page"`
@@ -62,12 +39,59 @@ type ListUsersInput struct {
 }
 
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
+	// Retrieve your data in one line of code!
 	input := r.Context().Value(httpin.Input).(*ListUsersInput)
+
 	// Do sth.
 }
 ```
 
-### Comparison
+## Run Demo
+
+Take a look at the **integrations** section in the left sidebar. You may also find useful runnable demos there.
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/ggicci/httpin"
+	"github.com/go-chi/chi/v5"
+)
+
+type ListUsersInput struct {
+	Token    string `in:"header=Authorization"`
+	IsMember bool   `in:"query=is_member"`
+	AgeRange []int  `in:"query=age_range[],age_range"`
+}
+
+func ListUsers(rw http.ResponseWriter, r *http.Request) {
+	input := r.Context().Value(httpin.Input).(*ListUsersInput)
+	fmt.Printf("input: %#v\n", input)
+}
+
+func main() {
+	router := chi.NewRouter()
+	router.With(
+		httpin.NewInput(ListUsersInput{}),
+	).Get("/users", ListUsers)
+
+	r, _ := http.NewRequest("GET", "/users?is_member=1&age_range=18&age_range=60", nil)
+	r.Header.Set("Authorization", "my-secret-here")
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>
+
+## Comparison
 
 | Items                | Before (use net/http package)              | After (use ggicci/httpin package)                                                              |
 | -------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
@@ -75,7 +99,3 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 | Code Repetition Rate | 😞 High                                    | **Lower**                                                                                      |
 | Code Readability     | 😟 Poor                                    | **Highly readable**                                                                            |
 | Maintainability      | 😡 Poor                                    | 😍 **Highly maintainable**                                                                     |
-
-## 🌟 Example Project
-
-You could visit https://github.com/ggicci/httpin-example/blob/main/main.go for the complete code.

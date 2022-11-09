@@ -4,12 +4,28 @@ sidebar_position: 3
 
 # gin-gonic/gin 🥤
 
-## Create a gin middleware - `BindInput`
+## Integrations
 
-About [gin middleware](https://pkg.go.dev/github.com/gin-gonic/gin#section-readme).
+You have to create a [gin middleware](https://github.com/gin-gonic/gin#using-middleware) on your own.
+In the following demo code, `BindInput` is a good example to start.
 
-```go {2,39,46}
-// BindInput instances an httpin engine for a input struct as a gin middleware.
+## Run Demo
+
+```go {15,46,54}
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/ggicci/httpin"
+	"github.com/gin-gonic/gin"
+)
+
+// BindInput instances an httpin engine for an input struct as a gin middleware.
 func BindInput(inputStruct interface{}) gin.HandlerFunc {
 	engine, err := httpin.New(inputStruct)
 	if err != nil {
@@ -34,27 +50,53 @@ func BindInput(inputStruct interface{}) gin.HandlerFunc {
 	}
 }
 
-type Pagination struct {
-	Page    int `in:"query=page"`
-	PerPage int `in:"query=per_page,page_size"`
-}
-
 type ListUsersInput struct {
 	Gender   string `in:"query=gender"`
 	AgeRange []int  `in:"query=age_range"`
 	IsMember bool   `in:"query=is_member"`
-	Pagination
 }
 
 func ListUsers(c *gin.Context) {
 	input := c.Request.Context().Value(httpin.Input).(*ListUsersInput)
-	c.JSON(http.StatusOK, input)
+	fmt.Printf("input: %#v\n", input)
 }
 
 func main() {
-	r := gin.New()
-	// Bind the input struct with your API handler.
-	r.GET("/users", BindInput(ListUsersInput{}), ListUsers)
-	r.Run()
+	router := gin.New()
+
+	// Bind input struct with handler.
+	router.GET("/users", BindInput(ListUsersInput{}), ListUsers)
+
+	r, _ := http.NewRequest("GET", "/users?gender=male&age_range=18&age_range=24&is_member=1", nil)
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
 }
+```
+
+Since it will run timeout on the Go Playground. I removed the `Run` button for the above demo code.
+You can test the above snippet by using the following command on your local host:
+
+```bash
+mkdir /tmp/test && cd $_
+
+touch main.go
+# then COPY & PASTE the above code to main.go
+
+
+go mod init test
+go mod tidy
+
+go run main.go
+```
+
+The output on my machine looks like this:
+
+```text
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /users                    --> main.ListUsers (2 handlers)
+input: &main.ListUsersInput{Gender:"male", AgeRange:[]int{18, 24}, IsMember:true}
 ```
