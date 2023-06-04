@@ -143,7 +143,7 @@ func copyEngineCore(engine *Engine) *Engine {
 // e.g.
 //
 //	input := &InputStruct{}
-//	if err := Decode(req, input); err != nil { ... }
+//	if err := Decode(req, &input); err != nil { ... }
 //
 // input is now populated with data from the request.
 func Decode(req *http.Request, input interface{}) error {
