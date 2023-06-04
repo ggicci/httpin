@@ -47,7 +47,11 @@ type Engine struct {
 
 // New builds an HTTP request decoder for the specified struct type with custom options.
 func New(inputStruct interface{}, opts ...Option) (*Engine, error) {
-	typ := reflect.TypeOf(inputStruct) // retrieve type information
+	typ, ok := inputStruct.(reflect.Type)
+	if !ok {
+		typ = reflect.TypeOf(inputStruct) // retrieve type information
+	}
+
 	if typ == nil {
 		return nil, fmt.Errorf("httpin: nil input type")
 	}
@@ -132,5 +136,33 @@ func copyEngineCore(engine *Engine) *Engine {
 	return &Engine{
 		inputType: engine.inputType,
 		tree:      engine.tree,
+	}
+}
+
+// Decode decodes an HTTP request to a struct instance.
+// e.g.
+//
+//	input := &InputStruct{}
+//	if err := Decode(req, &input); err != nil { ... }
+//
+// input is now populated with data from the request.
+func Decode(req *http.Request, input interface{}) error {
+	originalType := reflect.TypeOf(input)
+	if originalType.Kind() != reflect.Ptr {
+		return fmt.Errorf("httpin: input must be a pointer")
+	}
+	engine, err := New(originalType.Elem())
+	if err != nil {
+		return err
+	}
+	if value, err := engine.Decode(req); err != nil {
+		return err
+	} else {
+		if originalType.Elem().Kind() == reflect.Ptr {
+			reflect.ValueOf(input).Elem().Set(reflect.ValueOf(value))
+		} else {
+			reflect.ValueOf(input).Elem().Set(reflect.ValueOf(value).Elem())
+		}
+		return nil
 	}
 }

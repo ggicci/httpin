@@ -285,3 +285,32 @@ func TestEngine(t *testing.T) {
 		So(invalidName.Name, ShouldEqual, "Dragomeat")
 	})
 }
+
+func TestDecode(t *testing.T) {
+	r, _ := http.NewRequest("GET", "/", nil)
+	r.Form = url.Values{
+		"page":     {"1"},
+		"per_page": {"100"},
+	}
+	expected := &Pagination{
+		Page:    1,
+		PerPage: 100,
+	}
+
+	Convey("Decode passing a pointer to a pointer of struct instance", t, func() {
+		input := &Pagination{}
+		So(Decode(r, &input), ShouldBeNil)
+		So(input, ShouldResemble, expected)
+	})
+
+	Convey("Decode passing a pointer to a struct instance", t, func() {
+		input := Pagination{}
+		So(Decode(r, &input), ShouldBeNil)
+		So(input, ShouldResemble, *expected)
+	})
+
+	Convey("Decode passing a struct instance should fail", t, func() {
+		input := Pagination{}
+		So(Decode(r, input), ShouldBeError)
+	})
+}
