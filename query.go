@@ -3,14 +3,18 @@
 
 package httpin
 
-import "mime/multipart"
+import (
+	"mime/multipart"
+	"net/http"
+)
 
 // queryValueExtractor implements the "query" executor who extracts values from
 // the querystring of an HTTP request.
-func queryValueExtractor(ctx *DirectiveContext) error {
+func queryValueExtractor(ctx *DirectiveRuntime) error {
+	req := ctx.Context.Value(RequestValue).(*http.Request)
 	extractor := &extractor{
 		Form: multipart.Form{
-			Value: ctx.Request.URL.Query(),
+			Value: req.URL.Query(),
 		},
 	}
 	return extractor.Execute(ctx)

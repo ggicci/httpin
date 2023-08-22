@@ -9,14 +9,14 @@ import (
 
 func TestOptions(t *testing.T) {
 	Convey("Override default error handler", t, func() {
-		engine, _ := New(ProductQuery{})
-		So(engine.getErrorHandler(), ShouldEqual, globalCustomErrorHandler)
+		core, _ := New(ProductQuery{})
+		So(core.getErrorHandler(), ShouldEqual, globalCustomErrorHandler)
 
-		engine, _ = New(ProductQuery{}, WithErrorHandler(CustomErrorHandler))
-		So(engine.getErrorHandler(), ShouldEqual, CustomErrorHandler)
+		core, _ = New(ProductQuery{}, WithErrorHandler(CustomErrorHandler))
+		So(core.getErrorHandler(), ShouldEqual, CustomErrorHandler)
 	})
 
-	Convey("Can't create engine with nil custom error handler", t, func() {
+	Convey("Can't create core with nil custom error handler", t, func() {
 		_, err := New(ProductQuery{}, WithErrorHandler(nil))
 		So(errors.Is(err, ErrNilErrorHandler), ShouldBeTrue)
 	})

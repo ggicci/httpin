@@ -30,7 +30,7 @@ func newExtractor(r *http.Request) *extractor {
 	}
 }
 
-func (e *extractor) Execute(ctx *DirectiveContext) error {
+func (e *extractor) Execute(ctx *DirectiveRuntime) error {
 	for _, key := range ctx.Directive.Argv {
 		if e.KeyNormalizer != nil {
 			key = e.KeyNormalizer(key)
@@ -42,8 +42,8 @@ func (e *extractor) Execute(ctx *DirectiveContext) error {
 	return nil
 }
 
-func (e *extractor) extract(ctx *DirectiveContext, key string) error {
-	if ctx.Context.Value(FieldSet) == true {
+func (e *extractor) extract(rtm *DirectiveRuntime, key string) error {
+	if rtm.Context.Value(FieldSet) == true {
 		return nil
 	}
 
@@ -56,42 +56,45 @@ func (e *extractor) extract(ctx *DirectiveContext, key string) error {
 	}
 
 	// NOTE(ggicci): Array?
-	if ctx.ValueType.Kind() == reflect.Slice {
-		return e.extractMulti(ctx, key)
+	if rtm.Value.Type().Kind() == reflect.Slice {
+		return e.extractMulti(rtm, key)
 	}
 
-	switch decoder := ctx.decoderOf(ctx.ValueType).(type) {
+	rtmHelper := &directiveRuntimeHelper{rtm}
+
+	switch decoder := rtmHelper.decoderOf(rtm.Value.Type()).(type) {
 	case ValueTypeDecoder:
 		if gotValue, interfaceValue, err := decodeValueAt(decoder, e.Form.Value[key], 0); err != nil {
 			return fieldError{key, gotValue, err}
 		} else {
-			ctx.Value.Elem().Set(reflect.ValueOf(interfaceValue))
+			rtm.Value.Elem().Set(reflect.ValueOf(interfaceValue))
 		}
 	case FileTypeDecoder:
 		if gotFile, interfaceValue, err := decodeFileAt(decoder, e.Form.File[key], 0); err != nil {
 			return fieldError{key, gotFile, err}
 		} else {
-			ctx.Value.Elem().Set(reflect.ValueOf(interfaceValue))
+			rtm.Value.Elem().Set(reflect.ValueOf(interfaceValue))
 		}
 	default:
-		return UnsupportedTypeError{ctx.ValueType}
+		return UnsupportedTypeError{rtm.Value.Type()}
 	}
 
-	ctx.DeliverContextValue(FieldSet, true)
+	rtmHelper.DeliverContextValue(FieldSet, true)
 	return nil
 }
 
-func (e *extractor) extractMulti(ctx *DirectiveContext, key string) error {
+func (e *extractor) extractMulti(rtm *DirectiveRuntime, key string) error {
 	var (
-		theSlice reflect.Value
-		elemType = ctx.ValueType.Elem()
-		values   = e.Form.Value[key]
-		files    = e.Form.File[key]
+		theSlice  reflect.Value
+		elemType  = rtm.Value.Type().Elem()
+		values    = e.Form.Value[key]
+		files     = e.Form.File[key]
+		rtmHelper = &directiveRuntimeHelper{rtm}
 	)
 
-	switch decoder := ctx.decoderOf(elemType).(type) {
+	switch decoder := rtmHelper.decoderOf(elemType).(type) {
 	case ValueTypeDecoder:
-		theSlice = reflect.MakeSlice(ctx.ValueType, len(values), len(values))
+		theSlice = reflect.MakeSlice(rtm.Value.Type(), len(values), len(values))
 		for i := 0; i < len(values); i++ {
 			if _, interfaceValue, err := decodeValueAt(decoder, values, i); err != nil {
 				return fieldError{key, values, fmt.Errorf("at index %d: %w", i, err)}
@@ -100,7 +103,7 @@ func (e *extractor) extractMulti(ctx *DirectiveContext, key string) error {
 			}
 		}
 	case FileTypeDecoder:
-		theSlice = reflect.MakeSlice(ctx.ValueType, len(files), len(files))
+		theSlice = reflect.MakeSlice(rtm.Value.Type(), len(files), len(files))
 		for i := 0; i < len(files); i++ {
 			if _, interfaceValue, err := decodeFileAt(decoder, files, i); err != nil {
 				return fieldError{key, files, fmt.Errorf("at index %d: %w", i, err)}
@@ -109,11 +112,11 @@ func (e *extractor) extractMulti(ctx *DirectiveContext, key string) error {
 			}
 		}
 	default:
-		return UnsupportedTypeError{ctx.ValueType}
+		return UnsupportedTypeError{rtm.Value.Type()}
 	}
 
-	ctx.Value.Elem().Set(theSlice)
-	ctx.DeliverContextValue(FieldSet, true)
+	rtm.Value.Elem().Set(theSlice)
+	rtmHelper.DeliverContextValue(FieldSet, true)
 	return nil
 }
 

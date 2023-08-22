@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ggicci/owl"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 type Pagination struct {
@@ -42,10 +44,6 @@ type Cursor struct {
 	AfterMarker  ObjectID `in:"form=after"`
 	BeforeMarker ObjectID `in:"form=before"`
 	Limit        int      `in:"form=limit"`
-}
-
-type ThingWithInvalidDirectives struct {
-	Sequence string `in:"form=seq;base58_to_integer"`
 }
 
 type ThingWithUnsupportedCustomType struct {
@@ -88,33 +86,41 @@ type ThingWithInvalidNamedDecoder struct {
 	Name string `in:"form=name;decoder=decodeName"`
 }
 
-func TestEngine(t *testing.T) {
-	Convey("New engine with non-struct type", t, func() {
-		core, err := New(string("hello"))
-		So(core, ShouldBeNil)
-		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
-	})
+func TestNew_WithNonStructType(t *testing.T) {
+	core, err := New(string("hello"))
+	assert.Nil(t, core)
+	assert.ErrorIs(t, err, owl.ErrUnsupportedType)
+}
 
-	Convey("New engine with unregistered executor", t, func() {
-		core, err := New(ThingWithInvalidDirectives{})
-		So(core, ShouldBeNil)
-		So(errors.Is(err, ErrUnregisteredExecutor), ShouldBeTrue)
-	})
+func TestNew_WithUnregisteredExecutor(t *testing.T) {
+	type ThingWithInvalidDirectives struct {
+		Sequence string `in:"form=seq;base58_to_integer"`
+	}
 
-	Convey("New engine with same type should hit cache", t, func() {
-		core1, err := New(ProductQuery{})
-		So(err, ShouldBeNil)
-		core2, err := New(ProductQuery{})
-		So(err, ShouldBeNil)
-		core3, err := New(&ProductQuery{})
-		So(err, ShouldBeNil)
-		core4, err := New(&ProductQuery{}, WithErrorHandler(CustomErrorHandler))
-		So(err, ShouldBeNil)
-		So(core1.tree, ShouldEqual, core2.tree)
-		So(core2.tree, ShouldEqual, core3.tree)
-		So(core3.tree, ShouldEqual, core4.tree)
-	})
+	core, err := New(ThingWithInvalidDirectives{})
+	assert.Nil(t, core)
+	assert.ErrorIs(t, err, ErrUnregisteredExecutor)
+	assert.ErrorContains(t, err, "base58_to_integer")
+}
 
+func TestNew_hitCachedResolverOfSameInputType(t *testing.T) {
+	assert := assert.New(t)
+
+	type Query struct{}
+	core1, err := New(Query{})
+	assert.NoError(err)
+
+	core2, err := New(Query{})
+	assert.NoError(err)
+
+	assert.Equal(core1.resolver, core2.resolver)
+
+	core3, err := New(&Query{}, WithErrorHandler(CustomErrorHandler))
+	assert.NoError(err)
+	assert.Equal(core1.resolver, core3.resolver)
+}
+
+func TestCore(t *testing.T) {
 	Convey("Embedded field should work", t, func() {
 		r, _ := http.NewRequest("GET", "/", nil)
 		r.Form = url.Values{
@@ -242,7 +248,7 @@ func TestEngine(t *testing.T) {
 	Convey("Can specify a named decoder for a field rather than being auto-selected by field type", t, func() {
 		ReplaceNamedDecoder("decodeMyDate", ValueTypeDecoderFunc(decodeMyDate))
 
-		engine, err := New(ThingWithNamedDecoder{})
+		core, err := New(ThingWithNamedDecoder{})
 		So(err, ShouldBeNil)
 
 		r, _ := http.NewRequest("GET", "/", nil)
@@ -252,7 +258,7 @@ func TestEngine(t *testing.T) {
 			"effective_between": {"2021-04-12", "2025-04-12"},
 			"created_between":   {"2021-01-01T08:00:00+08:00", "2022-01-01T08:00:00+08:00"},
 		}
-		got, err := engine.Decode(r)
+		got, err := core.Decode(r)
 		So(err, ShouldBeNil)
 		So(got, ShouldResemble, &ThingWithNamedDecoder{
 			Name:     "Ggicci",
@@ -271,14 +277,14 @@ func TestEngine(t *testing.T) {
 	Convey("Can unwrap custom errors from named decoder", t, func() {
 		ReplaceNamedDecoder("decodeName", ValueTypeDecoderFunc(decodeName))
 
-		engine, err := New(ThingWithInvalidNamedDecoder{})
+		core, err := New(ThingWithInvalidNamedDecoder{})
 		So(err, ShouldBeNil)
 
 		r, _ := http.NewRequest("GET", "/", nil)
 		r.Form = url.Values{
 			"name": {"Dragomeat"},
 		}
-		_, err = engine.Decode(r)
+		_, err = core.Decode(r)
 		So(err, ShouldBeError)
 		var invalidName *InvalidName
 		So(errors.As(err, &invalidName), ShouldBeTrue)

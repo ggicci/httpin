@@ -10,10 +10,11 @@ import (
 
 // headerValueExtractor implements the "header" executor who extracts values
 // from the HTTP headers.
-func headerValueExtractor(ctx *DirectiveContext) error {
+func headerValueExtractor(ctx *DirectiveRuntime) error {
+	req := ctx.Context.Value(RequestValue).(*http.Request)
 	extractor := &extractor{
 		Form: multipart.Form{
-			Value: ctx.Request.Header,
+			Value: req.Header,
 		},
 		KeyNormalizer: http.CanonicalHeaderKey,
 	}

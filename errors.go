@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/ggicci/owl"
 )
 
 var (
@@ -57,7 +59,7 @@ type InvalidFieldError struct {
 	ErrorMessage string `json:"error"`
 
 	// directives is the list of directives bound to the field.
-	Directives []*Directive `json:"-"`
+	Directives []*owl.Directive `json:"-"`
 }
 
 func (f *InvalidFieldError) Error() string {
