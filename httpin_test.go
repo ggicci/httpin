@@ -1,296 +1,17 @@
 package httpin
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"testing"
-	"time"
 
-	"github.com/ggicci/owl"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/justinas/alice"
 	"github.com/stretchr/testify/assert"
 )
-
-type Pagination struct {
-	Page    int `in:"form=page,page_index,index"`
-	PerPage int `in:"form=per_page,page_size"`
-}
-
-type Authorization struct {
-	AccessToken string `in:"form=access_token;header=x-api-token"`
-}
-
-type ProductQuery struct {
-	CreatedAt time.Time `in:"form=created_at;required"`
-	Color     string    `in:"form=colour,color"`
-	IsSoldout bool      `in:"form=is_soldout"`
-	SortBy    []string  `in:"form=sort_by"`
-	SortDesc  []bool    `in:"form=sort_desc"`
-	Pagination
-	Authorization
-}
-
-type ObjectID struct {
-	Timestamp [4]byte
-	Mid       [3]byte
-	Pid       [2]byte
-	Counter   [3]byte
-}
-
-type Cursor struct {
-	AfterMarker  ObjectID `in:"form=after"`
-	BeforeMarker ObjectID `in:"form=before"`
-	Limit        int      `in:"form=limit"`
-}
-
-type ThingWithUnsupportedCustomType struct {
-	Cursor
-}
-
-type ThingWithUnsupportedCustomTypeOfSliceField struct {
-	IdList []ObjectID `in:"form=id[]"`
-}
-
-type ThingWithUnexportedFields struct {
-	Name    string `in:"form=name"`
-	display string // unexported field
-}
-
-func decodeMyDate(value string) (interface{}, error) {
-	return time.Parse("2006-01-02", value)
-}
-
-type ThingWithNamedDecoder struct {
-	Name             string      `in:"form=name"`
-	Birthday         time.Time   `in:"form=birthday;decoder=decodeMyDate"`
-	EffectiveBetween []time.Time `in:"form=effective_between;decoder=decodeMyDate"`
-	CreatedBetween   []time.Time `in:"form=created_between"`
-}
-
-type InvalidName struct {
-	Name string
-}
-
-func (e *InvalidName) Error() string {
-	return fmt.Sprintf("name '%s' is invalid", e.Name)
-}
-
-func decodeName(value string) (interface{}, error) {
-	return nil, &InvalidName{Name: value}
-}
-
-type ThingWithInvalidNamedDecoder struct {
-	Name string `in:"form=name;decoder=decodeName"`
-}
-
-func TestNew_WithNonStructType(t *testing.T) {
-	core, err := New(string("hello"))
-	assert.Nil(t, core)
-	assert.ErrorIs(t, err, owl.ErrUnsupportedType)
-}
-
-func TestNew_WithUnregisteredExecutor(t *testing.T) {
-	type ThingWithInvalidDirectives struct {
-		Sequence string `in:"form=seq;base58_to_integer"`
-	}
-
-	core, err := New(ThingWithInvalidDirectives{})
-	assert.Nil(t, core)
-	assert.ErrorIs(t, err, ErrUnregisteredExecutor)
-	assert.ErrorContains(t, err, "base58_to_integer")
-}
-
-func TestNew_hitCachedResolverOfSameInputType(t *testing.T) {
-	assert := assert.New(t)
-
-	type Query struct{}
-	core1, err := New(Query{})
-	assert.NoError(err)
-
-	core2, err := New(Query{})
-	assert.NoError(err)
-
-	assert.Equal(core1.resolver, core2.resolver)
-
-	core3, err := New(&Query{}, WithErrorHandler(CustomErrorHandler))
-	assert.NoError(err)
-	assert.Equal(core1.resolver, core3.resolver)
-}
-
-func TestCore(t *testing.T) {
-	Convey("Embedded field should work", t, func() {
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"created_at": {"1991-11-10T08:00:00+08:00"},
-			"color":      {"red"},
-			"is_soldout": {"true"},
-			"sort_by":    {"id", "quantity"},
-			"sort_desc":  {"0", "true"},
-			"page":       {"1"},
-			"per_page":   {"20"},
-		}
-		expected := &ProductQuery{
-			CreatedAt: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
-			Color:     "red",
-			IsSoldout: true,
-			SortBy:    []string{"id", "quantity"},
-			SortDesc:  []bool{false, true},
-			Pagination: Pagination{
-				Page:    1,
-				PerPage: 20,
-			},
-		}
-		core, err := New(ProductQuery{})
-		So(err, ShouldBeNil)
-		got, err := core.Decode(r)
-		So(err, ShouldBeNil)
-		So(got, ShouldResemble, expected)
-	})
-
-	Convey("Unexported fields should be ignored", t, func() {
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"name": []string{"ggicci"},
-		}
-		expected := &ThingWithUnexportedFields{
-			Name:    "ggicci",
-			display: "",
-		}
-		core, err := New(ThingWithUnexportedFields{})
-		So(err, ShouldBeNil)
-		got, err := core.Decode(r)
-		So(err, ShouldBeNil)
-		So(got, ShouldResemble, expected)
-	})
-
-	Convey("Unsupported custom type", t, func() {
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"uid":   {"ggicci"},
-			"after": {"5cb71995ad763f7f1717c9eb"},
-			"limit": {"50"},
-		}
-		core, err := New(ThingWithUnsupportedCustomType{})
-		So(err, ShouldBeNil)
-		got, err := core.Decode(r)
-		So(got, ShouldBeNil)
-		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
-	})
-
-	Convey("Unsupported custom type of slice field", t, func() {
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"id[]": {
-				"5cb71995ad763f7f1717c9eb",
-				"60922dd8940cf19c30bba50c",
-				"6093a70fdb597d966944c125",
-			},
-		}
-		core, err := New(ThingWithUnsupportedCustomTypeOfSliceField{})
-		So(err, ShouldBeNil)
-		got, err := core.Decode(r)
-		So(got, ShouldBeNil)
-		So(errors.Is(err, ErrUnsupporetedType), ShouldBeTrue)
-	})
-
-	Convey("Meet invalid value for a key", t, func() {
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"created_at": {"1991-11-10T08:00:00+08:00"},
-			"is_soldout": {"zero"}, // invalid
-		}
-		core, err := New(ProductQuery{})
-		So(err, ShouldBeNil)
-		_, err = core.Decode(r)
-		So(err, ShouldBeError)
-		var invalidField *InvalidFieldError
-		So(errors.As(err, &invalidField), ShouldBeTrue)
-		So(invalidField.Field, ShouldEqual, "IsSoldout")
-		So(invalidField.Source, ShouldEqual, "form")
-		So(invalidField.Value, ShouldEqual, "zero")
-	})
-
-	Convey("Meet invalid values for a key (of slice type)", t, func() {
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"created_at": {"1991-11-10T08:00:00+08:00"},
-			"sort_desc":  {"true", "zero", "0"}, // invalid value "zero"
-		}
-		core, err := New(ProductQuery{})
-		So(err, ShouldBeNil)
-		_, err = core.Decode(r)
-		var invalidField *InvalidFieldError
-		So(errors.As(err, &invalidField), ShouldBeTrue)
-		So(invalidField.Field, ShouldEqual, "SortDesc")
-		So(invalidField.Source, ShouldEqual, "form")
-		So(invalidField.Value, ShouldResemble, []string{"true", "zero", "0"})
-		So(err.Error(), ShouldContainSubstring, "at index 1")
-	})
-
-	Convey("Custom decoder should work", t, func() {
-		var boolType = reflect.TypeOf(bool(true))
-		RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool))
-		type BoolInput struct {
-			IsMember bool `in:"form=is_member"`
-		}
-		core, _ := New(BoolInput{})
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{"is_member": {"yes"}}
-		got, err := core.Decode(r)
-		So(err, ShouldBeNil)
-		So(got, ShouldResemble, &BoolInput{IsMember: true})
-		delete(decoders, boolType) // remove the custom decoder
-	})
-
-	Convey("Can specify a named decoder for a field rather than being auto-selected by field type", t, func() {
-		ReplaceNamedDecoder("decodeMyDate", ValueTypeDecoderFunc(decodeMyDate))
-
-		core, err := New(ThingWithNamedDecoder{})
-		So(err, ShouldBeNil)
-
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"name":              {"Ggicci"},
-			"birthday":          {"1991-11-10"},
-			"effective_between": {"2021-04-12", "2025-04-12"},
-			"created_between":   {"2021-01-01T08:00:00+08:00", "2022-01-01T08:00:00+08:00"},
-		}
-		got, err := core.Decode(r)
-		So(err, ShouldBeNil)
-		So(got, ShouldResemble, &ThingWithNamedDecoder{
-			Name:     "Ggicci",
-			Birthday: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
-			EffectiveBetween: []time.Time{
-				time.Date(2021, 4, 12, 0, 0, 0, 0, time.UTC),
-				time.Date(2025, 4, 12, 0, 0, 0, 0, time.UTC),
-			},
-			CreatedBetween: []time.Time{
-				time.Date(2021, 1, 1, 8, 0, 0, 0, time.FixedZone("E8", +8*3600)).UTC(),
-				time.Date(2022, 1, 1, 8, 0, 0, 0, time.FixedZone("E8", +8*3600)).UTC(),
-			},
-		})
-	})
-
-	Convey("Can unwrap custom errors from named decoder", t, func() {
-		ReplaceNamedDecoder("decodeName", ValueTypeDecoderFunc(decodeName))
-
-		core, err := New(ThingWithInvalidNamedDecoder{})
-		So(err, ShouldBeNil)
-
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"name": {"Dragomeat"},
-		}
-		_, err = core.Decode(r)
-		So(err, ShouldBeError)
-		var invalidName *InvalidName
-		So(errors.As(err, &invalidName), ShouldBeTrue)
-		So(invalidName.Name, ShouldEqual, "Dragomeat")
-	})
-}
 
 func TestDecode(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/", nil)
@@ -303,20 +24,124 @@ func TestDecode(t *testing.T) {
 		PerPage: 100,
 	}
 
-	Convey("Decode passing a pointer to a pointer of struct instance", t, func() {
+	func() {
 		input := &Pagination{}
-		So(Decode(r, &input), ShouldBeNil)
-		So(input, ShouldResemble, expected)
+		err := Decode(r, input) // pointer to a struct instance
+		assert.NoError(t, err)
+		assert.Equal(t, expected, input)
+	}()
+
+	func() {
+		input := Pagination{}
+		err := Decode(r, &input) // addressable struct instance
+		assert.NoError(t, err)
+		assert.Equal(t, expected, &input)
+	}()
+
+	func() {
+		input := Pagination{}
+		err := Decode(r, input) // non-pointer struct instance should fail
+		assert.ErrorContains(t, err, "input must be a pointer")
+	}()
+}
+
+type EchoInput struct {
+	Token  string `in:"form=access_token;header=x-api-key;required"`
+	Saying string `in:"form=saying"`
+}
+
+func EchoHandler(rw http.ResponseWriter, r *http.Request) {
+	var input = r.Context().Value(Input).(*EchoInput)
+	json.NewEncoder(rw).Encode(input)
+}
+
+func TestNewInput_WithNil(t *testing.T) {
+	assert.Panics(t, func() {
+		NewInput(nil)
+	})
+}
+
+func TestNewInput_Success(t *testing.T) {
+	r, err := http.NewRequest("GET", "/", nil)
+	assert.NoError(t, err)
+
+	r.Header.Add("X-Api-Key", "abc")
+	var params = url.Values{}
+	params.Add("saying", "TO THINE OWE SELF BE TRUE")
+	r.URL.RawQuery = params.Encode()
+
+	rw := httptest.NewRecorder()
+	handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
+	handler.ServeHTTP(rw, r)
+	assert.Equal(t, 200, rw.Code)
+	expected := `{"Token":"abc","Saying":"TO THINE OWE SELF BE TRUE"}` + "\n"
+	assert.Equal(t, expected, rw.Body.String())
+}
+
+func TestNewInput_Error_byDefaultErrorHandler(t *testing.T) {
+	r, err := http.NewRequest("GET", "/", nil)
+	assert.NoError(t, err)
+
+	var params = url.Values{}
+	params.Add("saying", "TO THINE OWE SELF BE TRUE")
+	r.URL.RawQuery = params.Encode()
+
+	rw := httptest.NewRecorder()
+	handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
+	handler.ServeHTTP(rw, r)
+	var out map[string]interface{}
+	assert.Nil(t, json.NewDecoder(rw.Body).Decode(&out))
+
+	assert.Equal(t, 422, rw.Code)
+	assert.Equal(t, "Token", out["field"])
+	assert.Equal(t, "required", out["source"])
+	assert.Contains(t, out["error"], ErrMissingField.Error())
+}
+
+func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
+	var invalidFieldError *InvalidFieldError
+	if errors.As(err, &invalidFieldError) {
+		rw.WriteHeader(http.StatusBadRequest) // status: 400
+		io.WriteString(rw, invalidFieldError.Error())
+		return
+	}
+	http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError) // status: 500
+}
+
+func TestNewInput_Error_byCustomErrorHandler(t *testing.T) {
+	r, err := http.NewRequest("GET", "/", nil)
+	assert.NoError(t, err)
+
+	var params = url.Values{}
+	params.Add("saying", "TO THINE OWE SELF BE TRUE")
+	r.URL.RawQuery = params.Encode()
+
+	rw := httptest.NewRecorder()
+	handler := alice.New(
+		NewInput(EchoInput{}, WithErrorHandler(CustomErrorHandler)),
+	).ThenFunc(EchoHandler)
+	handler.ServeHTTP(rw, r)
+	assert.Equal(t, 400, rw.Code)
+	assert.Contains(t, rw.Body.String(), `invalid field "Token":`)
+}
+
+func TestReplaceDefaultErrorHandler(t *testing.T) {
+	// Nil handler should panic.
+	assert.PanicsWithError(t, "httpin: nil error handler", func() {
+		ReplaceDefaultErrorHandler(nil)
 	})
 
-	Convey("Decode passing a pointer to a struct instance", t, func() {
-		input := Pagination{}
-		So(Decode(r, &input), ShouldBeNil)
-		So(input, ShouldResemble, *expected)
-	})
+	r, err := http.NewRequest("GET", "/", nil)
+	assert.NoError(t, err)
 
-	Convey("Decode passing a struct instance should fail", t, func() {
-		input := Pagination{}
-		So(Decode(r, input), ShouldBeError)
-	})
+	var params = url.Values{}
+	params.Add("saying", "TO THINE OWE SELF BE TRUE")
+	r.URL.RawQuery = params.Encode()
+	rw := httptest.NewRecorder()
+	handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
+	// NOTE: replace global error handler after NewInput should work
+	ReplaceDefaultErrorHandler(CustomErrorHandler)
+
+	handler.ServeHTTP(rw, r)
+	assert.Equal(t, 400, rw.Code)
 }

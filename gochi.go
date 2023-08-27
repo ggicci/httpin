@@ -20,8 +20,8 @@ type GochiURLParamFunc func(r *http.Request, key string) string
 //	func init() {
 //	    httpin.UseGochiURLParam("path", chi.URLParam)
 //	}
-func UseGochiURLParam(executor string, fn GochiURLParamFunc) {
-	RegisterDirectiveExecutor(executor, &gochiURLParamExtractor{URLParam: fn})
+func UseGochiURLParam(directive string, fn GochiURLParamFunc) {
+	RegisterDirectiveExecutor(directive, &gochiURLParamExtractor{URLParam: fn})
 }
 
 type gochiURLParamExtractor struct {

@@ -6,235 +6,234 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
-type Thing struct{}
+func TestDecoderOf(t *testing.T) {
+	assert.True(t, equalFuncs(DecodeBool, DecoderOf(reflect.TypeOf(true))))
 
-func TestBuiltinDecoders(t *testing.T) {
-
-	Convey("DecoderFunc implements Decoder interface", t, func() {
-		v, err := ValueTypeDecoderFunc(DecodeBool).Decode("true")
-		So(v, ShouldBeTrue)
-		So(err, ShouldBeNil)
-	})
-
-	Convey("DecoderOf retrieves a decoder by type", t, func() {
-		So(DecoderOf(reflect.TypeOf(true)), ShouldEqual, DecodeBool)
-		So(DecoderOf(reflect.TypeOf(Thing{})), ShouldBeNil)
-	})
-
-	Convey("Decoder for bool type", t, func() {
-		v, err := DecodeBool("true")
-		So(v, ShouldBeTrue)
-		So(v, ShouldHaveSameTypeAs, true)
-		So(err, ShouldBeNil)
-		v, err = DecodeBool("false")
-		So(v, ShouldBeFalse)
-		So(err, ShouldBeNil)
-		v, err = DecodeBool("1")
-		So(v, ShouldBeTrue)
-		So(err, ShouldBeNil)
-		_, err = DecodeBool("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for int type", t, func() {
-		v, err := DecodeInt("2045")
-		So(v, ShouldEqual, 2045)
-		So(v, ShouldHaveSameTypeAs, int(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeInt("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for int8 type", t, func() {
-		v, err := DecodeInt8("127")
-		So(v, ShouldEqual, 127)
-		So(v, ShouldHaveSameTypeAs, int8(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeInt8("128")
-		So(err, ShouldBeError)
-		_, err = DecodeInt8("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for int16 type", t, func() {
-		v, err := DecodeInt16("32767")
-		So(v, ShouldEqual, 32767)
-		So(v, ShouldHaveSameTypeAs, int16(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeInt16("32768")
-		So(err, ShouldBeError)
-		_, err = DecodeInt16("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for int32 type", t, func() {
-		v, err := DecodeInt32("2147483647")
-		So(v, ShouldEqual, 2147483647)
-		So(v, ShouldHaveSameTypeAs, int32(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeInt32("2147483648")
-		So(err, ShouldBeError)
-		_, err = DecodeInt32("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for int64 type", t, func() {
-		v, err := DecodeInt64("9223372036854775807")
-		So(v, ShouldEqual, 9223372036854775807)
-		So(v, ShouldHaveSameTypeAs, int64(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeInt64("9223372036854775808")
-		So(err, ShouldBeError)
-		_, err = DecodeInt64("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for uint type", t, func() {
-		v, err := DecodeUint("2045")
-		So(v, ShouldEqual, uint(2045))
-		So(v, ShouldHaveSameTypeAs, uint(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeUint("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for uint8 type", t, func() {
-		v, err := DecodeUint8("255")
-		So(v, ShouldEqual, uint8(255))
-		So(v, ShouldHaveSameTypeAs, uint8(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeUint8("256")
-		So(err, ShouldBeError)
-		_, err = DecodeUint8("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for uint16 type", t, func() {
-		v, err := DecodeUint16("65535")
-		So(v, ShouldEqual, uint16(65535))
-		So(v, ShouldHaveSameTypeAs, uint16(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeUint16("65536")
-		So(err, ShouldBeError)
-		_, err = DecodeUint16("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for uint32 type", t, func() {
-		v, err := DecodeUint32("4294967295")
-		So(v, ShouldEqual, uint32(4294967295))
-		So(v, ShouldHaveSameTypeAs, uint32(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeUint32("4294967296")
-		So(err, ShouldBeError)
-		_, err = DecodeUint32("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for uint64 type", t, func() {
-		v, err := DecodeUint64("18446744073709551615")
-		So(v, ShouldEqual, uint64(18446744073709551615))
-		So(v, ShouldHaveSameTypeAs, uint64(1))
-		So(err, ShouldBeNil)
-		_, err = DecodeUint64("18446744073709551616")
-		So(err, ShouldBeError)
-		_, err = DecodeUint64("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for float32 type", t, func() {
-		v, err := DecodeFloat32("3.1415926")
-		So(v, ShouldEqual, 3.1415926)
-		So(v, ShouldHaveSameTypeAs, float32(0.0))
-		So(err, ShouldBeNil)
-		_, err = DecodeFloat32("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for float64 type", t, func() {
-		v, err := DecodeFloat64("3.1415926")
-		So(v, ShouldEqual, 3.1415926)
-		So(v, ShouldHaveSameTypeAs, float64(0.0))
-		So(err, ShouldBeNil)
-		_, err = DecodeFloat64("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for complex64 type", t, func() {
-		v, err := DecodeComplex64("1+4i")
-		So(v, ShouldEqual, 1+4i)
-		So(v, ShouldHaveSameTypeAs, complex64(1+4i))
-		So(err, ShouldBeNil)
-		_, err = DecodeComplex64("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for complex128 type", t, func() {
-		v, err := DecodeComplex128("1+4i")
-		So(v, ShouldEqual, 1+4i)
-		So(v, ShouldHaveSameTypeAs, complex128(1+4i))
-		So(err, ShouldBeNil)
-		_, err = DecodeComplex128("apple")
-		So(err, ShouldBeError)
-	})
-
-	Convey("Decoder for string type", t, func() {
-		v, err := DecodeString("hello")
-		So(v, ShouldEqual, "hello")
-		So(v, ShouldHaveSameTypeAs, string(""))
-		So(err, ShouldBeNil)
-	})
-
-	Convey("Decoder for time.Time type", t, func() {
-		v, err := DecodeTime("1991-11-10T08:00:00+08:00")
-		So(v, ShouldEqual, time.Date(1991, 11, 10, 8, 0, 0, 0, time.FixedZone("Asia/Shanghai", +8*3600)))
-		So(v, ShouldHaveSameTypeAs, time.Time{})
-		So(v.(time.Time).Location(), ShouldEqual, time.UTC)
-		So(err, ShouldBeNil)
-
-		v, err = DecodeTime("678088800")
-		So(v, ShouldEqual, time.Date(1991, 6, 28, 6, 0, 0, 0, time.UTC))
-		So(v, ShouldHaveSameTypeAs, time.Time{})
-		So(v.(time.Time).Location(), ShouldEqual, time.UTC)
-		So(err, ShouldBeNil)
-
-		v, err = DecodeTime("678088800.123456")
-		So(v, ShouldEqual, time.Date(1991, 6, 28, 6, 0, 0, 123456000, time.UTC))
-		So(v, ShouldHaveSameTypeAs, time.Time{})
-		So(v.(time.Time).Location(), ShouldEqual, time.UTC)
-		So(err, ShouldBeNil)
-
-		_, err = DecodeTime("apple")
-		So(err, ShouldBeError)
-	})
+	type Thing struct{}
+	assert.Nil(t, DecoderOf(reflect.TypeOf(Thing{})))
 }
 
-func TestTypeDecoderAdapter(t *testing.T) {
-	Convey("Adapter: ValueTypeDecoderFunc", t, func() {
-
-		decoder := ValueTypeDecoderFunc(func(value string) (interface{}, error) {
-			return value + "!", nil
-		})
-
-		got, err := decoder.Decode("hello")
-		So(err, ShouldBeNil)
-		So(got, ShouldEqual, "hello!")
+func TestValueTypeDecoderFunc(t *testing.T) {
+	decoder := ValueTypeDecoderFunc(func(value string) (interface{}, error) {
+		return value + "!", nil
 	})
 
-	Convey("Adapter: FileTypeDecoderFunc", t, func() {
-		decoder := FileTypeDecoderFunc(func(file *multipart.FileHeader) (interface{}, error) {
-			return file.Filename, nil
-		})
+	got, err := decoder.Decode("hello")
+	assert.NoError(t, err)
+	assert.Equal(t, "hello!", got)
+}
 
-		fileHeader := &multipart.FileHeader{
-			Filename: "hello.txt",
-		}
-
-		got, err := decoder.Decode(fileHeader)
-		So(err, ShouldBeNil)
-		So(got, ShouldEqual, "hello.txt")
+func TestFileTypeDecoderFunc(t *testing.T) {
+	decoder := FileTypeDecoderFunc(func(file *multipart.FileHeader) (interface{}, error) {
+		return file.Filename, nil
 	})
+
+	fileHeader := &multipart.FileHeader{
+		Filename: "hello.txt",
+	}
+
+	got, err := decoder.Decode(fileHeader)
+	assert.NoError(t, err)
+	assert.Equal(t, "hello.txt", got)
+}
+
+func success[T any](t *testing.T, expected T, got interface{}, err error) {
+	assert.NoError(t, err)
+	_, ok := got.(T)
+	assert.True(t, ok)
+	assert.Equal(t, expected, got)
+}
+
+func fail[T any](t *testing.T, expected T, got interface{}, err error) {
+	assert.Error(t, err)
+	_, ok := got.(T)
+	assert.True(t, ok)
+	assert.Equal(t, expected, got)
+}
+
+func TestDecoder_bool(t *testing.T) {
+	v, err := DecodeBool("true")
+	success[bool](t, true, v, err)
+
+	v, err = DecodeBool("false")
+	success[bool](t, false, v, err)
+
+	v, err = DecodeBool("1")
+	success[bool](t, true, v, err)
+
+	v, err = DecodeBool("apple")
+	fail[bool](t, false, v, err)
+}
+
+func TestDecoder_int(t *testing.T) {
+	v, err := DecodeInt("2045")
+	success[int](t, 2045, v, err)
+
+	v, err = DecodeInt("apple")
+	fail[int](t, 0, v, err)
+}
+
+func TestDecoder_int8(t *testing.T) {
+	v, err := DecodeInt8("127")
+	success[int8](t, 127, v, err)
+
+	v, err = DecodeInt8("128")
+	fail[int8](t, 127, v, err)
+
+	v, err = DecodeInt8("apple")
+	fail[int8](t, 0, v, err)
+}
+
+func TestDecoder_int16(t *testing.T) {
+	v, err := DecodeInt16("32767")
+	success[int16](t, 32767, v, err)
+
+	v, err = DecodeInt16("32768")
+	fail[int16](t, 32767, v, err)
+
+	v, err = DecodeInt16("apple")
+	fail[int16](t, 0, v, err)
+}
+
+func TestDecoder_int32(t *testing.T) {
+	v, err := DecodeInt32("2147483647")
+	success[int32](t, 2147483647, v, err)
+
+	v, err = DecodeInt32("2147483648")
+	fail[int32](t, 2147483647, v, err)
+
+	v, err = DecodeInt32("apple")
+	fail[int32](t, 0, v, err)
+}
+
+func TestDecoder_int64(t *testing.T) {
+	v, err := DecodeInt64("9223372036854775807")
+	success[int64](t, 9223372036854775807, v, err)
+
+	v, err = DecodeInt64("9223372036854775808")
+	fail[int64](t, 9223372036854775807, v, err)
+
+	v, err = DecodeInt64("apple")
+	fail[int64](t, 0, v, err)
+}
+
+func TestDecoder_uint(t *testing.T) {
+	v, err := DecodeUint("2045")
+	success[uint](t, 2045, v, err)
+
+	v, err = DecodeUint("apple")
+	fail[uint](t, 0, v, err)
+}
+
+func TestDecoder_uint8(t *testing.T) {
+	v, err := DecodeUint8("255")
+	success[uint8](t, 255, v, err)
+
+	v, err = DecodeUint8("256")
+	fail[uint8](t, 255, v, err)
+
+	v, err = DecodeUint8("apple")
+	fail[uint8](t, 0, v, err)
+}
+
+func TestDecoder_uint16(t *testing.T) {
+	v, err := DecodeUint16("65535")
+	success[uint16](t, 65535, v, err)
+
+	v, err = DecodeUint16("65536")
+	fail[uint16](t, 65535, v, err)
+
+	v, err = DecodeUint16("apple")
+	fail[uint16](t, 0, v, err)
+}
+
+func TestDecoder_uint32(t *testing.T) {
+	v, err := DecodeUint32("4294967295")
+	success[uint32](t, 4294967295, v, err)
+
+	v, err = DecodeUint32("4294967296")
+	fail[uint32](t, 4294967295, v, err)
+
+	v, err = DecodeUint32("apple")
+	fail[uint32](t, 0, v, err)
+}
+
+func TestDecoder_uint64(t *testing.T) {
+	v, err := DecodeUint64("18446744073709551615")
+	success[uint64](t, 18446744073709551615, v, err)
+
+	v, err = DecodeUint64("18446744073709551616")
+	fail[uint64](t, 18446744073709551615, v, err)
+
+	v, err = DecodeUint64("apple")
+	fail[uint64](t, 0, v, err)
+}
+
+func TestDecoder_float32(t *testing.T) {
+	v, err := DecodeFloat32("3.1415926")
+	success[float32](t, 3.1415926, v, err)
+
+	v, err = DecodeFloat32("apple")
+	fail[float32](t, 0, v, err)
+}
+
+func TestDecoder_float64(t *testing.T) {
+	v, err := DecodeFloat64("3.1415926")
+	success[float64](t, 3.1415926, v, err)
+
+	v, err = DecodeFloat64("apple")
+	fail[float64](t, 0, v, err)
+}
+
+func TestDecoder_complex64(t *testing.T) {
+	v, err := DecodeComplex64("1+4i")
+	success[complex64](t, 1+4i, v, err)
+
+	v, err = DecodeComplex64("apple")
+	fail[complex64](t, 0, v, err)
+}
+
+func TestDecoder_complex128(t *testing.T) {
+	v, err := DecodeComplex128("1+4i")
+	success[complex128](t, 1+4i, v, err)
+
+	v, err = DecodeComplex128("apple")
+	fail[complex128](t, 0, v, err)
+}
+
+func TestDecoder_string(t *testing.T) {
+	v, err := DecodeString("hello")
+	success[string](t, "hello", v, err)
+}
+
+func TestDecoder_time(t *testing.T) {
+	v, err := DecodeTime("1991-11-10T08:00:00+08:00")
+	assert.NoError(t, err)
+	expected := time.Date(1991, 11, 10, 8, 0, 0, 0, time.FixedZone("Asia/Shanghai", +8*3600))
+	assert.True(t, equalTime(expected, v.(time.Time)))
+
+	v, err = DecodeTime("678088800")
+	expected = time.Date(1991, 6, 28, 6, 0, 0, 0, time.UTC)
+	assert.NoError(t, err)
+	assert.True(t, equalTime(expected, v.(time.Time)))
+
+	v, err = DecodeTime("678088800.123456")
+	assert.NoError(t, err)
+	expected = time.Date(1991, 6, 28, 6, 0, 0, 123456000, time.UTC)
+	assert.True(t, equalTime(expected, v.(time.Time)))
+
+	v, err = DecodeTime("apple")
+	assert.Error(t, err)
+	assert.True(t, equalTime(time.Time{}, v.(time.Time)))
+}
+
+func equalFuncs(expected, actual interface{}) bool {
+	return reflect.ValueOf(expected).Pointer() == reflect.ValueOf(actual).Pointer()
+}
+
+func equalTime(expected, actual time.Time) bool {
+	return expected.UTC() == actual.UTC()
 }

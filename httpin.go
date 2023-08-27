@@ -15,9 +15,6 @@ import (
 type ContextKey int
 
 const (
-	minimumMaxMemory = 1 << 10  // 1KB
-	defaultMaxMemory = 32 << 20 // 32 MB
-
 	// Input is the key to get the input object from Request.Context() injected by httpin. e.g.
 	//
 	//     input := r.Context().Value(httpin.Input).(*InputStruct)
@@ -77,7 +74,7 @@ func Decode(req *http.Request, input interface{}) error {
 func NewInput(inputStruct interface{}, opts ...Option) func(http.Handler) http.Handler {
 	core, err := New(inputStruct, opts...)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("httpin: %w", err))
 	}
 
 	return func(next http.Handler) http.Handler {

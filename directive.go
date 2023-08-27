@@ -22,17 +22,13 @@ func init() {
 	RegisterDirectiveExecutor("form", DirectiveExecutorFunc(formValueExtractor))
 	RegisterDirectiveExecutor("query", DirectiveExecutorFunc(queryValueExtractor))
 	RegisterDirectiveExecutor("header", DirectiveExecutorFunc(headerValueExtractor))
-	RegisterDirectiveExecutor(
-		"body",
-		DirectiveExecutorFunc(bodyDecoder),
-		// DirectiveNormalizerFunc(bodyDirectiveNormalizer),
-	)
+	RegisterDirectiveExecutor("body", DirectiveExecutorFunc(bodyDecoder))
 	RegisterDirectiveExecutor("required", DirectiveExecutorFunc(required))
 	RegisterDirectiveExecutor("default", DirectiveExecutorFunc(defaultValueSetter))
 
 	// decoder is a special executor which does nothing, but is an indicator of
 	// overriding the decoder for a specific field.
-	owl.RegisterDirectiveExecutor("decoder", DirectiveExecutorFunc(noop))
+	owl.RegisterDirectiveExecutor("decoder", DirectiveExecutorFunc(nil))
 }
 
 // RegisterDirectiveExecutor registers a named executor globally, which
@@ -58,23 +54,20 @@ func panicOnReservedExecutorName(name string) {
 	}
 }
 
-// noop is a no-operation directive executor.
-func noop(_ *DirectiveRuntime) error {
-	return nil
-}
-
 type directiveRuntimeHelper struct {
 	*DirectiveRuntime
 }
 
-func (h *directiveRuntimeHelper) decoderOf(t reflect.Type) interface{} {
-	decoder := h.DirectiveRuntime.Context.Value(CustomDecoder)
+func (rw *directiveRuntimeHelper) decoderOf(elemType reflect.Type) interface{} {
+	decoder := rw.DirectiveRuntime.Resolver.Context.Value(CustomDecoder)
 	if decoder != nil {
 		return decoder
 	}
-	return decoderOf(t)
+	return decoderOf(elemType)
 }
 
-func (h *directiveRuntimeHelper) DeliverContextValue(key interface{}, value interface{}) {
-	h.DirectiveRuntime.Context = context.WithValue(h.DirectiveRuntime.Context, key, value)
+func (rw *directiveRuntimeHelper) DeliverContextValue(key, value interface{}) {
+	rw.DirectiveRuntime.Context = context.WithValue(
+		rw.DirectiveRuntime.Context, key, value,
+	)
 }

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 // decodeCustomBool additionally parses "yes/no".
@@ -21,44 +21,61 @@ func decodeCustomBool(value string) (interface{}, error) {
 	return strconv.ParseBool(sdata)
 }
 
-func TestDecoders(t *testing.T) {
+func invalidDecoder(string) error {
+	return nil
+}
+
+func TestRegisterTypeDecoder(t *testing.T) {
+	boolType := reflect.TypeOf(bool(true))
+	assert.Panics(t, func() { RegisterTypeDecoder(boolType, nil) })
+	assert.Panics(t, func() { RegisterTypeDecoder(boolType, invalidDecoder) })
+	delete(decoders, boolType) // remove the custom decoder
+
+	// Register duplicate decoder should fail.
+	assert.NotPanics(t, func() {
+		RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool))
+	})
+	assert.Panics(t, func() {
+		RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool))
+	})
+
+	delete(decoders, boolType) // remove the custom decoder
+}
+
+func TestRegisterNamedDecoder(t *testing.T) {
+	assert.Panics(t, func() { RegisterNamedDecoder("myBool", nil) })
+	assert.Panics(t, func() { RegisterNamedDecoder("myBool", invalidDecoder) })
+	delete(namedDecoders, "mybool") // remove the custom decoder
+
+	// Register duplicate decoder should fail.
+	assert.NotPanics(t, func() {
+		RegisterNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool))
+	})
+	assert.Panics(t, func() {
+		RegisterNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool))
+	})
+
+	delete(namedDecoders, "mybool") // remove the custom decoder
+}
+
+func TestReplaceTypeDecoder(t *testing.T) {
 	boolType := reflect.TypeOf(bool(true))
 
-	Convey("Register nil decoder", t, func() {
-		So(func() { RegisterTypeDecoder(boolType, nil) }, ShouldPanic)
-		So(func() { RegisterNamedDecoder("myBool", nil) }, ShouldPanic)
+	assert.NotPanics(t, func() {
+		ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool))
 	})
-	delete(decoders, boolType)      // remove the custom decoder
-	delete(namedDecoders, "mybool") // remove the custom decoder
 
-	var invalidDecoder = func(string) error {
-		return nil
-	}
-
-	Convey("Register invalid decoder", t, func() {
-		So(func() { RegisterTypeDecoder(boolType, invalidDecoder) }, ShouldPanic)
-		So(func() { RegisterNamedDecoder("myBool", invalidDecoder) }, ShouldPanic)
+	assert.NotPanics(t, func() {
+		ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool))
 	})
-	delete(decoders, boolType)      // remove the custom decoder
-	delete(namedDecoders, "mybool") // remove the custom decoder
+}
 
-	Convey("Register duplicate decoder", t, func() {
-		So(func() { RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
-		So(func() { RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldPanic)
-
-		So(func() { RegisterNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
-		So(func() { RegisterNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldPanic)
+func TestReplaceNamedDecoder(t *testing.T) {
+	assert.NotPanics(t, func() {
+		ReplaceNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool))
 	})
-	delete(decoders, boolType)      // remove the custom decoder
-	delete(namedDecoders, "mybool") // remove the custom decoder
 
-	Convey("Replace a decoder", t, func() {
-		So(func() { ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
-		So(func() { ReplaceTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
-
-		So(func() { ReplaceNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
-		So(func() { ReplaceNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool)) }, ShouldNotPanic)
+	assert.NotPanics(t, func() {
+		ReplaceNamedDecoder("mybool", ValueTypeDecoderFunc(decodeCustomBool))
 	})
-	delete(decoders, boolType)      // remove the custom decoder
-	delete(namedDecoders, "mybool") // remove the custom decoder
 }

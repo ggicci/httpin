@@ -10,9 +10,12 @@ import (
 	"github.com/ggicci/owl"
 )
 
-var (
-	builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
+const (
+	minimumMaxMemory = int64(1 << 10)  // 1KB
+	defaultMaxMemory = int64(32 << 20) // 32 MB
 )
+
+var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 
 type Core struct {
 	resolver *owl.Resolver
@@ -129,9 +132,10 @@ func (c *Core) Decode(req *http.Request) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	rv, err := c.resolver.Resolve(owl.WithValue(RequestValue, req))
 	if err != nil {
-		return nil, fmt.Errorf("httpin: %w", err)
+		return nil, NewInvalidFieldError(err.(*owl.ResolveError))
 	}
 	return rv.Interface(), nil
 }

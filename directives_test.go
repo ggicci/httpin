@@ -1,32 +1,45 @@
 package httpin
 
-// import (
-// 	. "github.com/smartystreets/goconvey/convey"
-// )
+import (
+	"testing"
 
-// type NoopDirective struct{}
+	"github.com/stretchr/testify/assert"
+)
 
-// func (d *NoopDirective) Execute(ctx *DirectiveContext) error {
-// 	return nil
-// }
+var noopDirective = DirectiveExecutorFunc(nil)
 
-// func TestDirectives(t *testing.T) {
-// 	Convey("Register duplicate executor", t, func() {
-// 		So(func() { RegisterDirectiveExecutor("noop", &NoopDirective{}, nil) }, ShouldNotPanic)
-// 		So(func() { RegisterDirectiveExecutor("noop", &NoopDirective{}, nil) }, ShouldPanic)
-// 	})
+func TestRegisterDirectiveExecutor(t *testing.T) {
+	assert.NotPanics(t, func() {
+		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor", noopDirective)
+	})
 
-// 	Convey("Register nil executor", t, func() {
-// 		So(func() { RegisterDirectiveExecutor("whatever", nil, nil) }, ShouldPanic)
-// 	})
+	assert.Panics(t, func() {
+		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor", noopDirective)
+	}, "should panic on duplicate name")
 
-// 	Convey("Replace an executor", t, func() {
-// 		So(func() { ReplaceDirectiveExecutor("noop", &NoopDirective{}, nil) }, ShouldNotPanic)
-// 		So(func() { ReplaceDirectiveExecutor("noop", &NoopDirective{}, nil) }, ShouldNotPanic)
-// 	})
+	assert.Panics(t, func() {
+		RegisterDirectiveExecutor("nil_TestRegisterDirectiveExecutor", nil)
+	}, "should panic on nil executor")
 
-// 	Convey("Register executor name in reserved names should fail", t, func() {
-// 		So(func() { RegisterDirectiveExecutor("decoder", &NoopDirective{}, nil) }, ShouldPanic)
-// 		So(func() { ReplaceDirectiveExecutor("decoder", &NoopDirective{}, nil) }, ShouldPanic)
-// 	})
-// }
+	assert.Panics(t, func() {
+		RegisterDirectiveExecutor("decoder", noopDirective)
+	}, "should panic on reserved name")
+}
+
+func TestReplaceDirectiveExecutor(t *testing.T) {
+	assert.NotPanics(t, func() {
+		ReplaceDirectiveExecutor("noop_TestReplaceDirectiveExecutor", noopDirective)
+	})
+
+	assert.NotPanics(t, func() {
+		ReplaceDirectiveExecutor("noop_TestReplaceDirectiveExecutor", noopDirective)
+	}, "should not panic on duplicate name")
+
+	assert.Panics(t, func() {
+		ReplaceDirectiveExecutor("nil_TestReplaceDirectiveExecutor", nil)
+	}, "should panic on nil executor")
+
+	assert.Panics(t, func() {
+		ReplaceDirectiveExecutor("decoder", noopDirective)
+	}, "should panic on reserved name")
+}

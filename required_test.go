@@ -1,59 +1,55 @@
 package httpin
 
 import (
-	"errors"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestDirectiveRequired(t *testing.T) {
-	Convey("Required field is missing", t, func() {
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"color":      {"red"},
-			"is_soldout": {"true"},
-			"sort_by":    {"id", "quantity"},
-			"sort_desc":  {"0", "true"},
-			"page":       {"1"},
-			"per_page":   {"20"},
-		}
-		core, err := New(&ProductQuery{}) // struct pointer also works
-		So(err, ShouldBeNil)
-		got, err := core.Decode(r)
-		So(got, ShouldBeNil)
-		So(errors.Is(err, ErrMissingField), ShouldBeTrue)
+func TestDirectiveRequired_RequiredFieldMissing(t *testing.T) {
+	r, _ := http.NewRequest("GET", "/", nil)
+	r.Form = url.Values{
+		"color":      {"red"},
+		"is_soldout": {"true"},
+		"sort_by":    {"id", "quantity"},
+		"sort_desc":  {"0", "true"},
+		"page":       {"1"},
+		"per_page":   {"20"},
+	}
+	core, err := New(&ProductQuery{})
+	assert.NoError(t, err)
+	_, err = core.Decode(r)
+	assert.ErrorIs(t, err, ErrMissingField)
+	var invalidField *InvalidFieldError
+	assert.ErrorAs(t, err, &invalidField)
+	assert.Equal(t, "required", invalidField.Source)
+	assert.Empty(t, invalidField.Key)
+	assert.Nil(t, invalidField.Value)
+}
 
-		var invalidField *InvalidFieldError
-		So(errors.As(err, &invalidField), ShouldBeTrue)
-		So(invalidField.Source, ShouldEqual, "required")
-		So(invalidField.Value, ShouldBeNil)
-	})
-
-	Convey("Non-required fields can be absent", t, func() {
-		r, _ := http.NewRequest("GET", "/", nil)
-		r.Form = url.Values{
-			"created_at": {"1991-11-10T08:00:00+08:00"},
-			"is_soldout": {"true"},
-			"page":       {"1"},
-			"per_page":   {"20"},
-		}
-		expected := &ProductQuery{
-			CreatedAt: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
-			Color:     "",
-			IsSoldout: true,
-			Pagination: Pagination{
-				Page:    1,
-				PerPage: 20,
-			},
-		}
-		core, err := New(ProductQuery{})
-		So(err, ShouldBeNil)
-		got, err := core.Decode(r)
-		So(err, ShouldBeNil)
-		So(got, ShouldResemble, expected)
-	})
+func TestDirectiveRequired_NonRequiredFieldAbsent(t *testing.T) {
+	r, _ := http.NewRequest("GET", "/", nil)
+	r.Form = url.Values{
+		"created_at": {"1991-11-10T08:00:00+08:00"},
+		"is_soldout": {"true"},
+		"page":       {"1"},
+		"per_page":   {"20"},
+	}
+	expected := &ProductQuery{
+		CreatedAt: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
+		Color:     "",
+		IsSoldout: true,
+		Pagination: Pagination{
+			Page:    1,
+			PerPage: 20,
+		},
+	}
+	core, err := New(ProductQuery{})
+	assert.NoError(t, err)
+	got, err := core.Decode(r)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, got.(*ProductQuery))
 }

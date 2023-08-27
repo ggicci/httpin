@@ -56,63 +56,63 @@ func (e *extractor) extract(rtm *DirectiveRuntime, key string) error {
 	}
 
 	// NOTE(ggicci): Array?
-	if rtm.Value.Type().Kind() == reflect.Slice {
-		return e.extractMulti(rtm, key)
+	valueType := rtm.Value.Type().Elem()
+	if valueType.Kind() == reflect.Slice {
+		return e.extractMulti(rtm, valueType, key)
 	}
 
 	rtmHelper := &directiveRuntimeHelper{rtm}
-
-	switch decoder := rtmHelper.decoderOf(rtm.Value.Type()).(type) {
+	switch decoder := rtmHelper.decoderOf(valueType).(type) {
 	case ValueTypeDecoder:
-		if gotValue, interfaceValue, err := decodeValueAt(decoder, e.Form.Value[key], 0); err != nil {
-			return fieldError{key, gotValue, err}
+		if inputValue, interfaceValue, err := decodeValueAt(decoder, e.Form.Value[key], 0); err != nil {
+			return &fieldError{key, inputValue, err}
 		} else {
 			rtm.Value.Elem().Set(reflect.ValueOf(interfaceValue))
 		}
 	case FileTypeDecoder:
-		if gotFile, interfaceValue, err := decodeFileAt(decoder, e.Form.File[key], 0); err != nil {
-			return fieldError{key, gotFile, err}
+		if inputFile, interfaceValue, err := decodeFileAt(decoder, e.Form.File[key], 0); err != nil {
+			return &fieldError{key, inputFile, err}
 		} else {
 			rtm.Value.Elem().Set(reflect.ValueOf(interfaceValue))
 		}
 	default:
-		return UnsupportedTypeError{rtm.Value.Type()}
+		return UnsupportedTypeError{valueType}
 	}
 
 	rtmHelper.DeliverContextValue(FieldSet, true)
 	return nil
 }
 
-func (e *extractor) extractMulti(rtm *DirectiveRuntime, key string) error {
+func (e *extractor) extractMulti(rtm *DirectiveRuntime, sliceType reflect.Type, key string) error {
 	var (
+		rtmHelper = &directiveRuntimeHelper{rtm}
 		theSlice  reflect.Value
-		elemType  = rtm.Value.Type().Elem()
 		values    = e.Form.Value[key]
 		files     = e.Form.File[key]
-		rtmHelper = &directiveRuntimeHelper{rtm}
+		elemType  = sliceType.Elem()
 	)
 
 	switch decoder := rtmHelper.decoderOf(elemType).(type) {
 	case ValueTypeDecoder:
-		theSlice = reflect.MakeSlice(rtm.Value.Type(), len(values), len(values))
+		theSlice = reflect.MakeSlice(sliceType, len(values), len(values))
 		for i := 0; i < len(values); i++ {
 			if _, interfaceValue, err := decodeValueAt(decoder, values, i); err != nil {
-				return fieldError{key, values, fmt.Errorf("at index %d: %w", i, err)}
+				return &fieldError{key, values, fmt.Errorf("at index %d: %w", i, err)}
 			} else {
 				theSlice.Index(i).Set(reflect.ValueOf(interfaceValue))
 			}
 		}
 	case FileTypeDecoder:
-		theSlice = reflect.MakeSlice(rtm.Value.Type(), len(files), len(files))
+		theSlice = reflect.MakeSlice(sliceType, len(files), len(files))
 		for i := 0; i < len(files); i++ {
 			if _, interfaceValue, err := decodeFileAt(decoder, files, i); err != nil {
-				return fieldError{key, files, fmt.Errorf("at index %d: %w", i, err)}
+				return &fieldError{key, files, fmt.Errorf("at index %d: %w", i, err)}
 			} else {
 				theSlice.Index(i).Set(reflect.ValueOf(interfaceValue))
 			}
 		}
 	default:
-		return UnsupportedTypeError{rtm.Value.Type()}
+		return UnsupportedTypeError{sliceType}
 	}
 
 	rtm.Value.Elem().Set(theSlice)
@@ -121,19 +121,19 @@ func (e *extractor) extractMulti(rtm *DirectiveRuntime, key string) error {
 }
 
 func decodeValueAt(decoder ValueTypeDecoder, values []string, index int) (string, interface{}, error) {
-	var gotValue = ""
+	var inputValue = ""
 	if index < len(values) {
-		gotValue = values[index]
+		inputValue = values[index]
 	}
-	res, err := decoder.Decode(gotValue)
-	return gotValue, res, err
+	res, err := decoder.Decode(inputValue)
+	return inputValue, res, err
 }
 
 func decodeFileAt(decoder FileTypeDecoder, files []*multipart.FileHeader, index int) (*multipart.FileHeader, interface{}, error) {
-	var gotFile *multipart.FileHeader
+	var inputFile *multipart.FileHeader
 	if index < len(files) {
-		gotFile = files[index]
+		inputFile = files[index]
 	}
-	res, err := decoder.Decode(gotFile)
-	return gotFile, res, err
+	res, err := decoder.Decode(inputFile)
+	return inputFile, res, err
 }

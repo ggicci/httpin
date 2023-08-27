@@ -58,108 +58,72 @@ func DecodeBool(value string) (interface{}, error) {
 
 func DecodeInt(value string) (interface{}, error) {
 	v, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return int(v), nil
+	return int(v), err
 }
 
 func DecodeInt8(value string) (interface{}, error) {
 	v, err := strconv.ParseInt(value, 10, 8)
-	if err != nil {
-		return nil, err
-	}
-	return int8(v), nil
+	return int8(v), err
 }
+
 func DecodeInt16(value string) (interface{}, error) {
 	v, err := strconv.ParseInt(value, 10, 16)
-	if err != nil {
-		return nil, err
-	}
-	return int16(v), nil
+	return int16(v), err
 }
+
 func DecodeInt32(value string) (interface{}, error) {
 	v, err := strconv.ParseInt(value, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	return int32(v), nil
+	return int32(v), err
 }
+
 func DecodeInt64(value string) (interface{}, error) {
 	v, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return int64(v), nil
+	return int64(v), err
 }
 
 func DecodeUint(value string) (interface{}, error) {
 	v, err := strconv.ParseUint(value, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return uint(v), nil
+	return uint(v), err
 }
 
 func DecodeUint8(value string) (interface{}, error) {
 	v, err := strconv.ParseUint(value, 10, 8)
-	if err != nil {
-		return nil, err
-	}
-	return uint8(v), nil
+	return uint8(v), err
 }
+
 func DecodeUint16(value string) (interface{}, error) {
 	v, err := strconv.ParseUint(value, 10, 16)
-	if err != nil {
-		return nil, err
-	}
-	return uint16(v), nil
+	return uint16(v), err
 }
+
 func DecodeUint32(value string) (interface{}, error) {
 	v, err := strconv.ParseUint(value, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	return uint32(v), nil
+	return uint32(v), err
 }
+
 func DecodeUint64(value string) (interface{}, error) {
 	v, err := strconv.ParseUint(value, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return uint64(v), nil
+	return uint64(v), err
 }
 
 func DecodeFloat32(value string) (interface{}, error) {
 	v, err := strconv.ParseFloat(value, 32)
-	if err != nil {
-		return nil, err
-	}
-	return float32(v), nil
+	return float32(v), err
 }
 
 func DecodeFloat64(value string) (interface{}, error) {
 	v, err := strconv.ParseFloat(value, 64)
-	if err != nil {
-		return nil, err
-	}
-	return float64(v), nil
+	return float64(v), err
 }
 
 func DecodeComplex64(value string) (interface{}, error) {
 	v, err := strconv.ParseComplex(value, 64)
-	if err != nil {
-		return nil, err
-	}
-	return complex64(v), nil
+	return complex64(v), err
 }
 
 func DecodeComplex128(value string) (interface{}, error) {
 	v, err := strconv.ParseComplex(value, 128)
-	if err != nil {
-		return nil, err
-	}
-	return complex128(v), nil
+	return complex128(v), err
 }
 
 func DecodeString(value string) (interface{}, error) {
