@@ -2,7 +2,6 @@ package httpin
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -42,31 +41,67 @@ func TestMultipartForm_DecodeFile_FailOnBrokenFileHeader(t *testing.T) {
 	assert.False(t, got.Valid)
 }
 
+func newMultipartFormWriterFromMap(m map[string]interface{}) (body *bytes.Buffer, writer *multipart.Writer) {
+	body = new(bytes.Buffer)
+	writer = multipart.NewWriter(body)
+
+	appendValue := func(key, value string) {
+		fieldWriter, _ := writer.CreateFormField(key)
+		fieldWriter.Write([]byte(value))
+	}
+	appendFile := func(key string, value []byte) {
+		fileWriter, _ := writer.CreateFormFile(key, key+".txt")
+		fileWriter.Write(value)
+	}
+
+	for k, v := range m {
+		switch cv := v.(type) {
+		case string:
+			appendValue(k, cv)
+		case []byte:
+			appendFile(k, cv)
+		case []string:
+			for _, sv := range cv {
+				appendValue(k, sv)
+			}
+		case [][]byte:
+			for _, bv := range cv {
+				appendFile(k, bv)
+			}
+		default:
+			panic("invalid type")
+		}
+	}
+	_ = writer.Close() // error ignored
+	return
+}
+
+func newMultipartFormRequestFromMap(m map[string]interface{}) *http.Request {
+	body, writer := newMultipartFormWriterFromMap(m)
+	r, _ := http.NewRequest("POST", "/", body)
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	return r
+}
+
+func assertFile(t *testing.T, gotFile File, filename string, content []byte) {
+	assert.True(t, gotFile.Valid)
+	assert.Equal(t, filename, gotFile.Header.Filename)
+	assert.Equal(t, int64(len(content)), gotFile.Header.Size)
+	uploadedContent, err := io.ReadAll(gotFile.File)
+	assert.NoError(t, err)
+	assert.Equal(t, content, uploadedContent)
+}
+
 func TestMultipartForm_UploadSingleFile(t *testing.T) {
 	assert := assert.New(t)
 	// Upload a file through multipart/form-data requests.
 	var AvatarBytes = []byte("avatar image content")
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
 
-	nameFieldWriter, err := writer.CreateFormField("name")
-	assert.NoError(err)
-	nameFieldWriter.Write([]byte("Ggicci T'ang"))
-
-	genderFieldWriter, err := writer.CreateFormField("gender")
-	assert.NoError(err)
-	genderFieldWriter.Write([]byte("male"))
-
-	avatarFileWriter, err := writer.CreateFormFile("avatar", "avatar.png")
-	assert.NoError(err)
-	_, err = avatarFileWriter.Write(AvatarBytes)
-	assert.NoError(err)
-
-	_ = writer.Close() // error ignored
-
-	r, _ := http.NewRequest("POST", "/", body)
-	r.Header.Set("Content-Type", writer.FormDataContentType())
-
+	r := newMultipartFormRequestFromMap(map[string]interface{}{
+		"name":   "Ggicci T'ang",
+		"gender": "male",
+		"avatar": AvatarBytes,
+	})
 	core, err := New(UpdateUserProfileInput{})
 	assert.NoError(err)
 	gotInput, err := core.Decode(r)
@@ -75,28 +110,15 @@ func TestMultipartForm_UploadSingleFile(t *testing.T) {
 	assert.True(ok)
 	assert.Equal("Ggicci T'ang", got.Name)
 	assert.Equal("male", got.Gender)
-	assert.True(got.Avatar.Valid)
-	assert.Equal("avatar.png", got.Avatar.Header.Filename)
-	assert.Equal(int64(len(AvatarBytes)), got.Avatar.Header.Size)
-	uploadedContent, err := io.ReadAll(got.Avatar.File)
-	assert.NoError(err)
-	assert.Equal(AvatarBytes, uploadedContent)
+	assertFile(t, got.Avatar, "avatar.txt", AvatarBytes)
 }
 
 func TestMultipartForm_UploadSingleFile_FailOnEmpty(t *testing.T) {
 	assert := assert.New(t)
-	// No files uploaded should cause server to fail.
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
-
-	nameFieldWriter, err := writer.CreateFormField("name")
-	assert.NoError(err)
-	nameFieldWriter.Write([]byte("Ggicci T'ang"))
-
-	_ = writer.Close() // error ignored
-
-	r, _ := http.NewRequest("POST", "/", body)
-	r.Header.Set("Content-Type", writer.FormDataContentType())
+	r := newMultipartFormRequestFromMap(map[string]interface{}{
+		"name": "Ggicci T'ang",
+		// No files uploaded should cause server to fail.
+	})
 	core, err := New(UpdateUserProfileInput{})
 	assert.NoError(err)
 	gotInput, err := core.Decode(r)
@@ -110,25 +132,22 @@ func TestMultipartForm_UploadSingleFile_FailOnEmpty(t *testing.T) {
 	assert.Nil(got.Avatar.Header)
 }
 
+func breakMultipartFormBoundary(body *bytes.Buffer) *bytes.Buffer {
+	raw := body.Bytes()
+	var brokenBody = bytes.NewBuffer(raw[:len(raw)-10])
+	brokenBody.Write([]byte("xxx")) // break the boundary
+	return brokenBody
+}
+
 func TestMultipartForm_UploadSingleFile_FailOnBrokenBoundaries(t *testing.T) {
 	assert := assert.New(t)
 	// Broken boundaries should cause server to fail.
 	var AvatarBytes = []byte("avatar image content")
+	body, writer := newMultipartFormWriterFromMap(map[string]interface{}{
+		"avatar": AvatarBytes,
+	})
 
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
-
-	avatarFileWriter, err := writer.CreateFormFile("avatar", "avatar.png")
-	assert.NoError(err)
-	_, err = avatarFileWriter.Write(AvatarBytes)
-	assert.NoError(err)
-	writer.Close() // error ignored
-
-	raw := body.Bytes()
-	var brokenBody = bytes.NewBuffer(raw[:len(raw)-10])
-	brokenBody.Write([]byte("xxx")) // break the boundary
-
-	r, _ := http.NewRequest("POST", "/", brokenBody)
+	r, _ := http.NewRequest("POST", "/", breakMultipartFormBoundary(body))
 	r.Header.Set("Content-Type", writer.FormDataContentType())
 	core, err := New(UpdateUserProfileInput{})
 	assert.NoError(err)
@@ -141,32 +160,17 @@ func TestMultipartForm_UploadSingleFile_FailOnBrokenBoundaries(t *testing.T) {
 func TestMultipartForm_UploadMultiFiles(t *testing.T) {
 	assert := assert.New(t)
 	// Upload multiple files at a time.
+	title := "feature-request: integrate with open-telemetry"
 	var attachments = [][]byte{
 		[]byte("attachment #1"),
 		[]byte("attachment #2"),
 		[]byte("attachment #3"),
 	}
 
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
-
-	title := "feature-request: integrate with open-telemetry"
-	titleFieldWriter, err := writer.CreateFormField("title")
-	assert.NoError(err)
-	titleFieldWriter.Write([]byte(title))
-
-	for i, attContent := range attachments {
-		filename := fmt.Sprintf("attachment-%d.txt", i+1)
-		attachmentFileWriter, err := writer.CreateFormFile("attachment", filename)
-		assert.NoError(err)
-		_, err = attachmentFileWriter.Write(attContent)
-		assert.NoError(err)
-	}
-	_ = writer.Close() // error ignored
-
-	r, _ := http.NewRequest("POST", "/", body)
-	r.Header.Set("Content-Type", writer.FormDataContentType())
-
+	r := newMultipartFormRequestFromMap(map[string]interface{}{
+		"title":      title,
+		"attachment": attachments,
+	})
 	core, err := New(UpdateGitHubIssueInput{})
 	assert.NoError(err)
 	gotInput, err := core.Decode(r)
@@ -176,11 +180,6 @@ func TestMultipartForm_UploadMultiFiles(t *testing.T) {
 	assert.Equal(title, got.Title)
 	assert.Len(got.Attachments, len(attachments))
 	for i, att := range got.Attachments {
-		assert.True(att.Valid)
-		assert.Equal(fmt.Sprintf("attachment-%d.txt", i+1), att.Header.Filename)
-		assert.Equal(int64(len(attachments[i])), att.Header.Size)
-		uploadedContent, err := io.ReadAll(att.File)
-		assert.NoError(err)
-		assert.Equal(attachments[i], uploadedContent)
+		assertFile(t, att, "attachment.txt", attachments[i])
 	}
 }

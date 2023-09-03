@@ -29,7 +29,7 @@ func init() {
 	// decoder is a special executor which does nothing, but is an indicator of
 	// overriding the decoder for a specific field.
 	owl.RegisterDirectiveExecutor("decoder", DirectiveExecutorFunc(nil))
-	owl.RegisterDirectiveExecutor("_setfield", DirectiveExecutorFunc(setField))
+	// owl.RegisterDirectiveExecutor("_setfield", DirectiveExecutorFunc(setField))
 }
 
 // RegisterDirectiveExecutor registers a named executor globally, which

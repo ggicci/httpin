@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"testing"
 	"time"
 
@@ -226,8 +225,7 @@ func TestCore_Decode_UnexportedFields(t *testing.T) {
 }
 
 func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
-	var boolType = reflect.TypeOf(bool(true))
-	RegisterTypeDecoder(boolType, ValueTypeDecoderFunc(decodeCustomBool)) // usually done in init()
+	RegisterTypeDecoder[bool](ValueTypeDecoderFunc(decodeCustomBool)) // usually done in init()
 
 	type BoolInput struct {
 		IsMember bool `in:"form=is_member"`
@@ -242,7 +240,7 @@ func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got)
 
-	delete(decoders, boolType) // remove the custom decoder
+	removeTypeDecoder[bool]() // remove the custom decoder
 }
 
 type CustomNamedDecoderInput struct {
@@ -280,6 +278,27 @@ func TestCore_Decode_CustomDecoder_NamedDecoder(t *testing.T) {
 	got, err := core.Decode(r)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got.(*CustomNamedDecoderInput))
+}
+
+func TestCore_Decode_CustomDecoder_NamedDecoder_ErrMissingDecoderName(t *testing.T) {
+	type GenderType string
+	type Input struct {
+		Gender GenderType `in:"form=gender;decoder"` // cause ErrMissingDecoderName
+	}
+
+	core, err := New(Input{})
+	assert.ErrorIs(t, err, ErrMissingDecoderName)
+	assert.Nil(t, core)
+}
+
+func TestCore_Decode_CustomDecoder_NamedDecoder_ErrDecoderNotFound(t *testing.T) {
+	type GenderType string
+	type Input struct {
+		Gender GenderType `in:"form=gender;decoder=notfound"` // cause ErrDecoderNotFound
+	}
+	core, err := New(Input{})
+	assert.ErrorIs(t, err, ErrDecoderNotFound)
+	assert.Nil(t, core)
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_DecodeError(t *testing.T) {

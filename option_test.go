@@ -2,15 +2,10 @@ package httpin
 
 import (
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func equalFuncs(expected, actual interface{}) bool {
-	return reflect.ValueOf(expected).Pointer() == reflect.ValueOf(actual).Pointer()
-}
 
 func TestWithErrorHandler(t *testing.T) {
 	// Use the default error handler.

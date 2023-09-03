@@ -39,6 +39,13 @@ func TestDecode(t *testing.T) {
 	}()
 
 	func() {
+		input := &Pagination{}
+		err := Decode(r, &input) // pointer to pointer of struct instance
+		assert.NoError(t, err)
+		assert.Equal(t, expected, input)
+	}()
+
+	func() {
 		input := Pagination{}
 		err := Decode(r, input) // non-pointer struct instance should fail
 		assert.ErrorContains(t, err, "input must be a pointer")

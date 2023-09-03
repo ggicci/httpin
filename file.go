@@ -5,11 +5,10 @@ package httpin
 import (
 	"fmt"
 	"mime/multipart"
-	"reflect"
 )
 
 func init() {
-	RegisterTypeDecoder(reflect.TypeOf(File{}), FileTypeDecoderFunc(decodeFile))
+	RegisterTypeDecoder[File](FileTypeDecoderFunc(decodeFile))
 }
 
 type File struct {

@@ -79,7 +79,7 @@ func normalizeResolver(r *owl.Resolver) error {
 		for _, fn := range []func(*owl.Resolver) error{
 			reserveDecoderDirective,
 			normalizeBodyDirective,
-			appendSetFieldDirective,
+			// appendSetFieldDirective,
 			ensureDirectiveExecutorsRegistered,
 		} {
 			if err := fn(r); err != nil {
@@ -92,8 +92,8 @@ func normalizeResolver(r *owl.Resolver) error {
 	return r.Iterate(normalize)
 }
 
-// reserveDecoderDirective removes the decoder directive from the resolver.
-// Because it's a special directive which does nothing, but is an indicator of
+// reserveDecoderDirective removes the "decoder" directive from the resolver.
+// The "decoder" is a special directive which does nothing, but an indicator of
 // overriding the decoder for a specific field.
 func reserveDecoderDirective(r *owl.Resolver) error {
 	d := r.RemoveDirective("decoder")
@@ -129,7 +129,6 @@ func (c *Core) Decode(req *http.Request) (interface{}, error) {
 	} else {
 		err = req.ParseForm()
 	}
-
 	if err != nil {
 		return nil, err
 	}
