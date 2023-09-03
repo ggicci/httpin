@@ -1,4 +1,4 @@
-package httpin
+package httpin_test
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ggicci/httpin"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/stretchr/testify/assert"
@@ -17,12 +18,12 @@ type GetPostOfUserInput struct {
 }
 
 func GetPostOfUserHandler(rw http.ResponseWriter, r *http.Request) {
-	var input = r.Context().Value(Input).(*GetPostOfUserInput)
+	var input = r.Context().Value(httpin.Input).(*GetPostOfUserInput)
 	json.NewEncoder(rw).Encode(input)
 }
 
 func TestGorillaMuxVars(t *testing.T) {
-	UseGorillaMux("path", mux.Vars) // register the "path" directive, usually in init()
+	httpin.UseGorillaMux("path", mux.Vars) // register the "path" directive, usually in init()
 
 	rw := httptest.NewRecorder()
 	r, err := http.NewRequest("GET", "/ggicci/posts/1024", nil)
@@ -30,7 +31,7 @@ func TestGorillaMuxVars(t *testing.T) {
 
 	router := mux.NewRouter()
 	router.Handle("/{username}/posts/{pid}", alice.New(
-		NewInput(GetPostOfUserInput{}),
+		httpin.NewInput(GetPostOfUserInput{}),
 	).ThenFunc(GetPostOfUserHandler)).Methods("GET")
 	router.ServeHTTP(rw, r)
 	assert.Equal(t, 200, rw.Code)

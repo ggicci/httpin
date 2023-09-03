@@ -1,4 +1,4 @@
-package httpin
+package httpin_test
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ggicci/httpin"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,7 +17,7 @@ type GetArticleOfUserInput struct {
 }
 
 func GetArticleOfUser(rw http.ResponseWriter, r *http.Request) {
-	var input = r.Context().Value(Input).(*GetArticleOfUserInput)
+	var input = r.Context().Value(httpin.Input).(*GetArticleOfUserInput)
 	json.NewEncoder(rw).Encode(input)
 }
 
@@ -24,7 +25,7 @@ func TestUseGochiURLParam(t *testing.T) {
 	// Register the "gochi" directive, usually in init().
 	// In most cases, you register this as "path", here's just an example.
 	// Which is in order to avoid test conflicts with other tests
-	UseGochiURLParam("gochi", chi.URLParam)
+	httpin.UseGochiURLParam("gochi", chi.URLParam)
 
 	rw := httptest.NewRecorder()
 	r, err := http.NewRequest("GET", "/ggicci/articles/1024", nil)
@@ -32,7 +33,7 @@ func TestUseGochiURLParam(t *testing.T) {
 
 	router := chi.NewRouter()
 	router.With(
-		NewInput(GetArticleOfUserInput{}),
+		httpin.NewInput(GetArticleOfUserInput{}),
 	).Get("/{author}/articles/{articleID}", GetArticleOfUser)
 
 	router.ServeHTTP(rw, r)
