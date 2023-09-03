@@ -95,8 +95,6 @@ func bodyDecoder(rtm *DirectiveRuntime) error {
 	if err := decoder.Decode(req.Body, &obj); err != nil {
 		return err
 	}
-
-	(&directiveRuntimeHelper{rtm}).DeliverContextValue(StopRecursion, true)
 	return nil
 }
 

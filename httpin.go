@@ -20,8 +20,23 @@ const (
 	//     input := r.Context().Value(httpin.Input).(*InputStruct)
 	Input ContextKey = iota
 
+	// RequestValue is the key to get the HTTP request value (of *http.Request)
+	// from DirectiveRuntime.Context. The HTTP request value is injected by
+	// httpin to the context of DirectiveRuntime before executing the directive.
+	// See Core.Decode() for more details.
 	RequestValue
 
+	// CustomDecoder is the key to get the custom decoder for a field from
+	// Resolver.Context. Which is specified by the "decoder" directive.
+	// During resolver building phase, the "decoder" directive will be removed
+	// from the resolver, and the targeted decoder by name will be put into
+	// Resolver.Context with this key. e.g.
+	//
+	//    type GreetInput struct {
+	//        Message string `httpin:"decoder=custom"`
+	//    }
+	// For the above example, the decoder named "custom" will be put into the
+	// resolver of Message field with this key.
 	CustomDecoder
 
 	// FieldSet is used by executors to tell whether a field has been set. When
@@ -29,8 +44,6 @@ const (
 	// by a former executor, the latter executors MAY skip running by consulting
 	// this context value.
 	FieldSet
-
-	StopRecursion
 )
 
 var (

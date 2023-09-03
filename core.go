@@ -17,6 +17,9 @@ const (
 
 var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 
+// Core is the core of httpin. It holds the resolver of a specific struct type.
+// Who is responsible for decoding an HTTP request to an instance of such struct
+// type.
 type Core struct {
 	resolver *owl.Resolver
 
@@ -24,6 +27,14 @@ type Core struct {
 	maxMemory    int64 // in bytes
 }
 
+// New creates a new Core instance. It will build a resolver for the inputStruct.
+// The resolver will be cached for future use. For the same inputStruct, the
+// resolver will be built only once. While the applied options will be applied
+// separately for each Core instance.
+//
+// Use Core.Decode to decode an HTTP request to a struct instance.
+//
+// Use NewInput to create an HTTP middleware.
 func New(inputStruct interface{}, opts ...Option) (*Core, error) {
 	resolver, err := buildResolver(inputStruct)
 	if err != nil {
@@ -79,7 +90,7 @@ func normalizeResolver(r *owl.Resolver) error {
 		for _, fn := range []func(*owl.Resolver) error{
 			reserveDecoderDirective,
 			normalizeBodyDirective,
-			ensureDirectiveExecutorsRegistered,
+			ensureDirectiveExecutorsRegistered, // always the last one
 		} {
 			if err := fn(r); err != nil {
 				return err
@@ -120,6 +131,8 @@ func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 	return nil
 }
 
+// Decode decodes an HTTP request to a struct instance.
+// The return value is a pointer to the input struct.
 func (c *Core) Decode(req *http.Request) (interface{}, error) {
 	var err error
 	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
