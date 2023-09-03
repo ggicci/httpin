@@ -79,7 +79,6 @@ func normalizeResolver(r *owl.Resolver) error {
 		for _, fn := range []func(*owl.Resolver) error{
 			reserveDecoderDirective,
 			normalizeBodyDirective,
-			// appendSetFieldDirective,
 			ensureDirectiveExecutorsRegistered,
 		} {
 			if err := fn(r); err != nil {

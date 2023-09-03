@@ -15,7 +15,7 @@ type (
 	DirectiveExecutorFunc = owl.DirectiveExecutorFunc
 )
 
-var reservedExecutorNames = []string{"decoder", "_setfield"}
+var reservedExecutorNames = []string{"decoder"}
 
 func init() {
 	// Built-in Directives
@@ -29,7 +29,6 @@ func init() {
 	// decoder is a special executor which does nothing, but is an indicator of
 	// overriding the decoder for a specific field.
 	owl.RegisterDirectiveExecutor("decoder", DirectiveExecutorFunc(nil))
-	// owl.RegisterDirectiveExecutor("_setfield", DirectiveExecutorFunc(setField))
 }
 
 // RegisterDirectiveExecutor registers a named executor globally, which
