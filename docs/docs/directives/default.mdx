@@ -9,7 +9,7 @@ import data from "./data/default"
 
 Introduced in v0.8.0.
 
-**default** is a [directive executor](/advanced/concepts#directive-executor) who sets unsetted fields to their default value.
+**default** is a [directive executor](/advanced/concepts#directive-executor) who populates unset fields to their default value.
 
 ## Definition
 
@@ -25,7 +25,7 @@ So the presence of comma in an array item can lead to unexpected behavior.
 
 :::
 
-**default** will examine if the field was already set by former directives. If not, it will set the field to the given value.
+**default** will examine if the field has already been set by former directives. If not, it will set the field to the given value.
 
 ## Usage
 

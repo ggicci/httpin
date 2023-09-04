@@ -2,7 +2,7 @@
 sidebar_position: 100
 ---
 
-# custom 🔌
+# Create Your Own 🔌
 
 You can extend **httpin** by adding your custom directives.
 
@@ -15,14 +15,14 @@ To add your custom directive, you need to:
 by implementing the [`httpin.DirectiveExecutor`](https://pkg.go.dev/github.com/ggicci/httpin#DirectiveExecutor) interface:
 
 ```go {13}
-func toLower(ctx *DirectiveContext) error {
-	if ctx.ValueType.Kind() != reflect.String {
+func toLower(rtm *DirectiveRuntime) error {
+	if rtm.Value.Type().Elem().Kind() != reflect.String {
 		return errors.New("not a string")
 	}
 
-	currentValue := ctx.Value.Elem().String()
+	currentValue := rtm.Value.Elem().String()
 	newValue := strings.ToLower(currentValue)
-	ctx.Value.Elem().SetString(newValue)
+	rtm.Value.Elem().SetString(newValue)
 	return nil
 }
 
@@ -36,7 +36,7 @@ by calling [`httpin.RegisterDirectiveExecutor`](https://pkg.go.dev/github.com/gg
 
 ```go {2}
 func init() {
-	httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor, nil)
+	httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor)
 }
 ```
 

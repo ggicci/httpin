@@ -56,18 +56,18 @@ html[data-theme="dark"] .header-github-link:before {
     no-repeat;
 }
 
-.header-kofi-link:hover {
+.header-sponsor-link:hover {
   opacity: 0.6;
 }
 
-.header-kofi-link:before {
+.header-sponsor-link:before {
   content: "";
   width: 24px;
   height: 24px;
   display: flex;
-  background: url("../../static/img/ko-fi.svg") no-repeat center;
+  background: url("../../static/img/sponsor.svg") no-repeat center;
 }
 
-html[data-theme="dark"] .header-kofi-link:before {
-  background: url("../../static/img/ko-fi-dark.svg") no-repeat center;
+html[data-theme="dark"] .header-sponsor-link:before {
+  background: url("../../static/img/sponsor.svg") no-repeat center;
 }

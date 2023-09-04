@@ -1,8 +1,8 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const lightCodeTheme = require("prism-react-renderer/themes/github")
-const darkCodeTheme = require("prism-react-renderer/themes/dracula")
+const lightCodeTheme = require("prism-react-renderer").themes.github
+const darkCodeTheme = require("prism-react-renderer").themes.dracula
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -52,16 +52,18 @@ const config = {
         },
         items: [
           {
-            href: "https://ko-fi.com/ggicci",
+            href: "https://github.com/sponsors/ggicci",
             position: "right",
-            className: "header-kofi-link",
-            "aria-label": "Buy me a coffee",
+            className: "header-sponsor-link",
+            "aria-label": "Sponsor me",
+            title: "Sponsor Me",
           },
           {
             href: "https://github.com/ggicci/httpin",
             position: "right",
             className: "header-github-link",
             "aria-label": "Github repository",
+            title: "GitHub Repository",
           },
         ],
       },
