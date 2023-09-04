@@ -86,13 +86,7 @@ func bodyDecoder(rtm *DirectiveRuntime) error {
 		bodyType = rtm.Directive.Argv[0]
 		decoder  = bodyDecoders[bodyType]
 	)
-
-	if decoder == nil {
-		return ErrUnknownBodyType
-	}
-
-	obj := rtm.Value.Interface()
-	if err := decoder.Decode(req.Body, &obj); err != nil {
+	if err := decoder.Decode(req.Body, rtm.Value.Elem().Addr().Interface()); err != nil {
 		return err
 	}
 	return nil
