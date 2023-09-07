@@ -1,30 +1,20 @@
 package httpin
 
 import (
-	"mime/multipart"
-
-	"github.com/ggicci/httpin/patch"
+	"reflect"
+	"strings"
 )
 
-func wrapDecoderForPatchField[T any](decoder interface{}) interface{} {
-	switch d := decoder.(type) {
-	case ValueTypeDecoder:
-		return ValueTypeDecoderFunc(func(value string) (interface{}, error) {
-			if gotValue, err := d.Decode(value); err != nil {
-				return patch.Field[T]{}, err
-			} else {
-				return patch.Field[T]{Value: gotValue.(T), Valid: true}, nil
-			}
-		})
-	case FileTypeDecoder:
-		return FileTypeDecoderFunc(func(file *multipart.FileHeader) (interface{}, error) {
-			if gotValue, err := d.Decode(file); err != nil {
-				return patch.Field[T]{}, err
-			} else {
-				return patch.Field[T]{Value: gotValue.(T), Valid: true}, nil
-			}
-		})
-	default:
-		panic("httpin: invalid decoder")
+func isPatchField(t reflect.Type) bool {
+	return t.Kind() == reflect.Struct &&
+		t.PkgPath() == "github.com/ggicci/httpin/patch" &&
+		strings.HasPrefix(t.Name(), "Field[")
+}
+
+func patchFieldElemType(t reflect.Type) (reflect.Type, bool) {
+	fv, _ := t.FieldByName("Value")
+	if fv.Type.Kind() == reflect.Slice {
+		return fv.Type.Elem(), true
 	}
+	return fv.Type, false
 }

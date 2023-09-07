@@ -4,10 +4,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"reflect"
-	"strconv"
 	"time"
-
-	"github.com/ggicci/httpin/patch"
 )
 
 var (
@@ -17,110 +14,107 @@ var (
 )
 
 func init() {
-	registerTypeDecoderTo[bool](builtinDecoders, ValueTypeDecoderFunc(decodeBool))
-	registerTypeDecoderTo[int](builtinDecoders, ValueTypeDecoderFunc(decodeInt))
-	registerTypeDecoderTo[int8](builtinDecoders, ValueTypeDecoderFunc(decodeInt8))
-	registerTypeDecoderTo[int16](builtinDecoders, ValueTypeDecoderFunc(decodeInt16))
-	registerTypeDecoderTo[int32](builtinDecoders, ValueTypeDecoderFunc(decodeInt32))
-	registerTypeDecoderTo[int64](builtinDecoders, ValueTypeDecoderFunc(decodeInt64))
-	registerTypeDecoderTo[uint](builtinDecoders, ValueTypeDecoderFunc(decodeUint))
-	registerTypeDecoderTo[uint8](builtinDecoders, ValueTypeDecoderFunc(decodeUint8))
-	registerTypeDecoderTo[uint16](builtinDecoders, ValueTypeDecoderFunc(decodeUint16))
-	registerTypeDecoderTo[uint32](builtinDecoders, ValueTypeDecoderFunc(decodeUint32))
-	registerTypeDecoderTo[uint64](builtinDecoders, ValueTypeDecoderFunc(decodeUint64))
-	registerTypeDecoderTo[float32](builtinDecoders, ValueTypeDecoderFunc(decodeFloat32))
-	registerTypeDecoderTo[float64](builtinDecoders, ValueTypeDecoderFunc(decodeFloat64))
-	registerTypeDecoderTo[complex64](builtinDecoders, ValueTypeDecoderFunc(decodeComplex64))
-	registerTypeDecoderTo[complex128](builtinDecoders, ValueTypeDecoderFunc(decodeComplex128))
-	registerTypeDecoderTo[string](builtinDecoders, ValueTypeDecoderFunc(decodeString))
-	registerTypeDecoderTo[time.Time](builtinDecoders, ValueTypeDecoderFunc(decodeTime))
+	registerTypeDecoderTo[bool](builtinDecoders, AdaptDecoderFunc[bool, string](decodeBool), false)
+	registerTypeDecoderTo[int](builtinDecoders, AdaptDecoderFunc[int, string](decodeInt), false)
+	registerTypeDecoderTo[int8](builtinDecoders, AdaptDecoderFunc[int8, string](decodeInt8), false)
+	registerTypeDecoderTo[int16](builtinDecoders, AdaptDecoderFunc[int16, string](decodeInt16), false)
+	registerTypeDecoderTo[int32](builtinDecoders, AdaptDecoderFunc[int32, string](decodeInt32), false)
+	registerTypeDecoderTo[int64](builtinDecoders, AdaptDecoderFunc[int64, string](decodeInt64), false)
+	registerTypeDecoderTo[uint](builtinDecoders, AdaptDecoderFunc[uint, string](decodeUint), false)
+	registerTypeDecoderTo[uint8](builtinDecoders, AdaptDecoderFunc[uint8, string](decodeUint8), false)
+	registerTypeDecoderTo[uint16](builtinDecoders, AdaptDecoderFunc[uint16, string](decodeUint16), false)
+	registerTypeDecoderTo[uint32](builtinDecoders, AdaptDecoderFunc[uint32, string](decodeUint32), false)
+	registerTypeDecoderTo[uint64](builtinDecoders, AdaptDecoderFunc[uint64, string](decodeUint64), false)
+	registerTypeDecoderTo[float32](builtinDecoders, AdaptDecoderFunc[float32, string](decodeFloat32), false)
+	registerTypeDecoderTo[float64](builtinDecoders, AdaptDecoderFunc[float64, string](decodeFloat64), false)
+	registerTypeDecoderTo[complex64](builtinDecoders, AdaptDecoderFunc[complex64, string](decodeComplex64), false)
+	registerTypeDecoderTo[complex128](builtinDecoders, AdaptDecoderFunc[complex128, string](decodeComplex128), false)
+	registerTypeDecoderTo[string](builtinDecoders, AdaptDecoderFunc[string, string](decodeString), false)
+	registerTypeDecoderTo[time.Time](builtinDecoders, AdaptDecoderFunc[time.Time, string](decodeTime), false)
 }
 
-// ValueTypeDecoder is the interface implemented by types that can decode a
-// string to themselves.
-type ValueTypeDecoder interface {
-	Decode(value string) (interface{}, error)
+type DataSource interface{ string | *multipart.FileHeader }
+
+type Decoder[DT DataSource] interface {
+	Decode(value DT) (interface{}, error)
 }
 
-// ValueTypeDecoderFunc is an adaptor to allow the use of ordinary functions as
-// httpin `ValueTypeDecoder`s.
-type ValueTypeDecoderFunc func(string) (interface{}, error)
+type ValueTypeDecoder = Decoder[string]
+type FileTypeDecoder = Decoder[*multipart.FileHeader]
 
-func (fn ValueTypeDecoderFunc) Decode(value string) (interface{}, error) {
-	return fn(value)
+// decoder2D is the interface implemented by types that can decode a slice of
+// DataSource to themselves. DataSource can be string or *multipart.FileHeader.
+type decoder2D[DT DataSource] interface {
+	Decode(values []DT) (interface{}, error)
 }
 
-// FileTypeDecoder is the interface implemented by types that can decode a
-// *multipart.FileHeader to themselves.
-type FileTypeDecoder interface {
-	Decode(file *multipart.FileHeader) (interface{}, error)
-}
-
-// FileTypeDecoderFunc is an adaptor to allow the use of ordinary functions as
-// httpin `FileTypeDecoder`s.
-type FileTypeDecoderFunc func(*multipart.FileHeader) (interface{}, error)
-
-func (fn FileTypeDecoderFunc) Decode(file *multipart.FileHeader) (interface{}, error) {
-	return fn(file)
-}
-
-func isTypeDecoder(decoder interface{}) bool {
-	_, isValueTypeDecoder := decoder.(ValueTypeDecoder)
-	_, isFileTypeDecoder := decoder.(FileTypeDecoder)
-	return isValueTypeDecoder || isFileTypeDecoder
-}
-
-// RegisterDecoder registers a specific type decoder.
-// The decoder can be type of `ValueTypeDecoder` or `FileTypeDecoder`.
+// RegisterDecoder registers a specific type decoder. The decoder can be a
+// TypeDecoder or a ScalarTypeDecoder.
+//
+// When the decoder is a ScalarTypeDecoder, it will be adapted to 3 decoders
+// and will be registered to T, []T and patch.Field[T] separately.
+//
+// When the decoder is a TypeDecoder, it will be registered to T only.
+//
 // Panics on conflicts or invalid decoder.
-func RegisterTypeDecoder[T any](decoder interface{}) {
-	registerTypeDecoderTo[T](customDecoders, decoder)
+func registerTypeDecoder[T any, DT DataSource](decoder Decoder[DT]) {
+	registerTypeDecoderTo[T](customDecoders, decoder, false)
 }
 
-func registerTypeDecoderTo[T any](m map[reflect.Type]interface{}, decoder interface{}) {
-	replaceTypeDecoderTo[T](m, decoder, false)
-	// Always register patch.Field[T] by force, as long as T is registered.
-	replaceTypeDecoderTo[patch.Field[T]](m, wrapDecoderForPatchField[T](decoder), true)
+func RegisterValueTypeDecoder[T any](decoder Decoder[string]) {
+	registerTypeDecoder[T, string](decoder)
 }
 
-func ReplaceTypeDecoder[T any](decoder interface{}) {
-	replaceTypeDecoderTo[T](customDecoders, decoder, true)
-	replaceTypeDecoderTo[patch.Field[T]](customDecoders, wrapDecoderForPatchField[T](decoder), true)
+func RegisterFileTypeDecoder[T any](decoder Decoder[*multipart.FileHeader]) {
+	registerTypeDecoder[T, *multipart.FileHeader](decoder)
 }
 
-func replaceTypeDecoderTo[T any](m map[reflect.Type]interface{}, decoder interface{}, force bool) {
+func replaceTypeDecoder[T any, DT DataSource](decoder Decoder[DT]) {
+	registerTypeDecoderTo[T](customDecoders, decoder, true)
+}
+
+func ReplaceValueTypeDecoder[T any](decoder Decoder[string]) {
+	replaceTypeDecoder[T, string](decoder)
+}
+
+func ReplaceFileTypeDecoder[T any](decoder Decoder[*multipart.FileHeader]) {
+	replaceTypeDecoder[T, *multipart.FileHeader](decoder)
+}
+
+func registerTypeDecoderTo[T any](m map[reflect.Type]interface{}, decoder interface{}, force bool) {
 	var zero [0]T
 	typ := reflect.TypeOf(zero).Elem()
-	ensureValidDecoder(typ, decoder)
+	panicOnInvalidDecoder(decoder)
 
 	if _, conflict := m[typ]; conflict && !force {
 		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateTypeDecoder, typ))
 	}
-	m[typ] = decoder
+
+	m[typ] = adaptDecoder[T](decoder)
 }
 
 // RegisterNamedDecoder registers a decoder by name. Panics on conflicts.
-func RegisterNamedDecoder(name string, decoder interface{}) {
+func RegisterNamedDecoder[T any](name string, decoder interface{}) {
 	if _, ok := namedDecoders[name]; ok {
 		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateNamedDecoder, name))
 	}
 
-	ReplaceNamedDecoder(name, decoder)
+	ReplaceNamedDecoder[T](name, decoder)
 }
 
 // ReplaceNamedDecoder replaces a decoder by name.
-func ReplaceNamedDecoder(name string, decoder interface{}) {
-	ensureValidDecoder(nil, decoder)
-	namedDecoders[name] = decoder
+func ReplaceNamedDecoder[T any](name string, decoder interface{}) {
+	panicOnInvalidDecoder(decoder)
+	namedDecoders[name] = adaptDecoder[T](decoder)
 }
 
-func ensureValidDecoder(typ reflect.Type, decoder interface{}) {
+func panicOnInvalidDecoder(decoder interface{}) {
 	if decoder == nil {
-		panic(fmt.Errorf("httpin: %w: %q", ErrNilTypeDecoder, typ))
+		panic(fmt.Errorf("httpin: %w", ErrNilDecoder))
 	}
 
-	if !isTypeDecoder(decoder) {
-		panic(fmt.Errorf("httpin: %w: %q", ErrInvalidTypeDecoder, typ))
+	if !isDecoder(decoder) {
+		panic(fmt.Errorf("httpin: %w", ErrInvalidDecoder))
 	}
 }
 
@@ -138,104 +132,8 @@ func decoderByName(name string) interface{} {
 	return namedDecoders[name]
 }
 
-// All the builtin decoders:
-
-func decodeBool(value string) (interface{}, error) {
-	return strconv.ParseBool(value)
-}
-
-func decodeInt(value string) (interface{}, error) {
-	v, err := strconv.ParseInt(value, 10, 64)
-	return int(v), err
-}
-
-func decodeInt8(value string) (interface{}, error) {
-	v, err := strconv.ParseInt(value, 10, 8)
-	return int8(v), err
-}
-
-func decodeInt16(value string) (interface{}, error) {
-	v, err := strconv.ParseInt(value, 10, 16)
-	return int16(v), err
-}
-
-func decodeInt32(value string) (interface{}, error) {
-	v, err := strconv.ParseInt(value, 10, 32)
-	return int32(v), err
-}
-
-func decodeInt64(value string) (interface{}, error) {
-	v, err := strconv.ParseInt(value, 10, 64)
-	return int64(v), err
-}
-
-func decodeUint(value string) (interface{}, error) {
-	v, err := strconv.ParseUint(value, 10, 64)
-	return uint(v), err
-}
-
-func decodeUint8(value string) (interface{}, error) {
-	v, err := strconv.ParseUint(value, 10, 8)
-	return uint8(v), err
-}
-
-func decodeUint16(value string) (interface{}, error) {
-	v, err := strconv.ParseUint(value, 10, 16)
-	return uint16(v), err
-}
-
-func decodeUint32(value string) (interface{}, error) {
-	v, err := strconv.ParseUint(value, 10, 32)
-	return uint32(v), err
-}
-
-func decodeUint64(value string) (interface{}, error) {
-	v, err := strconv.ParseUint(value, 10, 64)
-	return uint64(v), err
-}
-
-func decodeFloat32(value string) (interface{}, error) {
-	v, err := strconv.ParseFloat(value, 32)
-	return float32(v), err
-}
-
-func decodeFloat64(value string) (interface{}, error) {
-	v, err := strconv.ParseFloat(value, 64)
-	return float64(v), err
-}
-
-func decodeComplex64(value string) (interface{}, error) {
-	v, err := strconv.ParseComplex(value, 64)
-	return complex64(v), err
-}
-
-func decodeComplex128(value string) (interface{}, error) {
-	v, err := strconv.ParseComplex(value, 128)
-	return complex128(v), err
-}
-
-func decodeString(value string) (interface{}, error) {
-	return value, nil
-}
-
-// DecodeTime parses data bytes as time.Time in UTC timezone.
-// Supported formats of the data bytes are:
-// 1. RFC3339Nano string, e.g. "2006-01-02T15:04:05-07:00"
-// 2. Unix timestamp, e.g. "1136239445"
-func decodeTime(value string) (interface{}, error) {
-	// Try parsing value as RFC3339 format.
-	if t, err := time.Parse(time.RFC3339Nano, value); err == nil {
-		return t.UTC(), nil
-	}
-
-	// Try parsing value as timestamp, both integer and float formats supported.
-	// e.g. "1618974933", "1618974933.284368".
-	if timestamp, err := strconv.ParseInt(value, 10, 64); err == nil {
-		return time.Unix(timestamp, 0).UTC(), nil
-	}
-	if timestamp, err := strconv.ParseFloat(value, 64); err == nil {
-		return time.Unix(0, int64(timestamp*float64(time.Second))).UTC(), nil
-	}
-
-	return time.Time{}, fmt.Errorf("invalid time value")
+func isDecoder(decoder interface{}) bool {
+	_, isValueTypeDecoder := decoder.(Decoder[string])
+	_, isFileTypeDecoder := decoder.(Decoder[*multipart.FileHeader])
+	return isValueTypeDecoder || isFileTypeDecoder
 }

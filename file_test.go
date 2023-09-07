@@ -140,6 +140,8 @@ func breakMultipartFormBoundary(body *bytes.Buffer) *bytes.Buffer {
 }
 
 func TestMultipartForm_UploadSingleFile_FailOnBrokenBoundaries(t *testing.T) {
+	// Broken boundaries will break when parsing multipart/form-data requests.
+	// Which means it will fail before stepping into the Resolve process.
 	assert := assert.New(t)
 	// Broken boundaries should cause server to fail.
 	var AvatarBytes = []byte("avatar image content")
@@ -155,6 +157,26 @@ func TestMultipartForm_UploadSingleFile_FailOnBrokenBoundaries(t *testing.T) {
 	gotInput, err := core.Decode(r)
 	assert.Nil(gotInput)
 	assert.Error(err)
+}
+
+func TestMultipartForm_UploadSingleFile_FailOnDecodeError(t *testing.T) {
+	RegisterNamedDecoder[File]("badfile", badFileDecoder{})
+
+	type AccountUpdate struct {
+		Username string `in:"form=username"`
+		Avatar   File   `in:"form=avatar;decoder=badfile"`
+	}
+
+	assert := assert.New(t)
+	r := newMultipartFormRequestFromMap(map[string]interface{}{
+		"username": "ggicci",
+		"avatar":   []byte("avatar image content"),
+	})
+	core, err := New(AccountUpdate{})
+	assert.NoError(err)
+	gotInput, err := core.Decode(r)
+	assert.Nil(gotInput)
+	assert.ErrorIs(err, errBadFile)
 }
 
 func TestMultipartForm_UploadMultiFiles(t *testing.T) {

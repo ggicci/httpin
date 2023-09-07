@@ -10,9 +10,11 @@ import (
 )
 
 type AccountPatch struct {
-	Email  patch.Field[string] `in:"form=email"`
-	Age    patch.Field[int]    `in:"form=age"`
-	Avatar patch.Field[File]   `in:"form=avatar"`
+	Email    patch.Field[string]   `in:"form=email"`
+	Age      patch.Field[int]      `in:"form=age"`
+	Avatar   patch.Field[File]     `in:"form=avatar"`
+	Hobbies  patch.Field[[]string] `in:"form=hobbies"`
+	Pictures patch.Field[[]File]   `in:"form=pictures"`
 }
 
 func TestPatchField(t *testing.T) {
@@ -20,6 +22,10 @@ func TestPatchField(t *testing.T) {
 	r := newMultipartFormRequestFromMap(map[string]interface{}{
 		"age":    "18",
 		"avatar": fileContent,
+		"hobbies": []string{
+			"reading",
+			"swimming",
+		},
 	})
 
 	core, err := New(AccountPatch{})
@@ -38,6 +44,16 @@ func TestPatchField(t *testing.T) {
 		Value: 18,
 	}, got.Age)
 
+	assert.Equal(t, patch.Field[[]string]{
+		Valid: true,
+		Value: []string{"reading", "swimming"},
+	}, got.Hobbies)
+
+	assert.Equal(t, patch.Field[[]File]{
+		Valid: false,
+		Value: nil,
+	}, got.Pictures)
+
 	assertFile(t, got.Avatar.Value, "avatar.txt", fileContent)
 }
 
@@ -54,7 +70,7 @@ func TestPatchField_DecodeValueFailed(t *testing.T) {
 	var ferr *InvalidFieldError
 	assert.ErrorAs(t, err, &ferr)
 	assert.Equal(t, "Age", ferr.Field)
-	assert.Equal(t, "eighteen", ferr.Value)
+	assert.Equal(t, []string{"eighteen"}, ferr.Value)
 	assert.Equal(t, "form", ferr.Source)
 	assert.Nil(t, gotValue)
 }

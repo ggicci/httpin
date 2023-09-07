@@ -14,8 +14,8 @@ var (
 	ErrUnregisteredExecutor  = errors.New("unregistered executor")
 	ErrDuplicateTypeDecoder  = errors.New("duplicate type decoder")
 	ErrDuplicateNamedDecoder = errors.New("duplicate named decoder")
-	ErrNilTypeDecoder        = errors.New("nil type decoder")
-	ErrInvalidTypeDecoder    = errors.New("invalid type decoder")
+	ErrNilDecoder            = errors.New("nil decoder")
+	ErrInvalidDecoder        = errors.New("invalid decoder")
 	ErrReservedExecutorName  = errors.New("reserved executor name")
 	ErrUnknownBodyType       = errors.New("unknown body type")
 	ErrNilErrorHandler       = errors.New("nil error handler")
@@ -24,6 +24,7 @@ var (
 	ErrDuplicateBodyDecoder  = errors.New("duplicate body decoder")
 	ErrMissingDecoderName    = errors.New("missing decoder name")
 	ErrDecoderNotFound       = errors.New("decoder not found")
+	ErrValueTypeMismatch     = errors.New("value type mismatch")
 )
 
 type UnsupportedTypeError struct {
