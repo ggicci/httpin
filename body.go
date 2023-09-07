@@ -8,8 +8,10 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"reflect"
+	"net/http"
 	"strings"
+
+	"github.com/ggicci/owl"
 )
 
 const (
@@ -18,12 +20,6 @@ const (
 )
 
 type (
-	// JSONBody is the annotation for JSON body.
-	JSONBody struct{}
-
-	// XMLBody is the annotation for XML body.
-	XMLBody struct{}
-
 	// BodyDecoder decodes the request body into the specified object. Common body types are:
 	// json, xml, yaml, and others.
 	BodyDecoder interface {
@@ -32,9 +28,6 @@ type (
 )
 
 var (
-	bodyTypeAnnotationJSON = reflect.TypeOf(JSONBody{})
-	bodyTypeAnnotationXML  = reflect.TypeOf(XMLBody{})
-
 	bodyDecoders = map[string]BodyDecoder{
 		bodyTypeJSON: &defaultJSONBodyDecoder{},
 		bodyTypeXML:  &defaultXMLBodyDecoder{},
@@ -43,9 +36,9 @@ var (
 
 // RegisterBodyDecoder registers a new body decoder. Panic if the body type is already registered.
 //
-//    func init() {
-//        RegisterBodyDecoder("yaml", &myYAMLBodyDecoder{})
-//    }
+//	func init() {
+//	    RegisterBodyDecoder("yaml", &myYAMLBodyDecoder{})
+//	}
 func RegisterBodyDecoder(bodyType string, decoder BodyDecoder) {
 	if _, ok := bodyDecoders[bodyType]; ok {
 		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateBodyDecoder, bodyType))
@@ -58,9 +51,9 @@ func RegisterBodyDecoder(bodyType string, decoder BodyDecoder) {
 // the default JSON decoder is borrowed from encoding/json. You can replace it with
 // your own implementation, e.g. json-iterator/go.
 //
-//    func init() {
-//        ReplaceBodyDecoder("json", &myJSONBodyDecoder{})
-//    }
+//	func init() {
+//	    ReplaceBodyDecoder("json", &myJSONBodyDecoder{})
+//	}
 func ReplaceBodyDecoder(bodyType string, decoder BodyDecoder) {
 	if bodyType == "" {
 		panic("httpin: body type cannot be empty")
@@ -68,7 +61,13 @@ func ReplaceBodyDecoder(bodyType string, decoder BodyDecoder) {
 	bodyDecoders[bodyType] = decoder
 }
 
-func bodyDirectiveNormalizer(dir *Directive) error {
+// normalizeBodyDirective normalizes the body directive of the resolver.
+// If no body type specified, the default type is "json".
+func normalizeBodyDirective(r *owl.Resolver) error {
+	dir := r.GetDirective("body")
+	if dir == nil || dir.Name != "body" {
+		return nil
+	}
 	if len(dir.Argv) == 0 {
 		dir.Argv = []string{bodyTypeJSON}
 	}
@@ -81,33 +80,15 @@ func bodyDirectiveNormalizer(dir *Directive) error {
 	return nil
 }
 
-func bodyTypeString(bodyType reflect.Type) string {
-	switch bodyType {
-	case bodyTypeAnnotationJSON:
-		return bodyTypeJSON
-	case bodyTypeAnnotationXML:
-		return bodyTypeXML
-	default:
-		panic(fmt.Errorf("httpin: %w: %q", ErrUnknownBodyType, bodyType))
-	}
-}
-
-func bodyDecoder(ctx *DirectiveContext) error {
+func bodyDecoder(rtm *DirectiveRuntime) error {
 	var (
-		bodyType = ctx.Argv[0]
+		req      = rtm.Context.Value(RequestValue).(*http.Request)
+		bodyType = rtm.Directive.Argv[0]
 		decoder  = bodyDecoders[bodyType]
 	)
-
-	if decoder == nil {
-		return ErrUnknownBodyType
-	}
-
-	obj := ctx.Value.Interface()
-	if err := decoder.Decode(ctx.Request.Body, &obj); err != nil {
+	if err := decoder.Decode(req.Body, rtm.Value.Elem().Addr().Interface()); err != nil {
 		return err
 	}
-
-	ctx.DeliverContextValue(StopRecursion, true)
 	return nil
 }
 

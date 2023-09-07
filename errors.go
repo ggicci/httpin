@@ -4,27 +4,27 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/ggicci/owl"
 )
 
 var (
-	ErrMissingField             = errors.New("missing required field")
-	ErrUnsupporetedType         = errors.New("unsupported type")
-	ErrUnregisteredExecutor     = errors.New("unregistered executor")
-	ErrDuplicateTypeDecoder     = errors.New("duplicate type decoder")
-	ErrDuplicateNamedDecoder    = errors.New("duplicate named decoder")
-	ErrNilTypeDecoder           = errors.New("nil type decoder")
-	ErrInvalidTypeDecoder       = errors.New("invalid type decoder")
-	ErrDuplicateExecutor        = errors.New("duplicate executor")
-	ErrReservedExecutorName     = errors.New("reserved executor name")
-	ErrNilExecutor              = errors.New("nil executor")
-	ErrUnknownBodyType          = errors.New("unknown body type")
-	ErrDuplicateAnnotationField = errors.New("duplicate annotation field")
-	ErrNilErrorHandler          = errors.New("nil error handler")
-	ErrMaxMemoryTooSmall        = errors.New("max memory too small")
-	ErrNilFile                  = errors.New("nil file")
-	ErrDuplicateBodyDecoder     = errors.New("duplicate body decoder")
-	ErrMissingDecoderName       = errors.New("missing decoder name")
-	ErrDecoderNotFound          = errors.New("decoder not found")
+	ErrMissingField          = errors.New("missing required field")
+	ErrUnsupporetedType      = errors.New("unsupported type")
+	ErrUnregisteredExecutor  = errors.New("unregistered executor")
+	ErrDuplicateTypeDecoder  = errors.New("duplicate type decoder")
+	ErrDuplicateNamedDecoder = errors.New("duplicate named decoder")
+	ErrNilDecoder            = errors.New("nil decoder")
+	ErrInvalidDecoder        = errors.New("invalid decoder")
+	ErrReservedExecutorName  = errors.New("reserved executor name")
+	ErrUnknownBodyType       = errors.New("unknown body type")
+	ErrNilErrorHandler       = errors.New("nil error handler")
+	ErrMaxMemoryTooSmall     = errors.New("max memory too small")
+	ErrNilFile               = errors.New("nil file")
+	ErrDuplicateBodyDecoder  = errors.New("duplicate body decoder")
+	ErrMissingDecoderName    = errors.New("missing decoder name")
+	ErrDecoderNotFound       = errors.New("decoder not found")
+	ErrValueTypeMismatch     = errors.New("value type mismatch")
 )
 
 type UnsupportedTypeError struct {
@@ -40,6 +40,9 @@ func (e UnsupportedTypeError) Unwrap() error {
 }
 
 type InvalidFieldError struct {
+	// err is the underlying error thrown by the directive executor.
+	err error
+
 	// Field is the name of the field.
 	Field string `json:"field"`
 
@@ -47,25 +50,45 @@ type InvalidFieldError struct {
 	// e.g. form, header, required, etc.
 	Source string `json:"source"`
 
+	// Key is the key to get the input data from the source.
+	Key string `json:"key"`
+
 	// Value is the input data.
 	Value interface{} `json:"value"`
 
-	// internalError is the underlying error thrown by the directive executor.
-	internalError error
-
 	// ErrorMessage is the string representation of `internalError`.
 	ErrorMessage string `json:"error"`
-
-	// directives is the list of directives bound to the field.
-	Directives []*Directive `json:"-"`
 }
 
-func (f *InvalidFieldError) Error() string {
-	return fmt.Sprintf("invalid field %q: %v", f.Field, f.internalError)
+func (e *InvalidFieldError) Error() string {
+	return fmt.Sprintf("invalid field %q: %v", e.Field, e.err)
 }
 
-func (f *InvalidFieldError) Unwrap() error {
-	return f.internalError
+func (e *InvalidFieldError) Unwrap() error {
+	return e.err
+}
+
+func NewInvalidFieldError(err *owl.ResolveError) *InvalidFieldError {
+	r := err.Resolver
+	de := err.AsDirectiveExecutionError()
+
+	var fe *fieldError
+	var inputKey string
+	var inputValue interface{}
+	errors.As(err, &fe)
+	if fe != nil {
+		inputValue = fe.Value
+		inputKey = fe.Key
+	}
+
+	return &InvalidFieldError{
+		err:          err,
+		Field:        r.Field.Name,
+		Source:       de.Name, // e.g. form, header, required, etc.
+		Key:          inputKey,
+		Value:        inputValue,
+		ErrorMessage: err.Error(),
+	}
 }
 
 type fieldError struct {

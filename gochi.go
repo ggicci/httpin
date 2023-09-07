@@ -17,22 +17,23 @@ type GochiURLParamFunc func(r *http.Request, key string) string
 //
 // Usage:
 //
-//     func init() {
-//         httpin.UseGochiURLParam("path", chi.URLParam)
-//     }
-func UseGochiURLParam(executor string, fn GochiURLParamFunc) {
-	RegisterDirectiveExecutor(executor, &gochiURLParamExtractor{URLParam: fn}, nil)
+//	func init() {
+//	    httpin.UseGochiURLParam("path", chi.URLParam)
+//	}
+func UseGochiURLParam(directive string, fn GochiURLParamFunc) {
+	RegisterDirectiveExecutor(directive, &gochiURLParamExtractor{URLParam: fn})
 }
 
 type gochiURLParamExtractor struct {
 	URLParam GochiURLParamFunc
 }
 
-func (chi *gochiURLParamExtractor) Execute(ctx *DirectiveContext) error {
-	var kvs = make(map[string][]string)
+func (chi *gochiURLParamExtractor) Execute(ctx *DirectiveRuntime) error {
+	req := ctx.Context.Value(RequestValue).(*http.Request)
+	kvs := make(map[string][]string)
 
-	for _, key := range ctx.Argv {
-		value := chi.URLParam(ctx.Request, key)
+	for _, key := range ctx.Directive.Argv {
+		value := chi.URLParam(req, key)
 		if value != "" {
 			kvs[key] = []string{value}
 		}

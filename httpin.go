@@ -4,140 +4,53 @@
 package httpin
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"mime"
 	"net/http"
 	"reflect"
-	"sync"
 )
 
 type ContextKey int
 
 const (
-	minimumMaxMemory = 1 << 10  // 1KB
-	defaultMaxMemory = 32 << 20 // 32 MB
-
 	// Input is the key to get the input object from Request.Context() injected by httpin. e.g.
 	//
 	//     input := r.Context().Value(httpin.Input).(*InputStruct)
 	Input ContextKey = iota
+
+	// RequestValue is the key to get the HTTP request value (of *http.Request)
+	// from DirectiveRuntime.Context. The HTTP request value is injected by
+	// httpin to the context of DirectiveRuntime before executing the directive.
+	// See Core.Decode() for more details.
+	RequestValue
+
+	// CustomDecoder is the key to get the custom decoder for a field from
+	// Resolver.Context. Which is specified by the "decoder" directive.
+	// During resolver building phase, the "decoder" directive will be removed
+	// from the resolver, and the targeted decoder by name will be put into
+	// Resolver.Context with this key. e.g.
+	//
+	//    type GreetInput struct {
+	//        Message string `httpin:"decoder=custom"`
+	//    }
+	// For the above example, the decoder named "custom" will be put into the
+	// resolver of Message field with this key.
+	CustomDecoder
 
 	// FieldSet is used by executors to tell whether a field has been set. When
 	// multiple executors were applied to a field, if the field value were set
 	// by a former executor, the latter executors MAY skip running by consulting
 	// this context value.
 	FieldSet
-
-	StopRecursion
 )
 
-var builtEngines sync.Map
+var (
+	globalCustomErrorHandler ErrorHandler = defaultErrorHandler
+)
 
-// Engine holds the information on how to decode a request to an instance of a
-// concrete struct type.
-type Engine struct {
-	// core
-	inputType reflect.Type
-	tree      *fieldResolver
-
-	// options
-	errorHandler ErrorHandler
-	maxMemory    int64 // in bytes
-}
-
-// New builds an HTTP request decoder for the specified struct type with custom options.
-func New(inputStruct interface{}, opts ...Option) (*Engine, error) {
-	typ, ok := inputStruct.(reflect.Type)
-	if !ok {
-		typ = reflect.TypeOf(inputStruct) // retrieve type information
-	}
-
-	if typ == nil {
-		return nil, fmt.Errorf("httpin: nil input type")
-	}
-
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-	}
-	if typ.Kind() != reflect.Struct {
-		return nil, UnsupportedTypeError{Type: typ}
-	}
-
-	var core *Engine
-
-	builtEngine, built := builtEngines.Load(typ)
-	if !built {
-		// Build the engine core if not built yet.
-		core = &Engine{inputType: typ}
-		if err := core.build(); err != nil {
-			return nil, fmt.Errorf("httpin: %w", err)
-		}
-		builtEngines.Store(typ, core)
-	} else {
-		// Load the engine core and get a copy.
-		core = copyEngineCore(builtEngine.(*Engine))
-	}
-	// Apply default options and user custom options to the engine.
-	var allOptions []Option
-	defaultOptions := []Option{
-		WithMaxMemory(defaultMaxMemory),
-	}
-	allOptions = append(allOptions, defaultOptions...)
-	allOptions = append(allOptions, opts...)
-
-	for _, opt := range allOptions {
-		if err := opt(core); err != nil {
-			return nil, fmt.Errorf("httpin: invalid option: %w", err)
-		}
-	}
-
-	return core, nil
-}
-
-// Decode decodes an HTTP request to a struct instance.
-func (e *Engine) Decode(req *http.Request) (interface{}, error) {
-	var err error
-	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
-	if ct == "multipart/form-data" {
-		err = req.ParseMultipartForm(e.maxMemory)
-	} else {
-		err = req.ParseForm()
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	rv, err := e.tree.resolve(req)
-	if err != nil {
-		return nil, fmt.Errorf("httpin: %w", err)
-	}
-	return rv.Interface(), nil
-}
-
-// build builds extractors for the exported fields of the input struct.
-func (e *Engine) build() error {
-	tree, err := buildResolverTree(e.inputType)
-	if err != nil {
-		return err
-	}
-	e.tree = tree
-	return nil
-}
-
-func (e *Engine) getErrorHandler() ErrorHandler {
-	if e.errorHandler != nil {
-		return e.errorHandler
-	}
-
-	return globalCustomErrorHandler
-}
-
-func copyEngineCore(engine *Engine) *Engine {
-	return &Engine{
-		inputType: engine.inputType,
-		tree:      engine.tree,
-	}
-}
+type ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error)
 
 // Decode decodes an HTTP request to a struct instance.
 // e.g.
@@ -151,11 +64,11 @@ func Decode(req *http.Request, input interface{}) error {
 	if originalType.Kind() != reflect.Ptr {
 		return fmt.Errorf("httpin: input must be a pointer")
 	}
-	engine, err := New(originalType.Elem())
+	core, err := New(originalType.Elem())
 	if err != nil {
 		return err
 	}
-	if value, err := engine.Decode(req); err != nil {
+	if value, err := core.Decode(req); err != nil {
 		return err
 	} else {
 		if originalType.Elem().Kind() == reflect.Ptr {
@@ -165,4 +78,50 @@ func Decode(req *http.Request, input interface{}) error {
 		}
 		return nil
 	}
+}
+
+// NewInput creates a "Middleware Constructor" for making a chain, which acts as
+// a list of http.Handler constructors. We recommend using
+// https://github.com/justinas/alice to chain your HTTP middleware functions and
+// the app handler.
+func NewInput(inputStruct interface{}, opts ...Option) func(http.Handler) http.Handler {
+	core, err := New(inputStruct, opts...)
+	if err != nil {
+		panic(fmt.Errorf("httpin: %w", err))
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			// Here we read the request and decode it to fill our structure.
+			// Once failed, the request should end here.
+			input, err := core.Decode(r)
+			if err != nil {
+				core.getErrorHandler()(rw, r, err)
+				return
+			}
+
+			// We put the `input` to the request's context, and it will pass to the next hop.
+			ctx := context.WithValue(r.Context(), Input, input)
+			next.ServeHTTP(rw, r.WithContext(ctx))
+		})
+	}
+}
+
+func ReplaceDefaultErrorHandler(custom ErrorHandler) {
+	if custom == nil {
+		panic(fmt.Errorf("httpin: %w", ErrNilErrorHandler))
+	}
+	globalCustomErrorHandler = custom
+}
+
+func defaultErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
+	var invalidFieldError *InvalidFieldError
+	if errors.As(err, &invalidFieldError) {
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusUnprocessableEntity) // status: 422
+		json.NewEncoder(rw).Encode(invalidFieldError)
+		return
+	}
+
+	http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError) // status: 500
 }

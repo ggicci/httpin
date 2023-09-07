@@ -1,4 +1,4 @@
-package httpin
+package httpin_test
 
 import (
 	"encoding/json"
@@ -6,9 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ggicci/httpin"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 type GetPostOfUserInput struct {
@@ -17,25 +18,23 @@ type GetPostOfUserInput struct {
 }
 
 func GetPostOfUserHandler(rw http.ResponseWriter, r *http.Request) {
-	var input = r.Context().Value(Input).(*GetPostOfUserInput)
+	var input = r.Context().Value(httpin.Input).(*GetPostOfUserInput)
 	json.NewEncoder(rw).Encode(input)
 }
 
 func TestGorillaMuxVars(t *testing.T) {
-	UseGorillaMux("path", mux.Vars) // register the "path" executor
+	httpin.UseGorillaMux("path", mux.Vars) // register the "path" directive, usually in init()
 
-	Convey("Gorilla: can extract mux vars", t, func() {
-		rw := httptest.NewRecorder()
-		r, err := http.NewRequest("GET", "/ggicci/posts/1024", nil)
-		So(err, ShouldBeNil)
+	rw := httptest.NewRecorder()
+	r, err := http.NewRequest("GET", "/ggicci/posts/1024", nil)
+	assert.NoError(t, err)
 
-		router := mux.NewRouter()
-		router.Handle("/{username}/posts/{pid}", alice.New(
-			NewInput(GetPostOfUserInput{}),
-		).ThenFunc(GetPostOfUserHandler)).Methods("GET")
-		router.ServeHTTP(rw, r)
-		So(rw.Code, ShouldEqual, 200)
-		expected := `{"Username":"ggicci","PostID":1024}` + "\n"
-		So(rw.Body.String(), ShouldEqual, expected)
-	})
+	router := mux.NewRouter()
+	router.Handle("/{username}/posts/{pid}", alice.New(
+		httpin.NewInput(GetPostOfUserInput{}),
+	).ThenFunc(GetPostOfUserHandler)).Methods("GET")
+	router.ServeHTTP(rw, r)
+	assert.Equal(t, 200, rw.Code)
+	expected := `{"Username":"ggicci","PostID":1024}` + "\n"
+	assert.Equal(t, expected, rw.Body.String())
 }

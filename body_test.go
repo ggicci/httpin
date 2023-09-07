@@ -5,11 +5,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 type LanguageLevel struct {
@@ -25,144 +24,66 @@ type BodyPayload struct {
 	Languages []*LanguageLevel `json:"languages" xml:"languages"`
 }
 
-type JSONBodyPayloadWithAnnotation struct {
-	JSONBody
-	BodyPayload
-}
+func TestBodyDecoder_JSON(t *testing.T) {
+	type JSONBodyPayloadWithBodyDirective struct {
+		Page     int          `in:"form=page"`
+		PageSize int          `in:"form=page_size"`
+		Body     *BodyPayload `in:"body=json"`
+	}
 
-type XMLBodyPayloadWithAnnotation struct {
-	XMLBody
-	BodyPayload
-}
+	assert := assert.New(t)
+	core, err := New(JSONBodyPayloadWithBodyDirective{})
+	assert.NoError(err)
 
-type JSONBodyPayloadWithBodyDirective struct {
-	Page     int          `in:"form=page"`
-	PageSize int          `in:"form=page_size"`
-	Body     *BodyPayload `in:"body=json"`
-}
+	r, _ := http.NewRequest("GET", "https://example.com", nil)
+	r.Form = make(url.Values)
+	r.Form.Set("page", "4")
+	r.Form.Set("page_size", "30")
+	r.Body = io.NopCloser(strings.NewReader(`
+	{
+		"name": "Elia",
+		"is_native": false,
+		"age": 14,
+		"hobbies": ["Gaming", "Drawing"],
+		"languages": [
+			{"lang": "English", "level": 10},
+			{"lang": "Japanese", "level": 3}
+		]
+	}`))
+	r.Header.Set("Content-Type", "application/json")
 
-type ThingWithDuplicateAnnotations struct {
-	JSONBody
-	XMLBody
-	Page int `in:"form=page"`
-}
-
-type ThingWithInvalidBodyType struct {
-	Username string `in:"form=username"`
-
-	Patch map[string]interface{} `in:"body=yaml"`
-}
-
-type ThingWithEmptyBodyType struct {
-	Username string `in:"form=username"`
-
-	Patch map[string]interface{} `in:"body"`
-}
-
-func TestAnnotationField(t *testing.T) {
-	Convey("annotate: duplicate annotations", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(ThingWithDuplicateAnnotations{}))
-		So(resolver, ShouldBeNil)
-		So(err, ShouldBeError)
-		So(errors.Is(err, ErrDuplicateAnnotationField), ShouldBeTrue)
-	})
-}
-
-func TestNormalizeBodyDirective(t *testing.T) {
-	Convey("body directive: empty body type defaults to json", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(ThingWithEmptyBodyType{}))
-		So(err, ShouldBeNil)
-		So(resolver.Fields[1].Directives[0].Argv[0], ShouldEqual, "json")
-	})
-
-	Convey("body directive: unknown body type", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(ThingWithInvalidBodyType{}))
-		So(resolver, ShouldBeNil)
-		So(err, ShouldBeError)
-		So(errors.Is(err, ErrUnknownBodyType), ShouldBeTrue)
-	})
-}
-
-func TestJSONBody(t *testing.T) {
-	Convey("body: parse HTTP body (in JSON) into a field of the input struct", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(JSONBodyPayloadWithBodyDirective{}))
-		So(err, ShouldBeNil)
-		So(resolver, ShouldNotBeNil)
-		r, _ := http.NewRequest("GET", "https://example.com", nil)
-
-		r.Form = make(url.Values)
-		r.Form.Set("page", "4")
-		r.Form.Set("page_size", "30")
-		r.Body = io.NopCloser(strings.NewReader(`{
-			"name": "Elia",
-			"is_native": false,
-			"age": 14,
-			"hobbies": ["Gaming", "Drawing"],
-			"languages": [
-				{"lang": "English", "level": 10},
-				{"lang": "Japanese", "level": 3}
-			]
-		}`))
-
-		res, err := resolver.resolve(r)
-		So(err, ShouldBeNil)
-		So(res.Interface(), ShouldResemble, &JSONBodyPayloadWithBodyDirective{
-			Page:     4,
-			PageSize: 30,
-			Body: &BodyPayload{
-				Name:     "Elia",
-				Age:      14,
-				IsNative: false,
-				Hobbies:  []string{"Gaming", "Drawing"},
-				Languages: []*LanguageLevel{
-					{"English", 10},
-					{"Japanese", 3},
-				},
+	expected := &JSONBodyPayloadWithBodyDirective{
+		Page:     4,
+		PageSize: 30,
+		Body: &BodyPayload{
+			Name:     "Elia",
+			Age:      14,
+			IsNative: false,
+			Hobbies:  []string{"Gaming", "Drawing"},
+			Languages: []*LanguageLevel{
+				{"English", 10},
+				{"Japanese", 3},
 			},
-		})
-	})
+		},
+	}
 
-	Convey("body: parse HTTP body (in JSON) to the input struct, use annotation", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(JSONBodyPayloadWithAnnotation{}))
-		So(err, ShouldBeNil)
-		So(resolver, ShouldNotBeNil)
-		r, _ := http.NewRequest("GET", "https://example.com", nil)
-
-		r.Body = io.NopCloser(strings.NewReader(`{
-			"name": "Elia",
-			"is_native": false,
-			"age": 14,
-			"hobbies": ["Gaming", "Drawing"],
-			"languages": [
-				{"lang": "English", "level": 10},
-				{"lang": "Japanese", "level": 3}
-			]
-		}`))
-		res, err := resolver.resolve(r)
-		So(err, ShouldBeNil)
-		So(res.Interface(), ShouldResemble, &JSONBodyPayloadWithAnnotation{
-			BodyPayload: BodyPayload{
-				Name:     "Elia",
-				Age:      14,
-				IsNative: false,
-				Hobbies:  []string{"Gaming", "Drawing"},
-				Languages: []*LanguageLevel{
-					{"English", 10},
-					{"Japanese", 3},
-				},
-			},
-		})
-	})
+	gotValue, err := core.Decode(r)
+	assert.NoError(err)
+	assert.Equal(expected, gotValue)
 }
 
-func TestXMLBody(t *testing.T) {
-	Convey("body: parse HTTP body (in XML) to the input struct, use annotation", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(XMLBodyPayloadWithAnnotation{}))
-		So(err, ShouldBeNil)
-		So(resolver, ShouldNotBeNil)
-		r, _ := http.NewRequest("GET", "https://example.com", nil)
+func TestBodyDecoder_XML(t *testing.T) {
+	type XMLBodyPayloadWithBodyDirective struct {
+		Body *BodyPayload `in:"body=xml"`
+	}
 
-		r.Body = io.NopCloser(strings.NewReader(`<BodyPayload>
+	assert := assert.New(t)
+	core, err := New(XMLBodyPayloadWithBodyDirective{})
+	assert.NoError(err)
+
+	r, _ := http.NewRequest("GET", "https://example.com", nil)
+	r.Body = io.NopCloser(strings.NewReader(`
+	<BodyPayload>
 		<name>Elia</name>
 		<age>14</age>
 		<is_native>false</is_native>
@@ -176,90 +97,89 @@ func TestXMLBody(t *testing.T) {
 		   <lang>Japanese</lang>
 		   <level>3</level>
 		</languages>
-	 </BodyPayload>`))
-		res, err := resolver.resolve(r)
-		So(err, ShouldBeNil)
-		So(res.Interface(), ShouldResemble, &XMLBodyPayloadWithAnnotation{
-			BodyPayload: BodyPayload{
-				Name:     "Elia",
-				Age:      14,
-				IsNative: false,
-				Hobbies:  []string{"Gaming", "Drawing"},
-				Languages: []*LanguageLevel{
-					{"English", 10},
-					{"Japanese", 3},
-				},
+	</BodyPayload>`))
+	r.Header.Set("Content-Type", "application/xml")
+
+	expected := &XMLBodyPayloadWithBodyDirective{
+		Body: &BodyPayload{
+			Name:     "Elia",
+			Age:      14,
+			IsNative: false,
+			Hobbies:  []string{"Gaming", "Drawing"},
+			Languages: []*LanguageLevel{
+				{"English", 10},
+				{"Japanese", 3},
 			},
-		})
-	})
+		},
+	}
+	gotValue, err := core.Decode(r)
+	assert.NoError(err)
+	assert.Equal(expected, gotValue)
 }
 
-func TestBodyDecoderDecodeFailed(t *testing.T) {
-	Convey("body: parse request body in JSON failed", t, func() {
-		resolver, err := buildResolverTree(reflect.TypeOf(JSONBodyPayloadWithAnnotation{}))
-		So(err, ShouldBeNil)
-		So(resolver, ShouldNotBeNil)
-		r, _ := http.NewRequest("GET", "https://example.com", nil)
+func TestBodyDecoder_DefaultsToJSON(t *testing.T) {
+	type Payload struct {
+		Body *BodyPayload `in:"body"`
+	}
 
-		r.Body = io.NopCloser(strings.NewReader(`{"name": "Elia"`))
-		_, err = resolver.resolve(r)
-		So(err, ShouldBeError)
-	})
+	core, err := New(Payload{})
+	assert.NoError(t, err)
+	d := core.resolver.Lookup("Body").GetDirective("body")
+	assert.Equal(t, "json", d.Argv[0])
 }
 
-func Test_bodyTypeString(t *testing.T) {
-	Convey("bodyTypeString should panic on unknown body type", t, func() {
-		type yamlBody struct{}
-		So(func() {
-			bodyTypeString(reflect.TypeOf(yamlBody{}))
-		}, ShouldPanic)
-	})
+func TestBodyDecoder_ErrUnknownBodyType(t *testing.T) {
+	type UnknownBodyTypePayload struct {
+		Body *BodyPayload `in:"body=yaml"`
+	}
+
+	core, err := New(UnknownBodyTypePayload{})
+	assert.ErrorIs(t, err, ErrUnknownBodyType)
+	assert.Nil(t, core)
 }
 
 type yamlBodyDecoder struct{}
 
+var errYamlNotImplemented = errors.New("yaml not implemented")
+
 func (de *yamlBodyDecoder) Decode(src io.Reader, dst interface{}) error {
-	// for test only
-	(*(*(dst.(*interface{}))).(*map[string]interface{})) = map[string]interface{}{
-		"version": 3,
-	}
-	return nil
+	return errYamlNotImplemented // for test only
 }
 
 type YamlInput struct {
 	Body map[string]interface{} `in:"body=yaml"`
 }
 
-type ThingWithUnknownBodyDecoder struct {
-	Body map[string]interface{} `in:"body=yml"`
+func TestRegisterBodyDecoder(t *testing.T) {
+	assert.NotPanics(t, func() {
+		RegisterBodyDecoder("yaml", &yamlBodyDecoder{})
+	})
+	assert.Panics(t, func() {
+		RegisterBodyDecoder("yaml", &yamlBodyDecoder{})
+	})
+
+	core, err := New(YamlInput{})
+	assert.NoError(t, err)
+
+	r, _ := http.NewRequest("GET", "https://example.com", nil)
+	r.Body = io.NopCloser(strings.NewReader(`version: "3"`))
+
+	gotValue, err := core.Decode(r)
+	assert.ErrorIs(t, err, errYamlNotImplemented)
+	assert.Nil(t, gotValue)
 }
 
-func TestCustomBodyDecoder(t *testing.T) {
-	Convey("body: register new body decoder", t, func() {
-		So(func() { RegisterBodyDecoder("yaml", &yamlBodyDecoder{}) }, ShouldNotPanic)
-
-		resolver, err := buildResolverTree(reflect.TypeOf(YamlInput{}))
-		So(err, ShouldBeNil)
-		So(resolver, ShouldNotBeNil)
-		r, _ := http.NewRequest("GET", "https://example.com", nil)
-
-		r.Body = io.NopCloser(strings.NewReader(`version: "3"`))
-		res, err := resolver.resolve(r)
-		So(err, ShouldBeNil)
-		So(res.Interface(), ShouldResemble, &YamlInput{
-			Body: map[string]interface{}{
-				"version": 3,
-			},
-		})
+func TestReplaceBodyDecoder(t *testing.T) {
+	assert.NotPanics(t, func() {
+		ReplaceBodyDecoder("yaml", &yamlBodyDecoder{})
 	})
-
-	Convey("body: panic on duplicate body decoder", t, func() {
-		So(func() { RegisterBodyDecoder("json", &yamlBodyDecoder{}) }, ShouldPanic)
-		So(func() { RegisterBodyDecoder("", &yamlBodyDecoder{}) }, ShouldPanic)
+	assert.NotPanics(t, func() {
+		ReplaceBodyDecoder("yaml", &yamlBodyDecoder{})
 	})
+}
 
-	Convey("body: unknown body decoder", t, func() {
-		_, err := buildResolverTree(reflect.TypeOf(ThingWithUnknownBodyDecoder{}))
-		So(errors.Is(err, ErrUnknownBodyType), ShouldBeTrue)
+func TestReplaceBodyDecoder_EmptyBodyType(t *testing.T) {
+	assert.PanicsWithValue(t, "httpin: body type cannot be empty", func() {
+		ReplaceBodyDecoder("", &yamlBodyDecoder{})
 	})
 }
