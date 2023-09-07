@@ -24,6 +24,7 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           name: codecov-umbrella
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./main.cover.out
           flags: unittests
           fail_ci_if_error: true
