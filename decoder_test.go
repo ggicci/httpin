@@ -33,7 +33,7 @@ func decodeCustomBool(value string) (interface{}, error) {
 	return strconv.ParseBool(sdata)
 }
 
-var boolAdaptor = AdaptDecoderFunc[bool, string](decodeCustomBool)
+var myBoolDecoder = DecoderFunc[string](decodeCustomBool)
 
 func invalidDecoder(string) error {
 	return nil
@@ -63,10 +63,10 @@ func TestRegisterTypeDecoder(t *testing.T) {
 
 	// Register duplicate decoder should fail.
 	assert.NotPanics(t, func() {
-		RegisterValueTypeDecoder[bool](boolAdaptor)
+		RegisterValueTypeDecoder[bool](myBoolDecoder)
 	})
 	assert.Panics(t, func() {
-		RegisterValueTypeDecoder[bool](boolAdaptor)
+		RegisterValueTypeDecoder[bool](myBoolDecoder)
 	})
 	removeTypeDecoder[bool]() // remove the custom decoder
 }
@@ -78,31 +78,31 @@ func TestRegisterNamedDecoder(t *testing.T) {
 
 	// Register duplicate decoder should fail.
 	assert.NotPanics(t, func() {
-		RegisterNamedDecoder[bool]("mybool", boolAdaptor)
+		RegisterNamedDecoder[bool]("mybool", myBoolDecoder)
 	})
 	assert.Panics(t, func() {
-		RegisterNamedDecoder[bool]("mybool", boolAdaptor)
+		RegisterNamedDecoder[bool]("mybool", myBoolDecoder)
 	})
 	removeTypeDecoder[bool]() // remove the custom decoder
 }
 
 func TestReplaceTypeDecoder(t *testing.T) {
 	assert.NotPanics(t, func() {
-		ReplaceValueTypeDecoder[bool](boolAdaptor)
+		ReplaceValueTypeDecoder[bool](myBoolDecoder)
 	})
 
 	assert.NotPanics(t, func() {
-		ReplaceValueTypeDecoder[bool](boolAdaptor)
+		ReplaceValueTypeDecoder[bool](myBoolDecoder)
 	})
 }
 
 func TestReplaceNamedDecoder(t *testing.T) {
 	assert.NotPanics(t, func() {
-		ReplaceNamedDecoder[bool]("mybool", boolAdaptor)
+		ReplaceNamedDecoder[bool]("mybool", myBoolDecoder)
 	})
 
 	assert.NotPanics(t, func() {
-		ReplaceNamedDecoder[bool]("mybool", boolAdaptor)
+		ReplaceNamedDecoder[bool]("mybool", myBoolDecoder)
 	})
 }
 

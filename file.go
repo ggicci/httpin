@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	registerTypeDecoderTo[File](builtinDecoders, AdaptDecoderFunc[File, *multipart.FileHeader](decodeFile), false)
+	registerTypeDecoderTo[File](builtinDecoders, DecoderFunc[*multipart.FileHeader](decodeFile), false)
 }
 
 type File struct {

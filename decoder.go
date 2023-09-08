@@ -14,23 +14,23 @@ var (
 )
 
 func init() {
-	registerTypeDecoderTo[bool](builtinDecoders, AdaptDecoderFunc[bool, string](decodeBool), false)
-	registerTypeDecoderTo[int](builtinDecoders, AdaptDecoderFunc[int, string](decodeInt), false)
-	registerTypeDecoderTo[int8](builtinDecoders, AdaptDecoderFunc[int8, string](decodeInt8), false)
-	registerTypeDecoderTo[int16](builtinDecoders, AdaptDecoderFunc[int16, string](decodeInt16), false)
-	registerTypeDecoderTo[int32](builtinDecoders, AdaptDecoderFunc[int32, string](decodeInt32), false)
-	registerTypeDecoderTo[int64](builtinDecoders, AdaptDecoderFunc[int64, string](decodeInt64), false)
-	registerTypeDecoderTo[uint](builtinDecoders, AdaptDecoderFunc[uint, string](decodeUint), false)
-	registerTypeDecoderTo[uint8](builtinDecoders, AdaptDecoderFunc[uint8, string](decodeUint8), false)
-	registerTypeDecoderTo[uint16](builtinDecoders, AdaptDecoderFunc[uint16, string](decodeUint16), false)
-	registerTypeDecoderTo[uint32](builtinDecoders, AdaptDecoderFunc[uint32, string](decodeUint32), false)
-	registerTypeDecoderTo[uint64](builtinDecoders, AdaptDecoderFunc[uint64, string](decodeUint64), false)
-	registerTypeDecoderTo[float32](builtinDecoders, AdaptDecoderFunc[float32, string](decodeFloat32), false)
-	registerTypeDecoderTo[float64](builtinDecoders, AdaptDecoderFunc[float64, string](decodeFloat64), false)
-	registerTypeDecoderTo[complex64](builtinDecoders, AdaptDecoderFunc[complex64, string](decodeComplex64), false)
-	registerTypeDecoderTo[complex128](builtinDecoders, AdaptDecoderFunc[complex128, string](decodeComplex128), false)
-	registerTypeDecoderTo[string](builtinDecoders, AdaptDecoderFunc[string, string](decodeString), false)
-	registerTypeDecoderTo[time.Time](builtinDecoders, AdaptDecoderFunc[time.Time, string](decodeTime), false)
+	registerTypeDecoderTo[bool](builtinDecoders, DecoderFunc[string](decodeBool), false)
+	registerTypeDecoderTo[int](builtinDecoders, DecoderFunc[string](decodeInt), false)
+	registerTypeDecoderTo[int8](builtinDecoders, DecoderFunc[string](decodeInt8), false)
+	registerTypeDecoderTo[int16](builtinDecoders, DecoderFunc[string](decodeInt16), false)
+	registerTypeDecoderTo[int32](builtinDecoders, DecoderFunc[string](decodeInt32), false)
+	registerTypeDecoderTo[int64](builtinDecoders, DecoderFunc[string](decodeInt64), false)
+	registerTypeDecoderTo[uint](builtinDecoders, DecoderFunc[string](decodeUint), false)
+	registerTypeDecoderTo[uint8](builtinDecoders, DecoderFunc[string](decodeUint8), false)
+	registerTypeDecoderTo[uint16](builtinDecoders, DecoderFunc[string](decodeUint16), false)
+	registerTypeDecoderTo[uint32](builtinDecoders, DecoderFunc[string](decodeUint32), false)
+	registerTypeDecoderTo[uint64](builtinDecoders, DecoderFunc[string](decodeUint64), false)
+	registerTypeDecoderTo[float32](builtinDecoders, DecoderFunc[string](decodeFloat32), false)
+	registerTypeDecoderTo[float64](builtinDecoders, DecoderFunc[string](decodeFloat64), false)
+	registerTypeDecoderTo[complex64](builtinDecoders, DecoderFunc[string](decodeComplex64), false)
+	registerTypeDecoderTo[complex128](builtinDecoders, DecoderFunc[string](decodeComplex128), false)
+	registerTypeDecoderTo[string](builtinDecoders, DecoderFunc[string](decodeString), false)
+	registerTypeDecoderTo[time.Time](builtinDecoders, DecoderFunc[string](decodeTime), false)
 }
 
 type DataSource interface{ string | *multipart.FileHeader }
@@ -90,7 +90,7 @@ func registerTypeDecoderTo[T any](m map[reflect.Type]interface{}, decoder interf
 		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateTypeDecoder, typ))
 	}
 
-	m[typ] = adaptDecoder[T](decoder)
+	m[typ] = adaptDecoderX[T](decoder)
 }
 
 // RegisterNamedDecoder registers a decoder by name. Panics on conflicts.
@@ -105,7 +105,7 @@ func RegisterNamedDecoder[T any](name string, decoder interface{}) {
 // ReplaceNamedDecoder replaces a decoder by name.
 func ReplaceNamedDecoder[T any](name string, decoder interface{}) {
 	panicOnInvalidDecoder(decoder)
-	namedDecoders[name] = adaptDecoder[T](decoder)
+	namedDecoders[name] = adaptDecoderX[T](decoder)
 }
 
 func panicOnInvalidDecoder(decoder interface{}) {
