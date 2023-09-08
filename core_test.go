@@ -43,7 +43,7 @@ func decodeMyDate(value string) (interface{}, error) {
 	return t, nil
 }
 
-var dateAdaptor = AdaptDecoderFunc[time.Time, string](decodeMyDate)
+var myDateDecoder = DecoderFunc[string](decodeMyDate)
 
 func (e *InvalidDate) Error() string {
 	return fmt.Sprintf("invalid date: %q (date must conform to format \"2006-01-02\"), %s", e.Value, e.Err)
@@ -227,7 +227,7 @@ func TestCore_Decode_UnexportedFields(t *testing.T) {
 }
 
 func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
-	RegisterValueTypeDecoder[bool](boolAdaptor) // usually done in init()
+	RegisterValueTypeDecoder[bool](myBoolDecoder) // usually done in init()
 
 	type BoolInput struct {
 		IsMember bool `in:"form=is_member"`
@@ -253,7 +253,7 @@ type CustomNamedDecoderInput struct {
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder(t *testing.T) {
-	ReplaceNamedDecoder[time.Time]("decodeMyDate", dateAdaptor) // usually done in init()
+	ReplaceNamedDecoder[time.Time]("decodeMyDate", myDateDecoder) // usually done in init()
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
@@ -304,7 +304,7 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrDecoderNotFound(t *testing.T)
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_ErrValueTypeMismatch(t *testing.T) {
-	ReplaceNamedDecoder[time.Time]("decodeMyDate", dateAdaptor) // usually done in init()
+	ReplaceNamedDecoder[time.Time]("decodeMyDate", myDateDecoder) // usually done in init()
 
 	type Input struct {
 		Birthday string `in:"form=birthday;decoder=decodeMyDate"` // cause ErrValueTypeMismatch
@@ -322,7 +322,7 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrValueTypeMismatch(t *testing.
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_DecodeError(t *testing.T) {
-	ReplaceNamedDecoder[time.Time]("decodeMyDate", dateAdaptor) // usually done in init()
+	ReplaceNamedDecoder[time.Time]("decodeMyDate", myDateDecoder) // usually done in init()
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{

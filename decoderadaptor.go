@@ -67,28 +67,24 @@ func (sva *decoderAdaptorImpl[T, DT]) DecoderByKind(kind decoderKindType) decode
 	return nil
 }
 
-func AdaptDecoder[T any, DT DataSource](decoder Decoder[DT]) *decoderAdaptorImpl[T, DT] {
+func adaptDecoder[T any, DT DataSource](decoder Decoder[DT]) *decoderAdaptorImpl[T, DT] {
 	return &decoderAdaptorImpl[T, DT]{decoder}
 }
 
-func AdaptDecoderFunc[T any, DT DataSource](fn func(value DT) (interface{}, error)) *decoderAdaptorImpl[T, DT] {
-	return &decoderAdaptorImpl[T, DT]{decoderFunc[DT](fn)}
-}
-
-func adaptDecoder[T any](decoder interface{}) interface{} {
+func adaptDecoderX[T any](decoder interface{}) interface{} {
 	switch decoder := decoder.(type) {
 	case ValueTypeDecoder:
-		return AdaptDecoder[T, string](decoder)
+		return adaptDecoder[T, string](decoder)
 	case FileTypeDecoder:
-		return AdaptDecoder[T, *multipart.FileHeader](decoder)
+		return adaptDecoder[T, *multipart.FileHeader](decoder)
 	default:
 		return decoder // noop
 	}
 }
 
-type decoderFunc[DT DataSource] func(value DT) (interface{}, error)
+type DecoderFunc[DT DataSource] func(value DT) (interface{}, error)
 
-func (fn decoderFunc[DT]) Decode(value DT) (interface{}, error) {
+func (fn DecoderFunc[DT]) Decode(value DT) (interface{}, error) {
 	return fn(value)
 }
 
