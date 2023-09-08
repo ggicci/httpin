@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/ggicci/httpin/patch"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,6 +25,28 @@ func TestDirectiveDefault(t *testing.T) {
 		Page:      7,
 		PerPage:   20,
 		StateList: []string{"pending", "in_progress", "failed"},
+	}
+	core, err := New(ThingWithDefaultValues{})
+	assert.NoError(t, err)
+	got, err := core.Decode(r)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, got)
+}
+
+func TestDirectiveDefault_PatchField(t *testing.T) {
+	type ThingWithDefaultValues struct {
+		Page      patch.Field[int]      `in:"form=page;default=1"`
+		PerPage   patch.Field[int]      `in:"form=per_page;default=20"`
+		StateList patch.Field[[]string] `in:"form=state;default=pending,in_progress,failed"`
+	}
+
+	r := newMultipartFormRequestFromMap(map[string]interface{}{
+		"page": "7",
+	})
+	expected := &ThingWithDefaultValues{
+		Page:      patch.Field[int]{Value: 7, Valid: true},
+		PerPage:   patch.Field[int]{Value: 20, Valid: true},
+		StateList: patch.Field[[]string]{Value: []string{"pending", "in_progress", "failed"}, Valid: true},
 	}
 	core, err := New(ThingWithDefaultValues{})
 	assert.NoError(t, err)
