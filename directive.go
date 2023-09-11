@@ -63,7 +63,7 @@ func (rw *directiveRuntimeHelper) decoderOf(elemType reflect.Type) interface{} {
 	if decoder != nil {
 		return decoder
 	}
-	return decoderOf(elemType)
+	return decoderByType(elemType)
 }
 
 func (rw *directiveRuntimeHelper) DeliverContextValue(key, value interface{}) {

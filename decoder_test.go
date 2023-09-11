@@ -13,14 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func removeTypeDecoder[T any]() {
-	var zero [0]T
-	var fzero [0]patch.Field[T]
-
-	delete(customDecoders, reflect.TypeOf(zero).Elem())
-	delete(customDecoders, reflect.TypeOf(fzero).Elem())
-}
-
 // decodeCustomBool additionally parses "yes/no".
 func decodeCustomBool(value string) (interface{}, error) {
 	sdata := strings.ToLower(value)
@@ -35,12 +27,38 @@ func decodeCustomBool(value string) (interface{}, error) {
 
 var myBoolDecoder = DecoderFunc[string](decodeCustomBool)
 
-func invalidDecoder(string) error {
-	return nil
+type Place struct {
+	Country string
+	City    string
 }
+
+// decodePlace parses "country.city", e.g. "Canada.Toronto".
+// It returns a Place.
+func decodePlace(value string) (interface{}, error) {
+	parts := strings.Split(value, ".")
+	if len(parts) != 2 {
+		return nil, errors.New("invalid place")
+	}
+	return Place{Country: parts[0], City: parts[1]}, nil
+}
+
+// decodePlacePointer parses "country.city", e.g. "Canada.Toronto".
+// It returns *Place.
+func decodePlacePointer(value string) (interface{}, error) {
+	parts := strings.Split(value, ".")
+	if len(parts) != 2 {
+		return nil, errors.New("invalid place")
+	}
+	return &Place{Country: parts[0], City: parts[1]}, nil
+}
+
+var myPlaceDecoder = DecoderFunc[string](decodePlace)
+var myPlacePointerDecoder = DecoderFunc[string](decodePlacePointer)
 
 type BadFile struct{}
 
+// decodeBadFile always returns an error, to simulate the case that we cannot
+// decode the file properly.
 type badFileDecoder struct{}
 
 var errBadFile = errors.New("bad file")
@@ -49,51 +67,77 @@ func (badFileDecoder) Decode(*multipart.FileHeader) (interface{}, error) {
 	return nil, errBadFile
 }
 
-func TestRegisterTypeDecoder(t *testing.T) {
-	assert.Panics(t, func() { RegisterValueTypeDecoder[bool](nil) })
-	assert.NotPanics(t, func() {
-		RegisterFileTypeDecoder[BadFile](badFileDecoder{})
-	})
-	assert.Panics(t, func() {
-		RegisterFileTypeDecoder[BadFile](badFileDecoder{})
-	})
+func TestRegisterValueTypeDecoder(t *testing.T) {
+	assert.Panics(t, func() { RegisterValueTypeDecoder[bool](nil) }) // fail on nil decoder
 
-	removeTypeDecoder[bool]() // remove the custom decoder
-	removeTypeDecoder[BadFile]()
-
-	// Register duplicate decoder should fail.
 	assert.NotPanics(t, func() {
 		RegisterValueTypeDecoder[bool](myBoolDecoder)
 	})
 	assert.Panics(t, func() {
+		// Fail on duplicate registeration on the same type.
 		RegisterValueTypeDecoder[bool](myBoolDecoder)
 	})
 	removeTypeDecoder[bool]() // remove the custom decoder
+}
+
+func TestRegisterFileTypeDecoder(t *testing.T) {
+	assert.Panics(t, func() { RegisterFileTypeDecoder[BadFile](nil) }) // fail on nil decoder
+
+	assert.NotPanics(t, func() {
+		RegisterFileTypeDecoder[BadFile](badFileDecoder{})
+	})
+	assert.Panics(t, func() {
+		// Fail on duplicate registeration on the same type.
+		RegisterFileTypeDecoder[BadFile](badFileDecoder{})
+	})
+
+	removeTypeDecoder[BadFile]() // remove the custom decoder
 }
 
 func TestRegisterNamedDecoder(t *testing.T) {
-	assert.Panics(t, func() { RegisterNamedDecoder[bool]("myBool", nil) })
-	assert.Panics(t, func() { RegisterNamedDecoder[bool]("myBool", invalidDecoder) })
-	removeTypeDecoder[bool]() // remove the custom decoder
+	assert.Panics(t, func() { RegisterNamedDecoder[bool]("myBool", nil) }) // fail on nil decoder
+
+	assert.Panics(t, func() {
+		// Fail on invalid decoder (invalid signature).
+		RegisterNamedDecoder[bool]("myBool", func(string) error {
+			return nil
+		})
+	})
 
 	// Register duplicate decoder should fail.
 	assert.NotPanics(t, func() {
 		RegisterNamedDecoder[bool]("mybool", myBoolDecoder)
 	})
 	assert.Panics(t, func() {
+		// Fail on duplicate registeration on the same name.
 		RegisterNamedDecoder[bool]("mybool", myBoolDecoder)
 	})
+
+	removeNamedDecoder("mybool") // remove the custom decoder
+}
+
+func TestReplaceValueTypeDecoder(t *testing.T) {
+	assert.NotPanics(t, func() {
+		ReplaceValueTypeDecoder[bool](myBoolDecoder)
+	})
+
+	assert.NotPanics(t, func() {
+		ReplaceValueTypeDecoder[bool](myBoolDecoder)
+	})
+
 	removeTypeDecoder[bool]() // remove the custom decoder
 }
 
-func TestReplaceTypeDecoder(t *testing.T) {
+func TestReplaceFileTypeDecoder(t *testing.T) {
 	assert.NotPanics(t, func() {
-		ReplaceValueTypeDecoder[bool](myBoolDecoder)
+		ReplaceFileTypeDecoder[BadFile](badFileDecoder{})
 	})
 
 	assert.NotPanics(t, func() {
-		ReplaceValueTypeDecoder[bool](myBoolDecoder)
+		ReplaceFileTypeDecoder[BadFile](badFileDecoder{})
 	})
+
+	removeTypeDecoder[BadFile]() // remove the custom decoder
 }
 
 func TestReplaceNamedDecoder(t *testing.T) {
@@ -104,22 +148,87 @@ func TestReplaceNamedDecoder(t *testing.T) {
 	assert.NotPanics(t, func() {
 		ReplaceNamedDecoder[bool]("mybool", myBoolDecoder)
 	})
+
+	removeNamedDecoder("mybool") // remove the custom decoder
+}
+
+func Test_smartDecoder_BasicTypes(t *testing.T) {
+	// returns int
+	intDecoder := DecoderFunc[string](decodeInt)
+
+	// returns *int
+	intPointerDecoder := DecoderFunc[string](func(value string) (interface{}, error) {
+		if v, err := decodeInt(value); err != nil {
+			return nil, err
+		} else {
+			var x = v.(int)
+			return &x, nil
+		}
+	})
+
+	intType := typeOf[int]()
+	intPointerType := typeOf[*int]()
+
+	smartIntDecoders := []ValueTypeDecoder{
+		newSmartDecoderX(intType, intDecoder).(ValueTypeDecoder),
+		newSmartDecoderX(intType, intPointerDecoder).(ValueTypeDecoder),
+	}
+	smartIntPointerDecoders := []ValueTypeDecoder{
+		newSmartDecoderX(intPointerType, intDecoder).(ValueTypeDecoder),
+		newSmartDecoderX(intPointerType, intPointerDecoder).(ValueTypeDecoder),
+	}
+
+	for _, decoder := range smartIntDecoders {
+		v, err := decoder.Decode("2000")
+		success[int](t, 2000, v, err)
+	}
+
+	for _, decoder := range smartIntPointerDecoders {
+		v, err := decoder.Decode("2000")
+		var ev int = 2000
+		success[*int](t, &ev, v, err)
+	}
+}
+
+func Test_smartDecoder_StructTypes(t *testing.T) {
+	placeType := typeOf[Place]()
+	placePointerType := typeOf[*Place]()
+
+	// myPlaceDecoder returns Place
+	// myPlacePointerDecoder returns *Place
+
+	smartPlaceDecoders := []ValueTypeDecoder{
+		newSmartDecoderX(placeType, myPlaceDecoder).(ValueTypeDecoder),
+		newSmartDecoderX(placeType, myPlacePointerDecoder).(ValueTypeDecoder),
+	}
+
+	smartPlacePointerDecoders := []ValueTypeDecoder{
+		newSmartDecoderX(placePointerType, myPlaceDecoder).(ValueTypeDecoder),
+		newSmartDecoderX(placePointerType, myPlacePointerDecoder).(ValueTypeDecoder),
+	}
+
+	for _, decoder := range smartPlaceDecoders {
+		v, err := decoder.Decode("Canada.Toronto")
+		success[Place](t, Place{Country: "Canada", City: "Toronto"}, v, err)
+	}
+
+	for _, decoder := range smartPlacePointerDecoders {
+		v, err := decoder.Decode("Canada.Toronto")
+		success[*Place](t, &Place{Country: "Canada", City: "Toronto"}, v, err)
+	}
+}
+
+func Test_smartDecoder_ErrValueTypeMismatch(t *testing.T) {
+	// myDateDecoder decodes a string to a time.Time.
+	// While we set the desired type to int, so it should fail.
+	smart := newSmartDecoder[string](typeOf[int](), myDateDecoder)
+	v, err := smart.Decode("2001-02-03")
+	assert.Nil(t, v)
+	assert.ErrorIs(t, err, ErrValueTypeMismatch)
+	assert.ErrorContains(t, err, `type "time.Time" is not assignable to type "int"`)
 }
 
 // Test that the builtin decoders are valid.
-func success[T any](t *testing.T, expected T, got interface{}, err error) {
-	assert.NoError(t, err)
-	_, ok := got.(T)
-	assert.True(t, ok)
-	assert.Equal(t, expected, got)
-}
-
-func fail[T any](t *testing.T, expected T, got interface{}, err error) {
-	assert.Error(t, err)
-	_, ok := got.(T)
-	assert.True(t, ok)
-	assert.Equal(t, expected, got)
-}
 
 func TestDecoder_bool(t *testing.T) {
 	v, err := decodeBool("true")
@@ -303,4 +412,29 @@ func equalFuncs(expected, actual interface{}) bool {
 
 func equalTime(expected, actual time.Time) bool {
 	return expected.UTC() == actual.UTC()
+}
+
+func removeTypeDecoder[T any]() {
+	delete(customDecoders, typeOf[T]())
+	delete(customDecoders, typeOf[[]T]())
+	delete(customDecoders, typeOf[patch.Field[T]]())
+	delete(customDecoders, typeOf[patch.Field[[]T]]())
+}
+
+func removeNamedDecoder(name string) {
+	delete(namedDecoders, name)
+}
+
+func success[T any](t *testing.T, expected T, got interface{}, err error) {
+	assert.NoError(t, err)
+	_, ok := got.(T)
+	assert.True(t, ok)
+	assert.Equal(t, expected, got)
+}
+
+func fail[T any](t *testing.T, expected T, got interface{}, err error) {
+	assert.Error(t, err)
+	_, ok := got.(T)
+	assert.True(t, ok)
+	assert.Equal(t, expected, got)
 }

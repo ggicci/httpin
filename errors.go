@@ -27,16 +27,13 @@ var (
 	ErrValueTypeMismatch     = errors.New("value type mismatch")
 )
 
-type UnsupportedTypeError struct {
-	Type reflect.Type
+func mismatchedValueTypeError(expected, got reflect.Type) error {
+	return fmt.Errorf("%w: the decoder returned value of type %q is not assignable to type %q",
+		ErrValueTypeMismatch, got, expected)
 }
 
-func (e UnsupportedTypeError) Error() string {
-	return fmt.Sprintf("unsupported type: %q", e.Type)
-}
-
-func (e UnsupportedTypeError) Unwrap() error {
-	return ErrUnsupporetedType
+func unsupportedTypeError(typ reflect.Type) error {
+	return fmt.Errorf("%w: %q", ErrUnsupporetedType, typ)
 }
 
 type InvalidFieldError struct {
