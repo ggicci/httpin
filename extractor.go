@@ -1,7 +1,6 @@
 package httpin
 
 import (
-	"fmt"
 	"mime/multipart"
 	"net/http"
 	"reflect"
@@ -55,20 +54,21 @@ func (e *extractor) extract(rtm *DirectiveRuntime, key string) error {
 		return nil
 	}
 
+	rtmHelper := directiveRuntimeHelper{rtm}
 	valueType := rtm.Value.Type().Elem()
 	elemType, decoderKind := scalarElemTypeOf(valueType)
-	rtmHelper := directiveRuntimeHelper{rtm}
-	adaptor := rtmHelper.decoderOf(elemType)
+	decoder := rtmHelper.decoderOf(elemType)
+
 	var decodedValue interface{}
 	var err error
 
-	switch ada := adaptor.(type) {
+	switch ada := decoder.(type) {
 	case decoderAdaptor[string]:
-		decodedValue, err = ada.DecoderByKind(decoderKind).Decode(values)
+		decodedValue, err = ada.DecoderByKind(decoderKind, valueType).DecodeX(values)
 	case decoderAdaptor[*multipart.FileHeader]:
-		decodedValue, err = ada.DecoderByKind(decoderKind).Decode(files)
+		decodedValue, err = ada.DecoderByKind(decoderKind, valueType).DecodeX(files)
 	default:
-		err = UnsupportedTypeError{elemType}
+		err = unsupportedTypeError(elemType)
 	}
 
 	if err == nil {
@@ -82,15 +82,18 @@ func (e *extractor) extract(rtm *DirectiveRuntime, key string) error {
 }
 
 func setDirectiveRuntimeValue(rtm *DirectiveRuntime, value interface{}) error {
+	if value == nil {
+		// NOTE: should we wipe the value here? i.e. set the value to nil if necessary.
+		// No case found yet, at lease for now.
+		return nil
+	}
 	newValue := reflect.ValueOf(value)
 	targetType := rtm.Value.Type().Elem()
 	if newValue.Type().AssignableTo(targetType) {
 		rtm.Value.Elem().Set(newValue)
 		return nil
 	}
-
-	return fmt.Errorf("%w: decoded value is of type %v that not assignable to type %v",
-		ErrValueTypeMismatch, newValue.Type(), targetType)
+	return mismatchedValueTypeError(targetType, reflect.TypeOf(value))
 }
 
 // scalarElemTypeOf returns the scalar element type of a given type.

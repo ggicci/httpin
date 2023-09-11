@@ -153,7 +153,7 @@ func TestCore_Decode_DecodeError_InvalidValueInSlice(t *testing.T) {
 	assert.ErrorContains(err, "at index 1")
 }
 
-func TestCore_Decode_UnsupportedCustomType(t *testing.T) {
+func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 	type ObjectID struct {
 		Timestamp [4]byte
 		Mid       [3]byte
@@ -183,6 +183,7 @@ func TestCore_Decode_UnsupportedCustomType(t *testing.T) {
 		assert.NoError(t, err)
 		got, err := core.Decode(r)
 		assert.ErrorIs(t, err, ErrUnsupporetedType)
+		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
 
@@ -200,6 +201,7 @@ func TestCore_Decode_UnsupportedCustomType(t *testing.T) {
 		assert.NoError(t, err)
 		got, err := core.Decode(r)
 		assert.ErrorIs(t, err, ErrUnsupporetedType)
+		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
 }
@@ -228,21 +230,110 @@ func TestCore_Decode_UnexportedFields(t *testing.T) {
 
 func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
 	RegisterValueTypeDecoder[bool](myBoolDecoder) // usually done in init()
+	RegisterValueTypeDecoder[Place](myPlaceDecoder)
 
-	type BoolInput struct {
-		IsMember bool `in:"form=is_member"`
+	type Input struct {
+		IsMember           bool   `in:"form=is_member"`
+		RegisterationPlace *Place `in:"form=registration_place"`
 	}
-	core, err := New(BoolInput{})
+	core, err := New(Input{})
 	assert.NoError(t, err)
+
 	r, _ := http.NewRequest("GET", "/", nil)
-	r.Form = url.Values{"is_member": {"yes"}}
-	expected := &BoolInput{IsMember: true}
+	r.Form = url.Values{
+		"is_member":          {"yes"},
+		"registration_place": {"Canada.Toronto"},
+	}
+
+	expected := &Input{
+		IsMember:           true,
+		RegisterationPlace: &Place{Country: "Canada", City: "Toronto"},
+	}
 
 	got, err := core.Decode(r)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got)
 
 	removeTypeDecoder[bool]() // remove the custom decoder
+	removeTypeDecoder[Place]()
+}
+
+func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
+	RegisterValueTypeDecoder[*Place](myPlacePointerDecoder) // usually done in init()
+	type Input struct {
+		BornPlace *Place `in:"form=born_place"`
+		LivePlace Place  `in:"form=live_place"`
+	}
+	core, err := New(Input{})
+	assert.NoError(t, err)
+
+	r := newMultipartFormRequestFromMap(map[string]interface{}{
+		"born_place": "China.Huzhou",
+		"live_place": "Canada.Toronto",
+	})
+	expected := &Input{
+		BornPlace: &Place{Country: "China", City: "Huzhou"},
+		LivePlace: Place{Country: "Canada", City: "Toronto"},
+	}
+
+	gotValue, err := core.Decode(r)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, gotValue)
+
+	removeTypeDecoder[*Place]() // remove the custom decoder
+	removeTypeDecoder[Place]()
+}
+
+func TestCore_Decode_PointerTypes(t *testing.T) {
+	assert := assert.New(t)
+
+	RegisterValueTypeDecoder[Place](myPlaceDecoder) // usually done in init()
+	type Input struct {
+		IsMember       *bool  `in:"form=is_member"`
+		Limit          *int   `in:"form=limit"`
+		LastAccessFrom *Place `in:"form=_laf"`
+	}
+	core, err := New(Input{})
+	assert.NoError(err)
+
+	// Missing fields.
+	r := newMultipartFormRequestFromMap(map[string]interface{}{
+		"is_member": "true",
+	})
+	gotValue, err := core.Decode(r)
+	assert.NoError(err)
+	got := gotValue.(*Input)
+	assert.Equal(true, *got.IsMember)
+	assert.Nil(got.Limit)
+	assert.Nil(got.LastAccessFrom)
+
+	// All fields.
+	r = newMultipartFormRequestFromMap(map[string]interface{}{
+		"is_member": "true",
+		"limit":     "10",
+		"_laf":      "Canada.Toronto",
+	})
+	gotValue, err = core.Decode(r)
+	assert.NoError(err)
+	got = gotValue.(*Input)
+	assert.Equal(true, *got.IsMember)
+	assert.Equal(10, *got.Limit)
+	assert.Equal(Place{Country: "Canada", City: "Toronto"}, *got.LastAccessFrom)
+
+	// Invalid value.
+	r = newMultipartFormRequestFromMap(map[string]interface{}{
+		"_laf": "Canada", // invalid value
+	})
+	gotValue, err = core.Decode(r)
+	assert.Nil(gotValue)
+	var ife *InvalidFieldError
+	assert.ErrorAs(err, &ife)
+	assert.Equal("_laf", ife.Key)
+	assert.Equal([]string{"Canada"}, ife.Value)
+	assert.Equal("form", ife.Source)
+	assert.ErrorContains(err, "invalid place")
+
+	removeTypeDecoder[Place]()
 }
 
 type CustomNamedDecoderInput struct {

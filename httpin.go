@@ -50,10 +50,13 @@ var (
 	globalCustomErrorHandler ErrorHandler = defaultErrorHandler
 )
 
+// ErrorHandler is the type of custom error handler. The error handler is used
+// by the http.Handler that created by NewInput() to handle errors during
+// decoding the HTTP request.
 type ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error)
 
-// Decode decodes an HTTP request to a struct instance.
-// e.g.
+// Decode decodes an HTTP request to the given input struct. The input must be a
+// pointer to a struct instance. For example:
 //
 //	input := &InputStruct{}
 //	if err := Decode(req, &input); err != nil { ... }
@@ -80,10 +83,17 @@ func Decode(req *http.Request, input interface{}) error {
 	}
 }
 
-// NewInput creates a "Middleware Constructor" for making a chain, which acts as
-// a list of http.Handler constructors. We recommend using
-// https://github.com/justinas/alice to chain your HTTP middleware functions and
-// the app handler.
+// NewInput creates a "Middleware". A middleware is a function that takes a
+// http.Handler and returns another http.Handler.
+//
+// The middleware created by NewInput is to add the decoding function to an
+// existing http.Handler. This functionality will decode the HTTP request and
+// put the decoded struct instance to the request's context. So that the next
+// hop can get the decoded struct instance from the request's context.
+//
+// We recommend using https://github.com/justinas/alice to chain your
+// middlewares. If you're using some popular web frameworks, they may have
+// already provided a middleware chaining mechanism.
 func NewInput(inputStruct interface{}, opts ...Option) func(http.Handler) http.Handler {
 	core, err := New(inputStruct, opts...)
 	if err != nil {
@@ -107,6 +117,9 @@ func NewInput(inputStruct interface{}, opts ...Option) func(http.Handler) http.H
 	}
 }
 
+// ReplaceDefaultErrorHandler replaces the default error handler with the given
+// custom error handler. The default error handler will be used in the http.Handler
+// that decoreated by the middleware created by NewInput().
 func ReplaceDefaultErrorHandler(custom ErrorHandler) {
 	if custom == nil {
 		panic(fmt.Errorf("httpin: %w", ErrNilErrorHandler))

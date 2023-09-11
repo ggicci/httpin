@@ -3,8 +3,7 @@ package httpin
 import (
 	"fmt"
 	"mime/multipart"
-
-	"github.com/ggicci/httpin/patch"
+	"reflect"
 )
 
 type decoderKindType int
@@ -17,11 +16,12 @@ const (
 )
 
 type decoderAdaptor[DT DataSource] interface {
-	Scalar() decoder2D[DT]
-	Multi() decoder2D[DT]
-	Patch() decoder2D[DT]
-	PatchMulti() decoder2D[DT]
-	DecoderByKind(kind decoderKindType) decoder2D[DT]
+	BaseType() reflect.Type            // T
+	Scalar(reflect.Type) decoder2D[DT] // takes in a desired return type
+	Multi(reflect.Type) decoder2D[DT]
+	Patch(reflect.Type) decoder2D[DT]
+	PatchMulti(reflect.Type) decoder2D[DT]
+	DecoderByKind(kind decoderKindType, returnType reflect.Type) decoder2D[DT]
 }
 
 // decoderAdaptorImpl is an implementation of decoderAdaptor.
@@ -33,116 +33,129 @@ type decoderAdaptor[DT DataSource] interface {
 //   - Call .PatchMulti() for patch.Field[[]T].
 //
 // Itself is also a ScalarTypeDecoder.
-type decoderAdaptorImpl[T any, DT DataSource] struct {
+type decoderAdaptorImpl[DT DataSource] struct {
 	Decoder[DT]
+	baseType reflect.Type
 }
 
-func (sva *decoderAdaptorImpl[T, DT]) Scalar() decoder2D[DT] {
-	return &scalarTypeDecoder[T, DT]{sva.Decoder}
+func (sva *decoderAdaptorImpl[DT]) BaseType() reflect.Type {
+	return sva.baseType
 }
 
-func (sva *decoderAdaptorImpl[T, DT]) Multi() decoder2D[DT] {
-	return &multiTypeDecoder[T, DT]{sva.Decoder}
+func (sva *decoderAdaptorImpl[DT]) Scalar(returnType reflect.Type) decoder2D[DT] {
+	return &scalarTypeDecoder[DT]{sva, returnType}
 }
 
-func (sva *decoderAdaptorImpl[T, DT]) Patch() decoder2D[DT] {
-	return &patchFieldTypeDecoder[T, DT]{sva.Decoder}
+func (sva *decoderAdaptorImpl[DT]) Multi(returnType reflect.Type) decoder2D[DT] {
+	return &multiTypeDecoder[DT]{sva, returnType}
 }
 
-func (sva *decoderAdaptorImpl[T, DT]) PatchMulti() decoder2D[DT] {
-	return &patchFieldMultiTypeDecoder[T, DT]{sva.Decoder}
+func (sva *decoderAdaptorImpl[DT]) Patch(returnType reflect.Type) decoder2D[DT] {
+	return &patchFieldTypeDecoder[DT]{sva, returnType}
 }
 
-func (sva *decoderAdaptorImpl[T, DT]) DecoderByKind(kind decoderKindType) decoder2D[DT] {
+func (sva *decoderAdaptorImpl[DT]) PatchMulti(returnType reflect.Type) decoder2D[DT] {
+	return &patchFieldMultiTypeDecoder[DT]{sva, returnType}
+}
+
+func (sva *decoderAdaptorImpl[DT]) DecoderByKind(kind decoderKindType, returnType reflect.Type) decoder2D[DT] {
 	switch kind {
 	case decoderKindScalar:
-		return sva.Scalar()
+		return sva.Scalar(returnType)
 	case decoderKindMulti:
-		return sva.Multi()
+		return sva.Multi(returnType)
 	case decoderKindPatch:
-		return sva.Patch()
+		return sva.Patch(returnType)
 	case decoderKindPatchMulti:
-		return sva.PatchMulti()
+		return sva.PatchMulti(returnType)
 	}
 	return nil
 }
 
-func adaptDecoder[T any, DT DataSource](decoder Decoder[DT]) *decoderAdaptorImpl[T, DT] {
-	return &decoderAdaptorImpl[T, DT]{decoder}
-}
-
-func adaptDecoderX[T any](decoder interface{}) interface{} {
+// adaptDecoder adapts a decoder (of Decoder[DT]) to a decoderAdaptor.
+// It returns nil if the decoder is not supported.
+func adaptDecoder(returnType reflect.Type, decoder interface{}) interface{} {
 	switch decoder := decoder.(type) {
 	case ValueTypeDecoder:
-		return adaptDecoder[T, string](decoder)
+		return &decoderAdaptorImpl[string]{decoder, returnType}
 	case FileTypeDecoder:
-		return adaptDecoder[T, *multipart.FileHeader](decoder)
+		return &decoderAdaptorImpl[*multipart.FileHeader]{decoder, returnType}
 	default:
-		return decoder // noop
+		return nil
 	}
 }
 
-type DecoderFunc[DT DataSource] func(value DT) (interface{}, error)
-
-func (fn DecoderFunc[DT]) Decode(value DT) (interface{}, error) {
-	return fn(value)
+type scalarTypeDecoder[DT DataSource] struct {
+	*decoderAdaptorImpl[DT]
+	ReturnType reflect.Type
 }
 
-type scalarTypeDecoder[T any, DT DataSource] struct {
-	Decoder[DT]
-}
-
-func (s *scalarTypeDecoder[T, DT]) Decode(values []DT) (interface{} /* T */, error) {
-	if len(values) == 0 {
-		var zero DT
-		return s.Decoder.Decode(zero) // "" or nil
-	}
+// DecodeX of scalarTypeDecoder[DT] decodes a single value.
+// It only decodes the first value in the given slice. Returns T.
+func (s *scalarTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* T */, error) {
 	return s.Decoder.Decode(values[0])
 }
 
-type multiTypeDecoder[T any, DT DataSource] struct {
-	Decoder[DT]
+type multiTypeDecoder[DT DataSource] struct {
+	*decoderAdaptorImpl[DT]
+	ReturnType reflect.Type
 }
 
-func (m *multiTypeDecoder[T, DT]) Decode(values []DT) (interface{} /* []T */, error) {
-	res := make([]T, len(values))
-	for i, v := range values {
-		if gotValue, err := m.Decoder.Decode(v); err != nil {
+// DecodeX of multiTypeDecoder[DT] decodes multiple values. Returns []T.
+func (m *multiTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* []T */, error) {
+	res := reflect.MakeSlice(m.ReturnType, len(values), len(values))
+	for i, value := range values {
+		if gotValue, err := m.Decoder.Decode(value); err != nil {
 			return nil, fmt.Errorf("at index %d: %w", i, err)
 		} else {
-			res[i] = gotValue.(T)
+			res.Index(i).Set(reflect.ValueOf(gotValue))
 		}
 	}
-	return res, nil
+	return res.Interface(), nil
 }
 
-type patchFieldTypeDecoder[T any, DT DataSource] struct {
-	Decoder[DT]
+type patchFieldTypeDecoder[DT DataSource] struct {
+	*decoderAdaptorImpl[DT]
+	ReturnType reflect.Type
 }
 
-func (p *patchFieldTypeDecoder[T, DT]) Decode(values []DT) (interface{} /* patch.Field[T] */, error) {
-	if len(values) == 0 {
-		return patch.Field[T]{}, nil
-	}
+// DecodeX of patchFieldTypeDecoder[DT] decodes a single value.
+// It only decodes the first value in the given slice. Returns patch.Field[T].
+func (p *patchFieldTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* patch.Field[T] */, error) {
+	res := reflect.New(p.ReturnType)
 	if gotValue, err := p.Decoder.Decode(values[0]); err != nil {
-		return patch.Field[T]{}, err
+		return res.Interface(), err
 	} else {
-		return patch.Field[T]{Value: gotValue.(T), Valid: true}, nil
+		res.Elem().FieldByName("Value").Set(reflect.ValueOf(gotValue))
+		res.Elem().FieldByName("Valid").SetBool(true)
+		return res.Elem().Interface(), nil
 	}
 }
 
-type patchFieldMultiTypeDecoder[T any, DT DataSource] struct {
-	Decoder[DT]
+type patchFieldMultiTypeDecoder[DT DataSource] struct {
+	*decoderAdaptorImpl[DT]
+	ReturnType reflect.Type
 }
 
-func (p *patchFieldMultiTypeDecoder[T, DT]) Decode(values []DT) (interface{} /* patch.Field[[]T] */, error) {
-	res := make([]T, len(values))
-	for i, v := range values {
-		if gotValue, err := p.Decoder.Decode(v); err != nil {
+// DecodeX of patchFieldMultiTypeDecoder[DT] decodes multiple values. Returns patch.Field[[]T].
+func (p *patchFieldMultiTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* patch.Field[[]T] */, error) {
+	subValue := reflect.MakeSlice(reflect.SliceOf(p.BaseType()), len(values), len(values))
+	for i, value := range values {
+		if gotValue, err := p.Decoder.Decode(value); err != nil {
 			return nil, fmt.Errorf("at index %d: %w", i, err)
 		} else {
-			res[i] = gotValue.(T)
+			subValue.Index(i).Set(reflect.ValueOf(gotValue))
 		}
 	}
-	return patch.Field[[]T]{Value: res, Valid: true}, nil
+	res := reflect.New(p.ReturnType)
+	res.Elem().FieldByName("Value").Set(subValue)
+	res.Elem().FieldByName("Valid").SetBool(true)
+	return res.Elem().Interface(), nil
+}
+
+// typeOf returns the reflect.Type of a given type.
+// e.g. typeOf[int]() returns reflect.TypeOf(0)
+func typeOf[T any]() reflect.Type {
+	var zero [0]T
+	return reflect.TypeOf(zero).Elem()
 }

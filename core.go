@@ -27,14 +27,9 @@ type Core struct {
 	maxMemory    int64 // in bytes
 }
 
-// New creates a new Core instance. It will build a resolver for the inputStruct.
-// The resolver will be cached for future use. For the same inputStruct, the
-// resolver will be built only once. While the applied options will be applied
-// separately for each Core instance.
-//
-// Use Core.Decode to decode an HTTP request to a struct instance.
-//
-// Use NewInput to create an HTTP middleware.
+// New creates a new Core instance, which holds the resolver of the inputStruct.
+//   - Use Core.Decode() to decode an HTTP request to an instance of the inputStruct.
+//   - Use NewInput() to create an HTTP middleware.
 func New(inputStruct interface{}, opts ...Option) (*Core, error) {
 	resolver, err := buildResolver(inputStruct)
 	if err != nil {
@@ -85,6 +80,8 @@ func buildResolver(inputStruct interface{}) (*owl.Resolver, error) {
 	return resolver, nil
 }
 
+// normalizeResolver normalizes the resolvers by running a series of
+// normalizations on every field resolver.
 func normalizeResolver(r *owl.Resolver) error {
 	normalize := func(r *owl.Resolver) error {
 		for _, fn := range []func(*owl.Resolver) error{
@@ -122,6 +119,8 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 	return nil
 }
 
+// ensureDirectiveExecutorsRegistered ensures all directives that defined in the
+// resolver are registered in the executor registry.
 func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 	for _, d := range r.Directives {
 		if owl.LookupExecutor(d.Name) == nil {
@@ -133,6 +132,10 @@ func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 
 // Decode decodes an HTTP request to a struct instance.
 // The return value is a pointer to the input struct.
+// For example:
+//
+//	New(&Input{}).Decode(req) -> *Input
+//	New(Input{}).Decode(req) -> *Input
 func (c *Core) Decode(req *http.Request) (interface{}, error) {
 	var err error
 	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
@@ -152,6 +155,8 @@ func (c *Core) Decode(req *http.Request) (interface{}, error) {
 	return rv.Interface(), nil
 }
 
+// getErrorHandler returns the error handler of the core if set, or the global
+// custom error handler.
 func (c *Core) getErrorHandler() ErrorHandler {
 	if c.errorHandler != nil {
 		return c.errorHandler
