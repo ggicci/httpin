@@ -29,6 +29,7 @@ type Core struct {
 
 // New creates a new Core instance, which holds the resolver of the inputStruct.
 //   - Use Core.Decode() to decode an HTTP request to an instance of the inputStruct.
+//   - Use Core.Encode() to encode an instance of the inputStruct to an HTTP request.
 //   - Use NewInput() to create an HTTP middleware.
 func New(inputStruct interface{}, opts ...Option) (*Core, error) {
 	resolver, err := buildResolver(inputStruct)
@@ -55,6 +56,49 @@ func New(inputStruct interface{}, opts ...Option) (*Core, error) {
 	}
 
 	return core, nil
+}
+
+// Decode decodes an HTTP request to a struct instance.
+// The return value is a pointer to the input struct.
+// For example:
+//
+//	New(&Input{}).Decode(req) -> *Input
+//	New(Input{}).Decode(req) -> *Input
+func (c *Core) Decode(req *http.Request) (interface{}, error) {
+	var err error
+	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
+	if ct == "multipart/form-data" {
+		err = req.ParseMultipartForm(c.maxMemory)
+	} else {
+		err = req.ParseForm()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	rv, err := c.resolver.Resolve(owl.WithNamespace(decoderNamespace), owl.WithValue(RequestValue, req))
+	if err != nil {
+		return nil, NewInvalidFieldError(err.(*owl.ResolveError))
+	}
+	return rv.Interface(), nil
+}
+
+// Encode encodes an input struct to an HTTP request. Note that one Core instance can
+// only encode one specific type of struct. If the input is not the type of the struct
+// that the Core instance holds, an ErrTypeMismatch error will be returned. In order to
+// avoid this error, you can use httpin.Encode() function instead. Which will create a
+// Core instance for you.
+func (c *Core) Encode(method string, url string, input interface{}) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = c.resolver.Scan(input, owl.WithNamespace(encoderNamespace), owl.WithValue(RequestValue, req)); err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // buildResolver builds a resolver for the inputStruct. It will run normalizations
@@ -123,36 +167,14 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 // resolver are registered in the executor registry.
 func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 	for _, d := range r.Directives {
-		if owl.LookupExecutor(d.Name) == nil {
-			return fmt.Errorf("%w: %q", ErrUnregisteredExecutor, d.Name)
+		if decoderNamespace.LookupExecutor(d.Name) == nil {
+			return fmt.Errorf("%w: %q (in decoder namespace)", ErrUnregisteredExecutor, d.Name)
+		}
+		if encoderNamespace.LookupExecutor(d.Name) == nil {
+			return fmt.Errorf("%w: %q (in encoder namespace)", ErrUnregisteredExecutor, d.Name)
 		}
 	}
 	return nil
-}
-
-// Decode decodes an HTTP request to a struct instance.
-// The return value is a pointer to the input struct.
-// For example:
-//
-//	New(&Input{}).Decode(req) -> *Input
-//	New(Input{}).Decode(req) -> *Input
-func (c *Core) Decode(req *http.Request) (interface{}, error) {
-	var err error
-	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
-	if ct == "multipart/form-data" {
-		err = req.ParseMultipartForm(c.maxMemory)
-	} else {
-		err = req.ParseForm()
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	rv, err := c.resolver.Resolve(owl.WithValue(RequestValue, req))
-	if err != nil {
-		return nil, NewInvalidFieldError(err.(*owl.ResolveError))
-	}
-	return rv.Interface(), nil
 }
 
 // getErrorHandler returns the error handler of the core if set, or the global

@@ -34,29 +34,28 @@ var (
 	}
 )
 
-// RegisterBodyDecoder registers a new body decoder. Panic if the body type is already registered.
+// RegisterBodyDecoder registers a new body decoder, which has the BodyDecoder interface
+// implemented. Panics on taken name, empty name or nil decoder. Pass parameter replace (true) to
+// ignore the name conflict.
+//
+// It is also useful when you want to override the default body decoder. For example, the default
+// JSON decoder is borrowed from encoding/json. You can replace it with your own implementation,
+// e.g. json-iterator/go. For example:
 //
 //	func init() {
 //	    RegisterBodyDecoder("yaml", &myYAMLBodyDecoder{})
+//	    RegisterBodyDecoder("json", &myJSONBodyDecoder{}, true) // force register, replace the old one
 //	}
-func RegisterBodyDecoder(bodyType string, decoder BodyDecoder) {
-	if _, ok := bodyDecoders[bodyType]; ok {
+func RegisterBodyDecoder(bodyType string, decoder BodyDecoder, replace ...bool) {
+	force := len(replace) > 0 && replace[0]
+	if _, ok := bodyDecoders[bodyType]; ok && !force {
 		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateBodyDecoder, bodyType))
 	}
-	ReplaceBodyDecoder(bodyType, decoder)
-}
-
-// ReplaceBodyDecoder replaces or add the body decoder of the specified type.
-// Which is useful when you want to override the default body decoder. For example,
-// the default JSON decoder is borrowed from encoding/json. You can replace it with
-// your own implementation, e.g. json-iterator/go.
-//
-//	func init() {
-//	    ReplaceBodyDecoder("json", &myJSONBodyDecoder{})
-//	}
-func ReplaceBodyDecoder(bodyType string, decoder BodyDecoder) {
 	if bodyType == "" {
 		panic("httpin: body type cannot be empty")
+	}
+	if decoder == nil {
+		panic("httpin: body decoder cannot be nil")
 	}
 	bodyDecoders[bodyType] = decoder
 }

@@ -80,6 +80,18 @@ func TestRegisterValueTypeDecoder(t *testing.T) {
 	removeTypeDecoder[bool]() // remove the custom decoder
 }
 
+func TestRegisterValueTypeDecoder_forceReplace(t *testing.T) {
+	assert.NotPanics(t, func() {
+		RegisterValueTypeDecoder[bool](myBoolDecoder, true)
+	})
+
+	assert.NotPanics(t, func() {
+		RegisterValueTypeDecoder[bool](myBoolDecoder, true)
+	})
+
+	removeTypeDecoder[bool]() // remove the custom decoder
+}
+
 func TestRegisterFileTypeDecoder(t *testing.T) {
 	assert.Panics(t, func() { RegisterFileTypeDecoder[BadFile](nil) }) // fail on nil decoder
 
@@ -89,6 +101,18 @@ func TestRegisterFileTypeDecoder(t *testing.T) {
 	assert.Panics(t, func() {
 		// Fail on duplicate registeration on the same type.
 		RegisterFileTypeDecoder[BadFile](badFileDecoder{})
+	})
+
+	removeTypeDecoder[BadFile]() // remove the custom decoder
+}
+
+func TestRegisterFileTypeDecoder_forceReplace(t *testing.T) {
+	assert.NotPanics(t, func() {
+		RegisterFileTypeDecoder[BadFile](badFileDecoder{}, true)
+	})
+
+	assert.NotPanics(t, func() {
+		RegisterFileTypeDecoder[BadFile](badFileDecoder{}, true)
 	})
 
 	removeTypeDecoder[BadFile]() // remove the custom decoder
@@ -116,37 +140,13 @@ func TestRegisterNamedDecoder(t *testing.T) {
 	removeNamedDecoder("mybool") // remove the custom decoder
 }
 
-func TestReplaceValueTypeDecoder(t *testing.T) {
+func TestRegisterNamedDecoder_forceReplace(t *testing.T) {
 	assert.NotPanics(t, func() {
-		ReplaceValueTypeDecoder[bool](myBoolDecoder)
+		RegisterNamedDecoder[bool]("mybool", myBoolDecoder, true)
 	})
 
 	assert.NotPanics(t, func() {
-		ReplaceValueTypeDecoder[bool](myBoolDecoder)
-	})
-
-	removeTypeDecoder[bool]() // remove the custom decoder
-}
-
-func TestReplaceFileTypeDecoder(t *testing.T) {
-	assert.NotPanics(t, func() {
-		ReplaceFileTypeDecoder[BadFile](badFileDecoder{})
-	})
-
-	assert.NotPanics(t, func() {
-		ReplaceFileTypeDecoder[BadFile](badFileDecoder{})
-	})
-
-	removeTypeDecoder[BadFile]() // remove the custom decoder
-}
-
-func TestReplaceNamedDecoder(t *testing.T) {
-	assert.NotPanics(t, func() {
-		ReplaceNamedDecoder[bool]("mybool", myBoolDecoder)
-	})
-
-	assert.NotPanics(t, func() {
-		ReplaceNamedDecoder[bool]("mybool", myBoolDecoder)
+		RegisterNamedDecoder[bool]("mybool", myBoolDecoder, true)
 	})
 
 	removeNamedDecoder("mybool") // remove the custom decoder
@@ -224,8 +224,8 @@ func Test_smartDecoder_ErrValueTypeMismatch(t *testing.T) {
 	smart := newSmartDecoder[string](typeOf[int](), myDateDecoder)
 	v, err := smart.Decode("2001-02-03")
 	assert.Nil(t, v)
-	assert.ErrorIs(t, err, ErrValueTypeMismatch)
-	assert.ErrorContains(t, err, `type "time.Time" is not assignable to type "int"`)
+	assert.ErrorIs(t, err, ErrTypeMismatch)
+	assert.ErrorContains(t, err, invalidDecodeReturnType(reflect.TypeOf(0), reflect.TypeOf(time.Time{})).Error())
 }
 
 // Test that the builtin decoders are valid.

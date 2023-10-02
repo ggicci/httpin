@@ -24,12 +24,12 @@ var (
 	ErrDuplicateBodyDecoder  = errors.New("duplicate body decoder")
 	ErrMissingDecoderName    = errors.New("missing decoder name")
 	ErrDecoderNotFound       = errors.New("decoder not found")
-	ErrValueTypeMismatch     = errors.New("value type mismatch")
+	ErrTypeMismatch          = errors.New("type mismatch")
 )
 
-func mismatchedValueTypeError(expected, got reflect.Type) error {
-	return fmt.Errorf("%w: the decoder returned value of type %q is not assignable to type %q",
-		ErrValueTypeMismatch, got, expected)
+func invalidDecodeReturnType(expected, got reflect.Type) error {
+	return fmt.Errorf("%w: value of type %q returned by decoder is not assignable to type %q",
+		ErrTypeMismatch, got, expected)
 }
 
 func unsupportedTypeError(typ reflect.Type) error {

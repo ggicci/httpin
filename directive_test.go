@@ -6,40 +6,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var noopDirective = DirectiveExecutorFunc(nil)
-
 func TestRegisterDirectiveExecutor(t *testing.T) {
 	assert.NotPanics(t, func() {
-		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor", noopDirective)
+		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor", noopDirective, noopDirective)
 	})
 
 	assert.Panics(t, func() {
-		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor", noopDirective)
+		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor", noopDirective, noopDirective)
 	}, "should panic on duplicate name")
 
 	assert.Panics(t, func() {
-		RegisterDirectiveExecutor("nil_TestRegisterDirectiveExecutor", nil)
+		RegisterDirectiveExecutor("nil_TestRegisterDirectiveExecutor", nil, nil)
 	}, "should panic on nil executor")
 
 	assert.Panics(t, func() {
-		RegisterDirectiveExecutor("decoder", noopDirective)
+		RegisterDirectiveExecutor("decoder", noopDirective, noopDirective)
 	}, "should panic on reserved name")
 }
 
-func TestReplaceDirectiveExecutor(t *testing.T) {
+func TestRegisterDirectiveExecutor_forceReplace(t *testing.T) {
 	assert.NotPanics(t, func() {
-		ReplaceDirectiveExecutor("noop_TestReplaceDirectiveExecutor", noopDirective)
+		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor_forceReplace", noopDirective, noopDirective, true)
 	})
 
 	assert.NotPanics(t, func() {
-		ReplaceDirectiveExecutor("noop_TestReplaceDirectiveExecutor", noopDirective)
+		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor_forceReplace", noopDirective, noopDirective, true)
 	}, "should not panic on duplicate name")
 
 	assert.Panics(t, func() {
-		ReplaceDirectiveExecutor("nil_TestReplaceDirectiveExecutor", nil)
+		RegisterDirectiveExecutor("nil_TestRegisterDirectiveExecutor_forceReplace", nil, nil, true)
 	}, "should panic on nil executor")
 
 	assert.Panics(t, func() {
-		ReplaceDirectiveExecutor("decoder", noopDirective)
+		RegisterDirectiveExecutor("decoder", noopDirective, noopDirective, true)
 	}, "should panic on reserved name")
 }

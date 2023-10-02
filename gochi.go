@@ -21,7 +21,7 @@ type GochiURLParamFunc func(r *http.Request, key string) string
 //	    httpin.UseGochiURLParam("path", chi.URLParam)
 //	}
 func UseGochiURLParam(directive string, fn GochiURLParamFunc) {
-	RegisterDirectiveExecutor(directive, &gochiURLParamExtractor{URLParam: fn})
+	RegisterDirectiveExecutor(directive, &gochiURLParamExtractor{URLParam: fn}, noopDirective)
 }
 
 type gochiURLParamExtractor struct {

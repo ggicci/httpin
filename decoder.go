@@ -84,8 +84,9 @@ type decoder2D[DT DataSource] interface {
 // practice, the underlying type of the decoded value should be T, even
 // returning *T also works. If the real returned value were not T or *T, the
 // decoder will return an error (ErrValueTypeMismatch) while decoding.
-func RegisterValueTypeDecoder[T any](decoder Decoder[string]) {
-	registerTypeDecoderTo[T](customDecoders, decoder, false)
+func RegisterValueTypeDecoder[T any](decoder Decoder[string], replace ...bool) {
+	force := len(replace) > 0 && replace[0]
+	registerTypeDecoderTo[T](customDecoders, decoder, force)
 }
 
 // RegisterFileTypeDecoder registers a FileTypeDecoder. The decoder takes in a
@@ -96,20 +97,9 @@ func RegisterValueTypeDecoder[T any](decoder Decoder[string]) {
 // practice, the underlying type of the decoded value should be T, even
 // returning *T also works. If the real returned value were not T or *T, the
 // decoder will return an error (ErrValueTypeMismatch) while decoding.
-func RegisterFileTypeDecoder[T any](decoder Decoder[*multipart.FileHeader]) {
-	registerTypeDecoderTo[T](customDecoders, decoder, false)
-}
-
-// ReplaceValueTypeDecoder works similar to RegisterValueTypeDecoder. But it
-// replaces the decoder if there is a conflict. It still panics on nil decoders.
-func ReplaceValueTypeDecoder[T any](decoder Decoder[string]) {
-	registerTypeDecoderTo[T](customDecoders, decoder, true)
-}
-
-// ReplaceFileTypeDecoder works similar to RegisterFileTypeDecoder. But it
-// replaces the decoder if there is a conflict. It still panics on nil decoders.
-func ReplaceFileTypeDecoder[T any](decoder Decoder[*multipart.FileHeader]) {
-	registerTypeDecoderTo[T](customDecoders, decoder, true)
+func RegisterFileTypeDecoder[T any](decoder Decoder[*multipart.FileHeader], replace ...bool) {
+	force := len(replace) > 0 && replace[0]
+	registerTypeDecoderTo[T](customDecoders, decoder, force)
 }
 
 // RegisterNamedDecoder registers a decoder by name. Panics on conflict names
@@ -124,17 +114,12 @@ func ReplaceFileTypeDecoder[T any](decoder Decoder[*multipart.FileHeader]) {
 //	}
 //
 // Visit https://ggicci.github.io/httpin/directives/decoder for more details.
-func RegisterNamedDecoder[T any](name string, decoder interface{}) {
-	if _, ok := namedDecoders[name]; ok {
+func RegisterNamedDecoder[T any](name string, decoder interface{}, replace ...bool) {
+	force := len(replace) > 0 && replace[0]
+	if _, ok := namedDecoders[name]; ok && !force {
 		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateNamedDecoder, name))
 	}
 
-	ReplaceNamedDecoder[T](name, decoder)
-}
-
-// ReplaceNamedDecoder works similar to RegisterNamedDecoder. But it replaces
-// the decoder if there is a conflict. It still panics on invalid decoders.
-func ReplaceNamedDecoder[T any](name string, decoder interface{}) {
 	panicOnInvalidDecoder(decoder)
 	typ := typeOf[T]()
 	namedDecoders[name] = adaptDecoder(typ, newSmartDecoderX(typ, decoder))
@@ -241,7 +226,7 @@ func (sd *smartDecoder[DT]) Decode(value DT) (interface{}, error) {
 		}
 
 		// Can't convert, return error.
-		return nil, mismatchedValueTypeError(sd.WantType, gotType)
+		return nil, invalidDecodeReturnType(sd.WantType, gotType)
 	}
 }
 

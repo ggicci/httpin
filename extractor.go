@@ -93,7 +93,7 @@ func setDirectiveRuntimeValue(rtm *DirectiveRuntime, value interface{}) error {
 		rtm.Value.Elem().Set(newValue)
 		return nil
 	}
-	return mismatchedValueTypeError(targetType, reflect.TypeOf(value))
+	return invalidDecodeReturnType(targetType, reflect.TypeOf(value))
 }
 
 // scalarElemTypeOf returns the scalar element type of a given type.

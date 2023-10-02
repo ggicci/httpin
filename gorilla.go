@@ -20,7 +20,7 @@ type GorillaMuxVarsFunc func(*http.Request) map[string]string
 //	    httpin.UseGorillaMux("path", mux.Vars)
 //	}
 func UseGorillaMux(executor string, fnVars GorillaMuxVarsFunc) {
-	RegisterDirectiveExecutor(executor, &gorillaMuxVarsExtractor{Vars: fnVars})
+	RegisterDirectiveExecutor(executor, &gorillaMuxVarsExtractor{Vars: fnVars}, noopDirective)
 }
 
 type gorillaMuxVarsExtractor struct {

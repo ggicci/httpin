@@ -344,7 +344,7 @@ type CustomNamedDecoderInput struct {
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder(t *testing.T) {
-	ReplaceNamedDecoder[time.Time]("decodeMyDate", myDateDecoder) // usually done in init()
+	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
@@ -395,7 +395,7 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrDecoderNotFound(t *testing.T)
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_ErrValueTypeMismatch(t *testing.T) {
-	ReplaceNamedDecoder[time.Time]("decodeMyDate", myDateDecoder) // usually done in init()
+	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 
 	type Input struct {
 		Birthday string `in:"form=birthday;decoder=decodeMyDate"` // cause ErrValueTypeMismatch
@@ -406,14 +406,14 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrValueTypeMismatch(t *testing.
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{"birthday": {"1991-11-10"}} // birthday is string, not time.Time
 	_, err = core.Decode(r)
-	assert.ErrorIs(t, err, ErrValueTypeMismatch)
+	assert.ErrorIs(t, err, ErrTypeMismatch)
 	assert.ErrorContains(t, err, "birthday")
 	assert.ErrorContains(t, err, "string")
 	assert.ErrorContains(t, err, "time.Time")
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_DecodeError(t *testing.T) {
-	ReplaceNamedDecoder[time.Time]("decodeMyDate", myDateDecoder) // usually done in init()
+	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{

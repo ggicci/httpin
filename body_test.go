@@ -169,17 +169,17 @@ func TestRegisterBodyDecoder(t *testing.T) {
 	assert.Nil(t, gotValue)
 }
 
-func TestReplaceBodyDecoder(t *testing.T) {
+func TestRegisterBodyDecoder_forceReplace(t *testing.T) {
 	assert.NotPanics(t, func() {
-		ReplaceBodyDecoder("yaml", &yamlBodyDecoder{})
+		RegisterBodyDecoder("yaml", &yamlBodyDecoder{}, true)
 	})
 	assert.NotPanics(t, func() {
-		ReplaceBodyDecoder("yaml", &yamlBodyDecoder{})
+		RegisterBodyDecoder("yaml", &yamlBodyDecoder{}, true)
 	})
 }
 
-func TestReplaceBodyDecoder_EmptyBodyType(t *testing.T) {
+func TestRegisterBodyDecoder_forceReplace_withEmptyBodyType(t *testing.T) {
 	assert.PanicsWithValue(t, "httpin: body type cannot be empty", func() {
-		ReplaceBodyDecoder("", &yamlBodyDecoder{})
+		RegisterBodyDecoder("", &yamlBodyDecoder{}, true)
 	})
 }

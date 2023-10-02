@@ -83,6 +83,14 @@ func Decode(req *http.Request, input interface{}) error {
 	}
 }
 
+func Encode(method, url string, input interface{}) (*http.Request, error) {
+	core, err := New(input)
+	if err != nil {
+		return nil, err
+	}
+	return core.Encode(method, url, input)
+}
+
 // NewInput creates a "Middleware". A middleware is a function that takes a
 // http.Handler and returns another http.Handler.
 //
