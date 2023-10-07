@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"io"
+	"bytes"
 )
 
 func TestDirectiveRequired_RequiredFieldMissing(t *testing.T) {
@@ -52,4 +54,25 @@ func TestDirectiveRequired_NonRequiredFieldAbsent(t *testing.T) {
 	got, err := core.Decode(r)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got.(*ProductQuery))
+}
+
+func TestDirectiveRequired_RequiredFieldAbsentInNilChild(t *testing.T) {
+	type Inner struct {
+		Val string `in:"query=val;required" json:"value"`
+	}
+	type Outer struct {
+		Inner *Inner `in:"body=json"`
+	}
+
+	r, _ := http.NewRequest("GET", "/", io.NopCloser(bytes.NewBufferString(`{}`)))
+	expected := &Outer{
+		Inner: &Inner{},
+	}
+	core, err := New(expected)
+	assert.NoError(t, err)
+
+	// ensure that although the required value is nil then no error is returned as the containing struct is also nil.
+	got, err := core.Decode(r)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, got.(*Outer))
 }
