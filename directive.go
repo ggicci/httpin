@@ -43,7 +43,7 @@ func RegisterDirectiveExecutor(name string, exe DirectiveExecutor) {
 // on duplicate names.
 func ReplaceDirectiveExecutor(name string, exe DirectiveExecutor) {
 	panicOnReservedExecutorName(name)
-	owl.ReplaceDirectiveExecutor(name, exe)
+	owl.RegisterDirectiveExecutor(name, exe, true)
 }
 
 func panicOnReservedExecutorName(name string) {
