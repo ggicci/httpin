@@ -29,8 +29,11 @@ func newExtractor(r *http.Request) *extractor {
 	}
 }
 
-func (e *extractor) Execute(ctx *DirectiveRuntime) error {
-	for _, key := range ctx.Directive.Argv {
+func (e *extractor) Execute(ctx *DirectiveRuntime, keys ...string) error {
+	if len(keys) == 0 {
+		keys = ctx.Directive.Argv
+	}
+	for _, key := range keys {
 		if e.KeyNormalizer != nil {
 			key = e.KeyNormalizer(key)
 		}

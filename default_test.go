@@ -73,3 +73,31 @@ func TestDirectiveDefault_PatchField(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got)
 }
+
+// FIX: https://github.com/ggicci/httpin/issues/77
+// Decode parameter struct with default values only works the first time
+func TestDirectiveDeafult_Decode_twice(t *testing.T) {
+	type ThingWithDefaultValues struct {
+		Id      uint `in:"query=id;required"`
+		Page    int  `in:"query=page;default=1"`
+		PerPage int  `in:"query=page_size;default=127"`
+	}
+
+	r, _ := http.NewRequest("GET", "/?id=123", nil)
+	expected := &ThingWithDefaultValues{
+		Id:      123,
+		Page:    1,
+		PerPage: 127,
+	}
+
+	// First decode works as expected
+	xxx := ThingWithDefaultValues{}
+	err := Decode(r, &xxx)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, &xxx)
+
+	// Second decode generates eror
+	err = Decode(r, &xxx)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, &xxx)
+}

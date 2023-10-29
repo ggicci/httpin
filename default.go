@@ -12,7 +12,7 @@ func defaultValueSetter(ctx *DirectiveRuntime) error {
 
 	// Transform:
 	// 1. ctx.Argv -> input values
-	// 2. ["default"] -> ctx.Argv
+	// 2. ["default"] -> keys
 	extractor := &extractor{
 		Form: multipart.Form{
 			Value: map[string][]string{
@@ -20,6 +20,5 @@ func defaultValueSetter(ctx *DirectiveRuntime) error {
 			},
 		},
 	}
-	ctx.Directive.Argv = []string{"default"}
-	return extractor.Execute(ctx)
+	return extractor.Execute(ctx, "default")
 }
