@@ -1,290 +1,220 @@
 package httpin
 
 import (
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"reflect"
 	"time"
 )
 
-// primarySecondaryDecodersMap is a map of type to a pair of decoders. The first
-// decoder is the primary decoder, while the second decoder is the secondary.
-type primarySecondaryDecodersMap map[reflect.Type][2]interface{}
-
 var (
-	builtinDecoders = make(primarySecondaryDecodersMap) // builtin decoders, always registered
-	customDecoders  = make(primarySecondaryDecodersMap) // custom decoders (by type)
-	namedDecoders   = make(map[string]interface{})      // custom decoders (by name)
+	builtinDecoders = newPriorityPair()                  // builtin decoders, always registered
+	customDecoders  = newPriorityPair()                  // custom decoders (by type)
+	namedDecoders   = make(map[string]*namedDecoderInfo) // custom decoders (by name)
 )
 
 func init() {
-	registerTypeDecoderTo[bool](builtinDecoders, DecoderFunc[string](decodeBool), false)
-	registerTypeDecoderTo[int](builtinDecoders, DecoderFunc[string](decodeInt), false)
-	registerTypeDecoderTo[int8](builtinDecoders, DecoderFunc[string](decodeInt8), false)
-	registerTypeDecoderTo[int16](builtinDecoders, DecoderFunc[string](decodeInt16), false)
-	registerTypeDecoderTo[int32](builtinDecoders, DecoderFunc[string](decodeInt32), false)
-	registerTypeDecoderTo[int64](builtinDecoders, DecoderFunc[string](decodeInt64), false)
-	registerTypeDecoderTo[uint](builtinDecoders, DecoderFunc[string](decodeUint), false)
-	registerTypeDecoderTo[uint8](builtinDecoders, DecoderFunc[string](decodeUint8), false)
-	registerTypeDecoderTo[uint16](builtinDecoders, DecoderFunc[string](decodeUint16), false)
-	registerTypeDecoderTo[uint32](builtinDecoders, DecoderFunc[string](decodeUint32), false)
-	registerTypeDecoderTo[uint64](builtinDecoders, DecoderFunc[string](decodeUint64), false)
-	registerTypeDecoderTo[float32](builtinDecoders, DecoderFunc[string](decodeFloat32), false)
-	registerTypeDecoderTo[float64](builtinDecoders, DecoderFunc[string](decodeFloat64), false)
-	registerTypeDecoderTo[complex64](builtinDecoders, DecoderFunc[string](decodeComplex64), false)
-	registerTypeDecoderTo[complex128](builtinDecoders, DecoderFunc[string](decodeComplex128), false)
-	registerTypeDecoderTo[string](builtinDecoders, DecoderFunc[string](decodeString), false)
-	registerTypeDecoderTo[time.Time](builtinDecoders, DecoderFunc[string](decodeTime), false)
+	registerBuiltinDecoder[bool](decodeBool)
+	registerBuiltinDecoder[int](decodeInt)
+	registerBuiltinDecoder[int8](decodeInt8)
+	registerBuiltinDecoder[int16](decodeInt16)
+	registerBuiltinDecoder[int32](decodeInt32)
+	registerBuiltinDecoder[int64](decodeInt64)
+	registerBuiltinDecoder[uint](decodeUint)
+	registerBuiltinDecoder[uint8](decodeUint8)
+	registerBuiltinDecoder[uint16](decodeUint16)
+	registerBuiltinDecoder[uint32](decodeUint32)
+	registerBuiltinDecoder[uint64](decodeUint64)
+	registerBuiltinDecoder[float32](decodeFloat32)
+	registerBuiltinDecoder[float64](decodeFloat64)
+	registerBuiltinDecoder[complex64](decodeComplex64)
+	registerBuiltinDecoder[complex128](decodeComplex128)
+	registerBuiltinDecoder[string](decodeString)
+	registerBuiltinDecoder[time.Time](decodeTime)
 }
 
-// DataSource is the type of the input data. It can be string or *multipart.FileHeader.
-//   - string: when the input data is from a querystring, form, or header.
-//   - *multipart.FileHeader: when the input data is from a file upload.
-type DataSource interface{ string | *multipart.FileHeader }
+type (
+	Decoder[T any]         decoderInterface[string, T]
+	DecoderFunc[T any]     func(string) (T, error)
+	FileDecoder[T any]     decoderInterface[*multipart.FileHeader, T]
+	FileDecoderFunc[T any] func(*multipart.FileHeader) (T, error)
+)
 
-// Decoder is the interface implemented by types that can decode a DataSource to
-// themselves.
-type Decoder[DT DataSource] interface {
-	Decode(value DT) (interface{}, error)
-}
-
-// ValueTypeDecoder is the interface implemented by types that can decode a
-// string to themselves. Take querystring as an example, the decoder takes in a
-// single string value and decodes it to value of type T.
-type ValueTypeDecoder = Decoder[string]
-
-// FileTypeDecoder is the interface implemented by types that can decode a
-// *multipart.FileHeader to themselves.
-type FileTypeDecoder = Decoder[*multipart.FileHeader]
-
-// DecoderFunc is a function that implements Decoder[DT]. It can be used to turn
-// a function into a Decoder[DT]. For instance:
-//
-//	func decodeInt(value string) (interface{}, error) { ... }
-//	myIntDecoder := DecoderFunc[string](decodeInt)
-type DecoderFunc[DT DataSource] func(value DT) (interface{}, error)
-
-func (fn DecoderFunc[DT]) Decode(value DT) (interface{}, error) {
+func (fn DecoderFunc[T]) Decode(value string) (T, error) {
 	return fn(value)
 }
 
-// decoder2D is the interface implemented by types that can decode a slice of
-// DataSource to themselves. DecodeX[DT] takes in a slice of DT values and
-// decodes them to some type of value. DecodeX[DT] is usually derived from
-// Decoder[DT], using Decoder[DT] to decode each element of the slice.
-type decoder2D[DT DataSource] interface {
-	DecodeX(values []DT) (interface{}, error)
+func (fn FileDecoderFunc[T]) Decode(fh *multipart.FileHeader) (T, error) {
+	return fn(fh)
 }
 
-// RegisterValueTypeDecoder registers a ValueTypeDecoder. The decoder takes in a
-// string value and decodes it to value of type T. Panics on conflict types and
-// nil decoders.
+// RegisterDecoder registers a FormValueDecoder. The decoder takes in a string
+// value and decodes it to value of type T. Used to decode values from
+// querystring, form, header. Panics on conflict types and nil decoders.
 //
-// NOTE: the decoder returns the decoded value as interface{}. For best
-// practice, the underlying type of the decoded value should be T, even
-// returning *T also works. If the real returned value were not T or *T, the
-// decoder will return an error (ErrValueTypeMismatch) while decoding.
-func RegisterValueTypeDecoder[T any](decoder Decoder[string], replace ...bool) {
+// NOTE: the decoder returns the decoded value as any. For best practice, the
+// underlying type of the decoded value should be T, even returning *T also
+// works. If the real returned value were not T or *T, the decoder will return
+// an error (ErrValueTypeMismatch) while decoding.
+func RegisterDecoder[T any](decoder Decoder[T], replace ...bool) {
 	force := len(replace) > 0 && replace[0]
-	registerTypeDecoderTo[T](customDecoders, decoder, force)
-}
-
-// RegisterFileTypeDecoder registers a FileTypeDecoder. The decoder takes in a
-// *multipart.FileHeader (when uploading files from an HTTP request) and decodes
-// it to value of type T. Panics on conflict types and nil decoders.
-//
-// NOTE: the decoder returns the decoded value as interface{}. For best
-// practice, the underlying type of the decoded value should be T, even
-// returning *T also works. If the real returned value were not T or *T, the
-// decoder will return an error (ErrValueTypeMismatch) while decoding.
-func RegisterFileTypeDecoder[T any](decoder Decoder[*multipart.FileHeader], replace ...bool) {
-	force := len(replace) > 0 && replace[0]
-	registerTypeDecoderTo[T](customDecoders, decoder, force)
+	registerDecoderTo[T](customDecoders, decoder, force)
 }
 
 // RegisterNamedDecoder registers a decoder by name. Panics on conflict names
-// and invalid decoders. The decoder can be a ValueTypeDecoder or a
-// FileTypeDecoder. It decodes the input value to a value of type T. Use the
-// *decoder directive* to override the decoder of a struct field:
+// and invalid decoders. It decodes a string value to a value of type T. Use the
+// "decoder" directive to override the decoder of a struct field:
 //
-//	RegisterNamedDecoder[time.Time]("x_time", DecoderFunc[string](decodeTimeInXFormat))
+//	func init() {
+//	    httpin.RegisterNamedDecoder[time.Time]("x_time", DecoderFunc[string](decodeTimeInXFormat))
+//	}
+//
 //	type Input struct {
 //	    // httpin will use the decoder registered above, instead of the builtin decoder for time.Time.
 //	    Time time.Time `in:"query:time;decoder=x_time"`
 //	}
 //
 // Visit https://ggicci.github.io/httpin/directives/decoder for more details.
-func RegisterNamedDecoder[T any](name string, decoder interface{}, replace ...bool) {
+func RegisterNamedDecoder[T any](name string, decoder Decoder[T], replace ...bool) {
 	force := len(replace) > 0 && replace[0]
 	if _, ok := namedDecoders[name]; ok && !force {
-		panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateNamedDecoder, name))
+		panicOnError(fmt.Errorf("duplicate name: %q", name))
 	}
-
-	panicOnInvalidDecoder(decoder)
+	panicOnError(validateDecoder(decoder))
 	typ := typeOf[T]()
-	namedDecoders[name] = adaptDecoder(typ, newSmartDecoderX(typ, decoder))
+
+	namedDecoders[name] = &namedDecoderInfo{
+		Name:     name,
+		Original: decoder,
+		Adapted:  adaptDecoder(typ, newSmartDecoder(typ, toAnyDecoder(decoder))).(*decoderAdaptor[string]),
+	}
 }
 
-func registerTypeDecoderTo[T any](m primarySecondaryDecodersMap, decoder interface{}, force bool) {
-	typ := typeOf[T]()
-	panicOnInvalidDecoder(decoder)
+type dataSource interface {
+	string | *multipart.FileHeader
+}
 
-	primaryDecoder := adaptDecoder(typ, newSmartDecoderX(typ, decoder))
-	updateDecodersMap(m, typ, primaryDecoder, nil, force)
+type decoderInterface[DT dataSource, RT any] interface {
+	Decode(DT) (RT, error)
+}
+
+func registerBuiltinDecoder[T any](fn DecoderFunc[T]) {
+	registerDecoderTo[T](builtinDecoders, fn, false)
+}
+
+func registerDecoderTo[T any](p priorityPair, decoder Decoder[T], force bool) {
+	registerDecoderToX[T](p, toAnyDecoder(decoder), force)
+}
+
+func registerDecoderToX[T any](p priorityPair, decoder Decoder[any], force bool) {
+	panicOnError(validateDecoder(decoder))
+
+	typ := typeOf[T]()
+	primaryDecoder := adaptDecoder(typ, newSmartDecoder(typ, decoder))
+	panicOnError(p.SetPair(typ, primaryDecoder, nil, force))
 
 	if typ.Kind() == reflect.Pointer {
-		// When we have a pointer type (*T), we also register the decoder for
-		// its base type (T). The decoder for the base type will be registered
-		// as the secondary decoder.
+		// When we have a pointer type (*T), we also register the decoder for its base
+		// type (T). The decoder for the base type (T) will be registered as the
+		// secondary decoder.
 		baseType := typ.Elem()
-		secondaryDecoder := adaptDecoder(baseType, newSmartDecoderX(baseType, decoder))
-		updateDecodersMap(m, baseType, nil, secondaryDecoder, force)
+		secondaryDecoder := adaptDecoder(baseType, newSmartDecoder(baseType, decoder))
+		panicOnError(p.SetPair(baseType, nil, secondaryDecoder, force))
 	} else {
-		// When we have a non-pointer type (T), we also register the decoder
-		// for its pointer type (*T). The decoder for the pointer type will be
-		// registered as the secondary decoder.
+		// When we have a non-pointer type (T), we also register the decoder for its
+		// pointer type (*T). The decoder for the pointer type (*T) will be registered
+		// as the secondary decoder.
 		pointerType := reflect.PtrTo(typ)
-		secondaryDecoder := adaptDecoder(pointerType, newSmartDecoderX(pointerType, decoder))
-		updateDecodersMap(m, pointerType, nil, secondaryDecoder, force)
+		secondaryDecoder := adaptDecoder(pointerType, newSmartDecoder(pointerType, decoder))
+		panicOnError(p.SetPair(pointerType, nil, secondaryDecoder, force))
 	}
 }
 
-// updateDecodersMap updates the decoders map with the given primary and
-// secondary decoder. The given nil decoders will be ignored. The secondary
-// decoder is always set. While the primary decoder is only set when the primary
-// decoder of the given type is not set or force is true.
-func updateDecodersMap(m map[reflect.Type][2]interface{}, typ reflect.Type, primary, secondary interface{}, force bool) {
-	olds, ok := m[typ]
-
-	if !ok {
-		m[typ] = [2]interface{}{primary, secondary}
-		return
+func toAnyDecoder[T any](decoder Decoder[T]) Decoder[any] {
+	if decoder == nil {
+		return nil
 	}
-
-	oldPrimary, _ := olds[0], olds[1]
-	if primary != nil { // set primary
-		if oldPrimary != nil && !force { // conflict
-			panic(fmt.Errorf("httpin: %w: %q", ErrDuplicateTypeDecoder, typ))
-		}
-		olds[0] = primary
-	}
-
-	if secondary != nil { // always set secondary
-		olds[1] = secondary
-	}
+	return DecoderFunc[any](func(s string) (any, error) {
+		return decoder.Decode(s)
+	})
 }
 
-// smartDecoder is a decoder that switches the return value of the inner
-// Decoder[DT] to WantType. For example, if the inner decoder returns a *T, and
-// WantType is T, then the smartDecoder will return T instead of *T, vice versa.
-type smartDecoder[DT DataSource] struct {
-	Decoder[DT]
+// smartDecoder is a decoder that switches the return value of the inner Decoder[DT] to
+// WantType. For example, if the inner decoder returns a *T, and WantType is T, then the
+// smartDecoder will return T instead of *T, vice versa.
+type smartDecoder struct {
+	Decoder  Decoder[any]
 	WantType reflect.Type
 }
 
-func newSmartDecoder[DT DataSource](typ reflect.Type, decoder interface{}) Decoder[DT] {
-	return &smartDecoder[DT]{decoder.(Decoder[DT]), typ}
+func newSmartDecoder(typ reflect.Type, decoder Decoder[any]) Decoder[any] {
+	return &smartDecoder{Decoder: decoder, WantType: typ}
 }
 
-func newSmartDecoderX(typ reflect.Type, decoder interface{}) interface{} {
-	switch decoder := decoder.(type) {
-	case ValueTypeDecoder:
-		return newSmartDecoder[string](typ, decoder)
-	case FileTypeDecoder:
-		return newSmartDecoder[*multipart.FileHeader](typ, decoder)
-	default:
-		return nil
-	}
-}
-
-func (sd *smartDecoder[DT]) Decode(value DT) (interface{}, error) {
-	if gotValue, err := sd.Decoder.Decode(value); err != nil {
+func (sd *smartDecoder) Decode(value string) (any, error) {
+	gotValue, err := sd.Decoder.Decode(value)
+	if err != nil {
 		return nil, err
-	} else {
-		// Returns directly on nil.
-		if gotValue == nil {
+	}
+	if gotValue == nil {
+		return nil, nil // nil value, return directly
+	}
+
+	gotType := reflect.TypeOf(gotValue) // returns nil if gotValue is nil
+
+	// Returns directly on the same type.
+	if gotType == sd.WantType {
+		return gotValue, nil
+	}
+
+	// Want T, got *T, return T.
+	if gotType.Kind() == reflect.Ptr && gotType.Elem() == sd.WantType {
+		rv := reflect.ValueOf(gotValue)
+		if rv.IsNil() {
 			return nil, nil
 		}
-
-		gotType := reflect.TypeOf(gotValue)
-
-		// Returns directly on the same type.
-		if gotType == sd.WantType {
-			return gotValue, nil
-		}
-
-		// Want T, got *T, return T.
-		if gotType.Kind() == reflect.Ptr && gotType.Elem() == sd.WantType {
-			return reflect.ValueOf(gotValue).Elem().Interface(), nil
-		}
-
-		// Want *T, got T, return &T.
-		if sd.WantType.Kind() == reflect.Ptr && sd.WantType.Elem() == gotType {
-			res := reflect.New(gotType)
-			res.Elem().Set(reflect.ValueOf(gotValue))
-			return res.Interface(), nil
-		}
-
-		// Can't convert, return error.
-		return nil, invalidDecodeReturnType(sd.WantType, gotType)
+		return rv.Elem().Interface(), nil
 	}
+
+	// Want *T, got T, return &T.
+	if sd.WantType.Kind() == reflect.Ptr && sd.WantType.Elem() == gotType {
+		res := reflect.New(gotType)
+		res.Elem().Set(reflect.ValueOf(gotValue))
+		return res.Interface(), nil
+	}
+
+	// Can't convert, return error.
+	return nil, invalidDecodeReturnType(sd.WantType, gotType)
 }
 
-// panicOnInvalidDecoder panics when the decoder is invalid, check by
-// validateDecoder.
-func panicOnInvalidDecoder(decoder interface{}) {
-	if err := validateDecoder(decoder); err != nil {
-		panic(fmt.Errorf("httpin: %w", err))
-	}
-}
-
-// validateDecoder validates the decoder. It returns an error if the decoder is
-// invalid, otherwise nil.
-//  1. nil decoder --> ErrNilDecoder
-//  2. not a ValueTypeDecoder or a FileTypeDecoder --> ErrInvalidDecoder
-func validateDecoder(decoder interface{}) error {
-	if decoder == nil {
-		return ErrNilDecoder
-	}
-	if !isDecoder(decoder) {
-		return ErrInvalidDecoder
+func validateDecoder(decoder any) error {
+	if decoder == nil || reflect.ValueOf(decoder).IsNil() {
+		return errors.New("nil decoder")
 	}
 	return nil
 }
 
 // decoderByName retrieves a decoder by name, from the global registerred named decoders.
-func decoderByName(name string) interface{} {
+func decoderByName(name string) *namedDecoderInfo {
 	return namedDecoders[name]
 }
 
 // decoderByType retrieves a decoder by type, from the global registerred decoders.
-func decoderByType(t reflect.Type) interface{} {
-	if d := decoderByTypeFrom(customDecoders, t); d != nil {
-		return d
+func decoderByType(t reflect.Type) *decoderAdaptor[string] {
+	d := customDecoders.GetOne(t)
+	if d == nil {
+		d = builtinDecoders.GetOne(t)
 	}
-	return decoderByTypeFrom(builtinDecoders, t)
+	if d != nil {
+		return d.(*decoderAdaptor[string])
+	} else {
+		return nil
+	}
 }
 
-// decoderByTypeFrom retrieves a decoder by type, from a specific decoders map.
-// It prioritizes the primary decoder over the secondary decoder.
-func decoderByTypeFrom(m primarySecondaryDecodersMap, t reflect.Type) interface{} {
-	if decoders, ok := m[t]; ok {
-		if decoders[0] != nil {
-			return decoders[0]
-		}
-		if decoders[1] != nil {
-			return decoders[1]
-		}
-	}
-	return nil
-}
-
-// isDecoder checks if the decoder is a ValueTypeDecoder or a FileTypeDecoder.
-func isDecoder(decoder interface{}) bool {
-	_, isValueTypeDecoder := decoder.(Decoder[string])
-	if isValueTypeDecoder {
-		return true
-	}
-	_, isFileTypeDecoder := decoder.(Decoder[*multipart.FileHeader])
-	return isFileTypeDecoder
+type namedDecoderInfo struct {
+	Name     string
+	Original any
+	Adapted  *decoderAdaptor[string]
 }

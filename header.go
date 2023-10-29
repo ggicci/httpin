@@ -8,15 +8,23 @@ import (
 	"net/http"
 )
 
-// headerValueExtractor implements the "header" executor who extracts values
+type directiveHeader struct{}
+
+// Decode implements the "header" executor who extracts values
 // from the HTTP headers.
-func headerValueExtractor(ctx *DirectiveRuntime) error {
-	req := ctx.Context.Value(RequestValue).(*http.Request)
+func (*directiveHeader) Decode(rtm *DirectiveRuntime) error {
+	req := rtm.GetRequest()
 	extractor := &extractor{
+		Runtime: rtm,
 		Form: multipart.Form{
 			Value: req.Header,
 		},
 		KeyNormalizer: http.CanonicalHeaderKey,
 	}
-	return extractor.Execute(ctx)
+	return extractor.Extract()
+}
+
+func (*directiveHeader) Encode(rtm *DirectiveRuntime) error {
+	encoder := &formEncoder{rtm.GetRequestBuilder().setHeader}
+	return encoder.Execute(rtm)
 }

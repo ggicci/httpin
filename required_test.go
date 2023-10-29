@@ -22,7 +22,7 @@ func TestDirectiveRequired_RequiredFieldMissing(t *testing.T) {
 	core, err := New(&ProductQuery{})
 	assert.NoError(t, err)
 	_, err = core.Decode(r)
-	assert.ErrorIs(t, err, ErrMissingField)
+	assert.ErrorIs(t, err, errMissingField)
 	var invalidField *InvalidFieldError
 	assert.ErrorAs(t, err, &invalidField)
 	assert.Equal(t, "required", invalidField.Source)

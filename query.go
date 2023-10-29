@@ -5,17 +5,24 @@ package httpin
 
 import (
 	"mime/multipart"
-	"net/http"
 )
 
-// queryValueExtractor implements the "query" executor who extracts values from
+type directiveQuery struct{}
+
+// Decode implements the "query" executor who extracts values from
 // the querystring of an HTTP request.
-func queryValueExtractor(ctx *DirectiveRuntime) error {
-	req := ctx.Context.Value(RequestValue).(*http.Request)
+func (*directiveQuery) Decode(rtm *DirectiveRuntime) error {
+	req := rtm.GetRequest()
 	extractor := &extractor{
+		Runtime: rtm,
 		Form: multipart.Form{
 			Value: req.URL.Query(),
 		},
 	}
-	return extractor.Execute(ctx)
+	return extractor.Extract()
+}
+
+func (*directiveQuery) Encode(rtm *DirectiveRuntime) error {
+	encoder := &formEncoder{rtm.GetRequestBuilder().setQuery}
+	return encoder.Execute(rtm)
 }

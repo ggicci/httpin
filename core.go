@@ -2,6 +2,7 @@ package httpin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"mime"
 	"net/http"
@@ -23,7 +24,7 @@ var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 type Core struct {
 	resolver *owl.Resolver
 
-	errorHandler ErrorHandler
+	errorHandler errorHandler
 	maxMemory    int64 // in bytes
 }
 
@@ -31,7 +32,7 @@ type Core struct {
 //   - Use Core.Decode() to decode an HTTP request to an instance of the inputStruct.
 //   - Use Core.Encode() to encode an instance of the inputStruct to an HTTP request.
 //   - Use NewInput() to create an HTTP middleware.
-func New(inputStruct interface{}, opts ...Option) (*Core, error) {
+func New(inputStruct any, opts ...Option) (*Core, error) {
 	resolver, err := buildResolver(inputStruct)
 	if err != nil {
 		return nil, err
@@ -64,7 +65,7 @@ func New(inputStruct interface{}, opts ...Option) (*Core, error) {
 //
 //	New(&Input{}).Decode(req) -> *Input
 //	New(Input{}).Decode(req) -> *Input
-func (c *Core) Decode(req *http.Request) (interface{}, error) {
+func (c *Core) Decode(req *http.Request) (any, error) {
 	var err error
 	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
 	if ct == "multipart/form-data" {
@@ -76,9 +77,9 @@ func (c *Core) Decode(req *http.Request) (interface{}, error) {
 		return nil, err
 	}
 
-	rv, err := c.resolver.Resolve(owl.WithNamespace(decoderNamespace), owl.WithValue(RequestValue, req))
+	rv, err := c.resolver.Resolve(owl.WithNamespace(decoderNamespace), owl.WithValue(ctxRequest, req))
 	if err != nil {
-		return nil, NewInvalidFieldError(err.(*owl.ResolveError))
+		return nil, newInvalidFieldError(err.(*owl.ResolveError))
 	}
 	return rv.Interface(), nil
 }
@@ -88,13 +89,23 @@ func (c *Core) Decode(req *http.Request) (interface{}, error) {
 // that the Core instance holds, an ErrTypeMismatch error will be returned. In order to
 // avoid this error, you can use httpin.Encode() function instead. Which will create a
 // Core instance for you.
-func (c *Core) Encode(method string, url string, input interface{}) (*http.Request, error) {
+func (c *Core) Encode(method string, url string, input any) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = c.resolver.Scan(input, owl.WithNamespace(encoderNamespace), owl.WithValue(RequestValue, req)); err != nil {
+	rb := &RequestBuilder{}
+	if err = c.resolver.Scan(
+		input,
+		owl.WithNamespace(encoderNamespace),
+		owl.WithValue(ctxRequestBuilder, rb),
+	); err != nil {
+		return nil, err
+	}
+
+	// Populate the request with the encoded values.
+	if err := rb.Populate(req); err != nil {
 		return nil, err
 	}
 
@@ -103,7 +114,7 @@ func (c *Core) Encode(method string, url string, input interface{}) (*http.Reque
 
 // buildResolver builds a resolver for the inputStruct. It will run normalizations
 // on the resolver and cache it.
-func buildResolver(inputStruct interface{}) (*owl.Resolver, error) {
+func buildResolver(inputStruct any) (*owl.Resolver, error) {
 	resolver, err := owl.New(inputStruct)
 	if err != nil {
 		return nil, err
@@ -130,6 +141,7 @@ func normalizeResolver(r *owl.Resolver) error {
 	normalize := func(r *owl.Resolver) error {
 		for _, fn := range []func(*owl.Resolver) error{
 			reserveDecoderDirective,
+			reserveEncoderDirective,
 			normalizeBodyDirective,
 			ensureDirectiveExecutorsRegistered, // always the last one
 		} {
@@ -152,14 +164,35 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 		return nil
 	}
 	if len(d.Argv) == 0 {
-		return ErrMissingDecoderName
+		return errors.New("missing decoder name")
 	}
-
 	decoder := decoderByName(d.Argv[0])
 	if decoder == nil {
-		return ErrDecoderNotFound
+		return fmt.Errorf("unregistered decoder: %q", d.Argv[0])
 	}
-	r.Context = context.WithValue(r.Context, CustomDecoder, decoder)
+	if isFileType(r.Type) {
+		return errors.New("cannot use decoder directive on a file type field")
+	}
+	r.Context = context.WithValue(r.Context, ctxCustomDecoder, decoder)
+	return nil
+}
+
+func reserveEncoderDirective(r *owl.Resolver) error {
+	d := r.RemoveDirective("encoder")
+	if d == nil {
+		return nil
+	}
+	if len(d.Argv) == 0 {
+		return errors.New("missing encoder name")
+	}
+	encoder := encoderByName(d.Argv[0])
+	if encoder == nil {
+		return fmt.Errorf("unregistered encoder: %q", d.Argv[0])
+	}
+	if isFileType(r.Type) {
+		return errors.New("cannot use encoder directive on a file type field")
+	}
+	r.Context = context.WithValue(r.Context, ctxCustomEncoder, encoder)
 	return nil
 }
 
@@ -168,10 +201,10 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 	for _, d := range r.Directives {
 		if decoderNamespace.LookupExecutor(d.Name) == nil {
-			return fmt.Errorf("%w: %q (in decoder namespace)", ErrUnregisteredExecutor, d.Name)
+			return fmt.Errorf("unregistered directive: %q (decoder)", d.Name)
 		}
 		if encoderNamespace.LookupExecutor(d.Name) == nil {
-			return fmt.Errorf("%w: %q (in encoder namespace)", ErrUnregisteredExecutor, d.Name)
+			return fmt.Errorf("unregistered directive: %q (encoder)", d.Name)
 		}
 	}
 	return nil
@@ -179,7 +212,7 @@ func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 
 // getErrorHandler returns the error handler of the core if set, or the global
 // custom error handler.
-func (c *Core) getErrorHandler() ErrorHandler {
+func (c *Core) getErrorHandler() errorHandler {
 	if c.errorHandler != nil {
 		return c.errorHandler
 	}

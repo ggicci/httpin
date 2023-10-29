@@ -1,6 +1,9 @@
 package httpin
 
 import (
+	"bytes"
+	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"io"
 	"net/http"
@@ -24,13 +27,74 @@ type BodyPayload struct {
 	Languages []*LanguageLevel `json:"languages" xml:"languages"`
 }
 
-func TestBodyDecoder_JSON(t *testing.T) {
-	type JSONBodyPayloadWithBodyDirective struct {
-		Page     int          `in:"form=page"`
-		PageSize int          `in:"form=page_size"`
-		Body     *BodyPayload `in:"body=json"`
-	}
+type JSONBodyPayloadWithBodyDirective struct {
+	Page     int          `in:"form=page"`
+	PageSize int          `in:"form=page_size"`
+	Body     *BodyPayload `in:"body=json"`
+}
 
+type XMLBodyPayloadWithBodyDirective struct {
+	Body *BodyPayload `in:"body=xml"`
+}
+
+var sampleJSON_JSONBodyPayloadWithBodyDirective = `
+{
+	"name": "Elia",
+	"is_native": false,
+	"age": 14,
+	"hobbies": ["Gaming", "Drawing"],
+	"languages": [
+		{"lang": "English", "level": 10},
+		{"lang": "Japanese", "level": 3}
+	]
+}`
+
+var sampleObject_JSONBodyPayloadWithBodyDirective = &JSONBodyPayloadWithBodyDirective{
+	Page:     4,
+	PageSize: 30,
+	Body: &BodyPayload{
+		Name:     "Elia",
+		Age:      14,
+		IsNative: false,
+		Hobbies:  []string{"Gaming", "Drawing"},
+		Languages: []*LanguageLevel{
+			{"English", 10},
+			{"Japanese", 3},
+		},
+	},
+}
+
+var sampleXML_XMLBodyPayloadWithBodyDirective = `
+<BodyPayload>
+	<name>Elia</name>
+	<age>14</age>
+	<is_native>false</is_native>
+	<hobbies>Gaming</hobbies>
+	<hobbies>Drawing</hobbies>
+	<languages>
+	   <lang>English</lang>
+	   <level>10</level>
+	</languages>
+	<languages>
+	   <lang>Japanese</lang>
+	   <level>3</level>
+	</languages>
+</BodyPayload>`
+
+var sampleObject_XMLBodyPayloadWithBodyDirective = &XMLBodyPayloadWithBodyDirective{
+	Body: &BodyPayload{
+		Name:     "Elia",
+		Age:      14,
+		IsNative: false,
+		Hobbies:  []string{"Gaming", "Drawing"},
+		Languages: []*LanguageLevel{
+			{"English", 10},
+			{"Japanese", 3},
+		},
+	},
+}
+
+func TestBodyDecoder_JSON(t *testing.T) {
 	assert := assert.New(t)
 	core, err := New(JSONBodyPayloadWithBodyDirective{})
 	assert.NoError(err)
@@ -39,82 +103,26 @@ func TestBodyDecoder_JSON(t *testing.T) {
 	r.Form = make(url.Values)
 	r.Form.Set("page", "4")
 	r.Form.Set("page_size", "30")
-	r.Body = io.NopCloser(strings.NewReader(`
-	{
-		"name": "Elia",
-		"is_native": false,
-		"age": 14,
-		"hobbies": ["Gaming", "Drawing"],
-		"languages": [
-			{"lang": "English", "level": 10},
-			{"lang": "Japanese", "level": 3}
-		]
-	}`))
+	r.Body = io.NopCloser(strings.NewReader(sampleJSON_JSONBodyPayloadWithBodyDirective))
 	r.Header.Set("Content-Type", "application/json")
-
-	expected := &JSONBodyPayloadWithBodyDirective{
-		Page:     4,
-		PageSize: 30,
-		Body: &BodyPayload{
-			Name:     "Elia",
-			Age:      14,
-			IsNative: false,
-			Hobbies:  []string{"Gaming", "Drawing"},
-			Languages: []*LanguageLevel{
-				{"English", 10},
-				{"Japanese", 3},
-			},
-		},
-	}
-
 	gotValue, err := core.Decode(r)
 	assert.NoError(err)
-	assert.Equal(expected, gotValue)
+	assert.Equal(sampleObject_JSONBodyPayloadWithBodyDirective, gotValue)
 }
 
 func TestBodyDecoder_XML(t *testing.T) {
-	type XMLBodyPayloadWithBodyDirective struct {
-		Body *BodyPayload `in:"body=xml"`
-	}
 
 	assert := assert.New(t)
 	core, err := New(XMLBodyPayloadWithBodyDirective{})
 	assert.NoError(err)
 
 	r, _ := http.NewRequest("GET", "https://example.com", nil)
-	r.Body = io.NopCloser(strings.NewReader(`
-	<BodyPayload>
-		<name>Elia</name>
-		<age>14</age>
-		<is_native>false</is_native>
-		<hobbies>Gaming</hobbies>
-		<hobbies>Drawing</hobbies>
-		<languages>
-		   <lang>English</lang>
-		   <level>10</level>
-		</languages>
-		<languages>
-		   <lang>Japanese</lang>
-		   <level>3</level>
-		</languages>
-	</BodyPayload>`))
+	r.Body = io.NopCloser(strings.NewReader(sampleXML_XMLBodyPayloadWithBodyDirective))
 	r.Header.Set("Content-Type", "application/xml")
 
-	expected := &XMLBodyPayloadWithBodyDirective{
-		Body: &BodyPayload{
-			Name:     "Elia",
-			Age:      14,
-			IsNative: false,
-			Hobbies:  []string{"Gaming", "Drawing"},
-			Languages: []*LanguageLevel{
-				{"English", 10},
-				{"Japanese", 3},
-			},
-		},
-	}
 	gotValue, err := core.Decode(r)
 	assert.NoError(err)
-	assert.Equal(expected, gotValue)
+	assert.Equal(sampleObject_XMLBodyPayloadWithBodyDirective, gotValue)
 }
 
 func TestBodyDecoder_DefaultsToJSON(t *testing.T) {
@@ -128,34 +136,38 @@ func TestBodyDecoder_DefaultsToJSON(t *testing.T) {
 	assert.Equal(t, "json", d.Argv[0])
 }
 
-func TestBodyDecoder_ErrUnknownBodyType(t *testing.T) {
-	type UnknownBodyTypePayload struct {
+func TestBodyDecoder_ErrUnknownBodyFormat(t *testing.T) {
+	type UnknownBodyFormatPayload struct {
 		Body *BodyPayload `in:"body=yaml"`
 	}
 
-	core, err := New(UnknownBodyTypePayload{})
-	assert.ErrorIs(t, err, ErrUnknownBodyType)
+	core, err := New(UnknownBodyFormatPayload{})
+	assert.ErrorContains(t, err, "unknown body format: \"yaml\"")
 	assert.Nil(t, core)
 }
 
-type yamlBodyDecoder struct{}
+type yamlBody struct{}
 
 var errYamlNotImplemented = errors.New("yaml not implemented")
 
-func (de *yamlBodyDecoder) Decode(src io.Reader, dst interface{}) error {
+func (de *yamlBody) Decode(src io.Reader, dst any) error {
 	return errYamlNotImplemented // for test only
 }
 
-type YamlInput struct {
-	Body map[string]interface{} `in:"body=yaml"`
+func (en *yamlBody) Encode(src any) (io.Reader, error) {
+	return nil, errYamlNotImplemented // for test only
 }
 
-func TestRegisterBodyDecoder(t *testing.T) {
+type YamlInput struct {
+	Body map[string]any `in:"body=yaml"`
+}
+
+func TestRegisterBody(t *testing.T) {
 	assert.NotPanics(t, func() {
-		RegisterBodyDecoder("yaml", &yamlBodyDecoder{})
+		RegisterBodyFormat("yaml", &yamlBody{})
 	})
 	assert.Panics(t, func() {
-		RegisterBodyDecoder("yaml", &yamlBodyDecoder{})
+		RegisterBodyFormat("yaml", &yamlBody{})
 	})
 
 	core, err := New(YamlInput{})
@@ -169,17 +181,71 @@ func TestRegisterBodyDecoder(t *testing.T) {
 	assert.Nil(t, gotValue)
 }
 
-func TestRegisterBodyDecoder_forceReplace(t *testing.T) {
-	assert.NotPanics(t, func() {
-		RegisterBodyDecoder("yaml", &yamlBodyDecoder{}, true)
-	})
-	assert.NotPanics(t, func() {
-		RegisterBodyDecoder("yaml", &yamlBodyDecoder{}, true)
+func TestRegisterBody_nil(t *testing.T) {
+	assert.Panics(t, func() {
+		RegisterBodyFormat("toml", nil)
 	})
 }
 
-func TestRegisterBodyDecoder_forceReplace_withEmptyBodyType(t *testing.T) {
-	assert.PanicsWithValue(t, "httpin: body type cannot be empty", func() {
-		RegisterBodyDecoder("", &yamlBodyDecoder{}, true)
+func TestRegisterBody_forceReplace(t *testing.T) {
+	assert.NotPanics(t, func() {
+		RegisterBodyFormat("yaml", &yamlBody{}, true)
 	})
+	assert.NotPanics(t, func() {
+		RegisterBodyFormat("yaml", &yamlBody{}, true)
+	})
+}
+
+func TestRegisterBody_forceReplace_withEmptyBodyFormat(t *testing.T) {
+	assert.PanicsWithError(t, "httpin: body format cannot be empty", func() {
+		RegisterBodyFormat("", &yamlBody{}, true)
+	})
+}
+
+func TestBodyEncoder_JSON(t *testing.T) {
+	assert := assert.New(t)
+	core, err := New(JSONBodyPayloadWithBodyDirective{})
+	assert.NoError(err)
+	req, err := core.Encode("POST", "/data", sampleObject_JSONBodyPayloadWithBodyDirective)
+	expected, _ := http.NewRequest("POST", "/data", nil)
+	expected.Form = url.Values{
+		"page":      {"4"},
+		"page_size": {"30"},
+	}
+	expected.Header.Set("Content-Type", "application/json")
+	assert.NoError(err)
+	var body bytes.Buffer
+	assert.NoError(json.NewEncoder(&body).Encode(sampleObject_JSONBodyPayloadWithBodyDirective.Body))
+	expected.Body = io.NopCloser(&body)
+	assert.NoError(err)
+	assertRequest(t, expected, req)
+
+	// On the server side (decode).
+	gotValue, err := core.Decode(req)
+	assert.NoError(err)
+	got, ok := gotValue.(*JSONBodyPayloadWithBodyDirective)
+	assert.True(ok)
+	assert.Equal(sampleObject_JSONBodyPayloadWithBodyDirective, got)
+}
+
+func TestBodyEncoder_XML(t *testing.T) {
+	assert := assert.New(t)
+	core, err := New(XMLBodyPayloadWithBodyDirective{})
+	assert.NoError(err)
+	req, err := core.Encode("POST", "/data", sampleObject_XMLBodyPayloadWithBodyDirective)
+	expected, _ := http.NewRequest("POST", "/data", nil)
+	expected.Header.Set("Content-Type", "application/xml")
+	assert.NoError(err)
+	var body bytes.Buffer
+	assert.NoError(xml.NewEncoder(&body).Encode(sampleObject_XMLBodyPayloadWithBodyDirective.Body))
+	expected.Body = io.NopCloser(&body)
+	assert.NoError(err)
+	assertRequest(t, expected, req)
+
+	// On the server side (decode).
+	gotValue, err := core.Decode(req)
+	assert.NoError(err)
+	got, ok := gotValue.(*XMLBodyPayloadWithBodyDirective)
+	assert.True(ok)
+	assert.Equal(sampleObject_XMLBodyPayloadWithBodyDirective, got)
 }

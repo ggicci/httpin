@@ -21,18 +21,20 @@ type GochiURLParamFunc func(r *http.Request, key string) string
 //	    httpin.UseGochiURLParam("path", chi.URLParam)
 //	}
 func UseGochiURLParam(directive string, fn GochiURLParamFunc) {
-	RegisterDirectiveExecutor(directive, &gochiURLParamExtractor{URLParam: fn}, noopDirective)
+	RegisterDirective(directive, &directivePath{
+		overrideDecode: (&gochiURLParamExtractor{URLParam: fn}).Execute,
+	})
 }
 
 type gochiURLParamExtractor struct {
 	URLParam GochiURLParamFunc
 }
 
-func (chi *gochiURLParamExtractor) Execute(ctx *DirectiveRuntime) error {
-	req := ctx.Context.Value(RequestValue).(*http.Request)
+func (chi *gochiURLParamExtractor) Execute(rtm *DirectiveRuntime) error {
+	req := rtm.GetRequest()
 	kvs := make(map[string][]string)
 
-	for _, key := range ctx.Directive.Argv {
+	for _, key := range rtm.Directive.Argv {
 		value := chi.URLParam(req, key)
 		if value != "" {
 			kvs[key] = []string{value}
@@ -40,9 +42,10 @@ func (chi *gochiURLParamExtractor) Execute(ctx *DirectiveRuntime) error {
 	}
 
 	extractor := &extractor{
+		Runtime: rtm,
 		Form: multipart.Form{
 			Value: kvs,
 		},
 	}
-	return extractor.Execute(ctx)
+	return extractor.Extract()
 }

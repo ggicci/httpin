@@ -35,15 +35,15 @@ type InvalidDate struct {
 	Err   error
 }
 
-func decodeMyDate(value string) (interface{}, error) {
+func decodeMyDate(value string) (time.Time, error) {
 	t, err := time.Parse("2006-01-02", value)
 	if err != nil {
-		return nil, &InvalidDate{Value: value, Err: err}
+		return time.Time{}, &InvalidDate{Value: value, Err: err}
 	}
 	return t, nil
 }
 
-var myDateDecoder = DecoderFunc[string](decodeMyDate)
+var myDateDecoder = DecoderFunc[time.Time](decodeMyDate)
 
 func (e *InvalidDate) Error() string {
 	return fmt.Sprintf("invalid date: %q (date must conform to format \"2006-01-02\"), %s", e.Value, e.Err)
@@ -66,7 +66,7 @@ func TestNew_WithUnregisteredExecutor(t *testing.T) {
 
 	core, err := New(ThingWithInvalidDirectives{})
 	assert.Nil(t, core)
-	assert.ErrorIs(t, err, ErrUnregisteredExecutor)
+	assert.ErrorContains(t, err, "unregistered directive")
 	assert.ErrorContains(t, err, "base58_to_integer")
 }
 
@@ -182,7 +182,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		core, err := New(Cursor{})
 		assert.NoError(t, err)
 		got, err := core.Decode(r)
-		assert.ErrorIs(t, err, ErrUnsupporetedType)
+		assert.ErrorIs(t, err, errUnsupportedType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -200,7 +200,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		core, err := New(Payload{})
 		assert.NoError(t, err)
 		got, err := core.Decode(r)
-		assert.ErrorIs(t, err, ErrUnsupporetedType)
+		assert.ErrorIs(t, err, errUnsupportedType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -229,8 +229,8 @@ func TestCore_Decode_UnexportedFields(t *testing.T) {
 }
 
 func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
-	RegisterValueTypeDecoder[bool](myBoolDecoder) // usually done in init()
-	RegisterValueTypeDecoder[Place](myPlaceDecoder)
+	RegisterDecoder[bool](myBoolDecoder) // usually done in init()
+	RegisterDecoder[Place](myPlaceDecoder)
 
 	type Input struct {
 		IsMember           bool   `in:"form=is_member"`
@@ -259,7 +259,7 @@ func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
 }
 
 func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
-	RegisterValueTypeDecoder[*Place](myPlacePointerDecoder) // usually done in init()
+	RegisterDecoder[*Place](myPlacePointerDecoder) // usually done in init()
 	type Input struct {
 		BornPlace *Place `in:"form=born_place"`
 		LivePlace Place  `in:"form=live_place"`
@@ -267,7 +267,7 @@ func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
 	core, err := New(Input{})
 	assert.NoError(t, err)
 
-	r := newMultipartFormRequestFromMap(map[string]interface{}{
+	r := newMultipartFormRequestFromMap(map[string]any{
 		"born_place": "China.Huzhou",
 		"live_place": "Canada.Toronto",
 	})
@@ -287,7 +287,7 @@ func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
 func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert := assert.New(t)
 
-	RegisterValueTypeDecoder[Place](myPlaceDecoder) // usually done in init()
+	RegisterDecoder[Place](myPlaceDecoder) // usually done in init()
 	type Input struct {
 		IsMember       *bool  `in:"form=is_member"`
 		Limit          *int   `in:"form=limit"`
@@ -297,7 +297,7 @@ func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert.NoError(err)
 
 	// Missing fields.
-	r := newMultipartFormRequestFromMap(map[string]interface{}{
+	r := newMultipartFormRequestFromMap(map[string]any{
 		"is_member": "true",
 	})
 	gotValue, err := core.Decode(r)
@@ -308,7 +308,7 @@ func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert.Nil(got.LastAccessFrom)
 
 	// All fields.
-	r = newMultipartFormRequestFromMap(map[string]interface{}{
+	r = newMultipartFormRequestFromMap(map[string]any{
 		"is_member": "true",
 		"limit":     "10",
 		"_laf":      "Canada.Toronto",
@@ -321,7 +321,7 @@ func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert.Equal(Place{Country: "Canada", City: "Toronto"}, *got.LastAccessFrom)
 
 	// Invalid value.
-	r = newMultipartFormRequestFromMap(map[string]interface{}{
+	r = newMultipartFormRequestFromMap(map[string]any{
 		"_laf": "Canada", // invalid value
 	})
 	gotValue, err = core.Decode(r)
@@ -376,21 +376,31 @@ func TestCore_Decode_CustomDecoder_NamedDecoder(t *testing.T) {
 func TestCore_Decode_CustomDecoder_NamedDecoder_ErrMissingDecoderName(t *testing.T) {
 	type GenderType string
 	type Input struct {
-		Gender GenderType `in:"form=gender;decoder"` // cause ErrMissingDecoderName
+		Gender GenderType `in:"form=gender;decoder"`
 	}
 
 	core, err := New(Input{})
-	assert.ErrorIs(t, err, ErrMissingDecoderName)
+	assert.ErrorContains(t, err, "missing decoder name")
 	assert.Nil(t, core)
 }
 
-func TestCore_Decode_CustomDecoder_NamedDecoder_ErrDecoderNotFound(t *testing.T) {
+func TestCore_Decode_CustomDecoder_NamedDecoder_ErrUnregisteredDecoder(t *testing.T) {
 	type GenderType string
 	type Input struct {
-		Gender GenderType `in:"form=gender;decoder=notfound"` // cause ErrDecoderNotFound
+		Gender GenderType `in:"form=gender;decoder=notfound"` // cause ErrUnregisteredDecoder
 	}
 	core, err := New(Input{})
-	assert.ErrorIs(t, err, ErrDecoderNotFound)
+	assert.ErrorContains(t, err, "unregistered decoder: \"notfound\"")
+	assert.Nil(t, core)
+}
+
+func TestCore_Decode_CustomDecoder_NamedDecoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
+	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+	type Input struct {
+		Avatar *File `in:"form=avatar;decoder=decodeMyDate"`
+	}
+	core, err := New(Input{})
+	assert.ErrorContains(t, err, "cannot use decoder directive on a file type field")
 	assert.Nil(t, core)
 }
 
@@ -406,7 +416,7 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrValueTypeMismatch(t *testing.
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{"birthday": {"1991-11-10"}} // birthday is string, not time.Time
 	_, err = core.Decode(r)
-	assert.ErrorIs(t, err, ErrTypeMismatch)
+	assert.ErrorIs(t, err, errTypeMismatch)
 	assert.ErrorContains(t, err, "birthday")
 	assert.ErrorContains(t, err, "string")
 	assert.ErrorContains(t, err, "time.Time")

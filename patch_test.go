@@ -12,14 +12,14 @@ import (
 type AccountPatch struct {
 	Email    patch.Field[string]   `in:"form=email"`
 	Age      patch.Field[int]      `in:"form=age"`
-	Avatar   patch.Field[File]     `in:"form=avatar"`
+	Avatar   patch.Field[*File]    `in:"form=avatar"`
 	Hobbies  patch.Field[[]string] `in:"form=hobbies"`
-	Pictures patch.Field[[]File]   `in:"form=pictures"`
+	Pictures patch.Field[[]*File]  `in:"form=pictures"`
 }
 
 func TestPatchField(t *testing.T) {
 	fileContent := []byte("hello")
-	r := newMultipartFormRequestFromMap(map[string]interface{}{
+	r := newMultipartFormRequestFromMap(map[string]any{
 		"age":    "18",
 		"avatar": fileContent,
 		"hobbies": []string{
@@ -49,12 +49,12 @@ func TestPatchField(t *testing.T) {
 		Value: []string{"reading", "swimming"},
 	}, got.Hobbies)
 
-	assert.Equal(t, patch.Field[[]File]{
+	assert.Equal(t, patch.Field[[]*File]{
 		Valid: false,
 		Value: nil,
 	}, got.Pictures)
 
-	assertFile(t, got.Avatar.Value, "avatar.txt", fileContent)
+	assertDecodedFile(t, got.Avatar.Value, "avatar.txt", fileContent)
 }
 
 func TestPatchField_DecodeValueFailed(t *testing.T) {
@@ -76,7 +76,7 @@ func TestPatchField_DecodeValueFailed(t *testing.T) {
 }
 
 func TestPatchField_DecodeFileFailed(t *testing.T) {
-	body, writer := newMultipartFormWriterFromMap(map[string]interface{}{
+	body, writer := newMultipartFormWriterFromMap(map[string]any{
 		"email":  "abc@example.com",
 		"age":    "18",
 		"avatar": []byte("hello"),

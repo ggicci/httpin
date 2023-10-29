@@ -19,7 +19,7 @@ func TestWithErrorHandler(t *testing.T) {
 
 	// Fail on nil error handler.
 	_, err := New(ProductQuery{}, WithErrorHandler(nil))
-	assert.ErrorIs(t, err, ErrNilErrorHandler)
+	assert.ErrorContains(t, err, "nil error handler")
 }
 
 func TestWithMaxMemory(t *testing.T) {
@@ -33,5 +33,5 @@ func TestWithMaxMemory(t *testing.T) {
 
 	// Fail on too small max memory.
 	_, err := New(ProductQuery{}, WithMaxMemory(100))
-	assert.ErrorIs(t, err, ErrMaxMemoryTooSmall)
+	assert.ErrorContains(t, err, "max memory too small")
 }

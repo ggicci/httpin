@@ -38,3 +38,7 @@ func TestGorillaMuxVars(t *testing.T) {
 	expected := `{"Username":"ggicci","PostID":1024}` + "\n"
 	assert.Equal(t, expected, rw.Body.String())
 }
+
+func TestGorilla_EncodePath(t *testing.T) {
+
+}

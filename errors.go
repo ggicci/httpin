@@ -8,34 +8,6 @@ import (
 	"github.com/ggicci/owl"
 )
 
-var (
-	ErrMissingField          = errors.New("missing required field")
-	ErrUnsupporetedType      = errors.New("unsupported type")
-	ErrUnregisteredExecutor  = errors.New("unregistered executor")
-	ErrDuplicateTypeDecoder  = errors.New("duplicate type decoder")
-	ErrDuplicateNamedDecoder = errors.New("duplicate named decoder")
-	ErrNilDecoder            = errors.New("nil decoder")
-	ErrInvalidDecoder        = errors.New("invalid decoder")
-	ErrReservedExecutorName  = errors.New("reserved executor name")
-	ErrUnknownBodyType       = errors.New("unknown body type")
-	ErrNilErrorHandler       = errors.New("nil error handler")
-	ErrMaxMemoryTooSmall     = errors.New("max memory too small")
-	ErrNilFile               = errors.New("nil file")
-	ErrDuplicateBodyDecoder  = errors.New("duplicate body decoder")
-	ErrMissingDecoderName    = errors.New("missing decoder name")
-	ErrDecoderNotFound       = errors.New("decoder not found")
-	ErrTypeMismatch          = errors.New("type mismatch")
-)
-
-func invalidDecodeReturnType(expected, got reflect.Type) error {
-	return fmt.Errorf("%w: value of type %q returned by decoder is not assignable to type %q",
-		ErrTypeMismatch, got, expected)
-}
-
-func unsupportedTypeError(typ reflect.Type) error {
-	return fmt.Errorf("%w: %q", ErrUnsupporetedType, typ)
-}
-
 type InvalidFieldError struct {
 	// err is the underlying error thrown by the directive executor.
 	err error
@@ -51,7 +23,7 @@ type InvalidFieldError struct {
 	Key string `json:"key"`
 
 	// Value is the input data.
-	Value interface{} `json:"value"`
+	Value any `json:"value"`
 
 	// ErrorMessage is the string representation of `internalError`.
 	ErrorMessage string `json:"error"`
@@ -65,13 +37,13 @@ func (e *InvalidFieldError) Unwrap() error {
 	return e.err
 }
 
-func NewInvalidFieldError(err *owl.ResolveError) *InvalidFieldError {
+func newInvalidFieldError(err *owl.ResolveError) *InvalidFieldError {
 	r := err.Resolver
 	de := err.AsDirectiveExecutionError()
 
 	var fe *fieldError
 	var inputKey string
-	var inputValue interface{}
+	var inputValue any
 	errors.As(err, &fe)
 	if fe != nil {
 		inputValue = fe.Value
@@ -90,7 +62,7 @@ func NewInvalidFieldError(err *owl.ResolveError) *InvalidFieldError {
 
 type fieldError struct {
 	Key           string
-	Value         interface{}
+	Value         any
 	internalError error
 }
 
@@ -100,4 +72,25 @@ func (e fieldError) Error() string {
 
 func (e fieldError) Unwrap() error {
 	return e.internalError
+}
+
+var (
+	errMissingField    = errors.New("missing required field") // directive: "required"
+	errUnsupportedType = errors.New("unsupported type")
+	errTypeMismatch    = errors.New("type mismatch")
+)
+
+func invalidDecodeReturnType(expected, got reflect.Type) error {
+	return fmt.Errorf("%w: value of type %q returned by decoder is not assignable to type %q",
+		errTypeMismatch, got, expected)
+}
+
+func unsupportedTypeError(typ reflect.Type) error {
+	return fmt.Errorf("%w: %q", errUnsupportedType, typ)
+}
+
+func panicOnError(err error) {
+	if err != nil {
+		panic(fmt.Errorf("httpin: %w", err))
+	}
 }

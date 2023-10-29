@@ -6,106 +6,90 @@ import (
 	"reflect"
 )
 
-type decoderKindType int
-
-const (
-	decoderKindScalar     decoderKindType = iota // T
-	decoderKindMulti                             // []T
-	decoderKindPatch                             // patch.Field[T]
-	decoderKindPatchMulti                        // patch.Field[[]T]
-)
-
-type decoderAdaptor[DT DataSource] interface {
-	BaseType() reflect.Type            // T
-	Scalar(reflect.Type) decoder2D[DT] // takes in a desired return type
-	Multi(reflect.Type) decoder2D[DT]
-	Patch(reflect.Type) decoder2D[DT]
-	PatchMulti(reflect.Type) decoder2D[DT]
-	DecoderByKind(kind decoderKindType, returnType reflect.Type) decoder2D[DT]
+// decoder2d is the interface implemented by types that can decode a slice of
+// DataSource to themselves. DecodeX[DT] takes in a slice of DT values and
+// decodes them to some type of value. DecodeX[DT] is usually derived from
+// Decoder[DT], using Decoder[DT] to decode each element of the slice.
+type decoder2d[DT dataSource] interface {
+	DecodeX(values []DT) (any, error)
 }
 
-// decoderAdaptorImpl is an implementation of decoderAdaptor.
-// It can be adapted to 3 types of Decoder:
-//
-//   - Call .Scalar() to get a Decoder that can be registered for type T.
-//   - Call .Multi() for []T.
-//   - Call .Patch() for patch.Field[T].
-//   - Call .PatchMulti() for patch.Field[[]T].
-//
-// Itself is also a ScalarTypeDecoder.
-type decoderAdaptorImpl[DT DataSource] struct {
-	Decoder[DT]
-	baseType reflect.Type
+type decoderAdaptor[DT dataSource] struct {
+	BaseDecoder decoderInterface[DT, any]
+	BaseType    reflect.Type
 }
 
-func (sva *decoderAdaptorImpl[DT]) BaseType() reflect.Type {
-	return sva.baseType
-}
-
-func (sva *decoderAdaptorImpl[DT]) Scalar(returnType reflect.Type) decoder2D[DT] {
-	return &scalarTypeDecoder[DT]{sva, returnType}
-}
-
-func (sva *decoderAdaptorImpl[DT]) Multi(returnType reflect.Type) decoder2D[DT] {
-	return &multiTypeDecoder[DT]{sva, returnType}
-}
-
-func (sva *decoderAdaptorImpl[DT]) Patch(returnType reflect.Type) decoder2D[DT] {
-	return &patchFieldTypeDecoder[DT]{sva, returnType}
-}
-
-func (sva *decoderAdaptorImpl[DT]) PatchMulti(returnType reflect.Type) decoder2D[DT] {
-	return &patchFieldMultiTypeDecoder[DT]{sva, returnType}
-}
-
-func (sva *decoderAdaptorImpl[DT]) DecoderByKind(kind decoderKindType, returnType reflect.Type) decoder2D[DT] {
-	switch kind {
-	case decoderKindScalar:
-		return sva.Scalar(returnType)
-	case decoderKindMulti:
-		return sva.Multi(returnType)
-	case decoderKindPatch:
-		return sva.Patch(returnType)
-	case decoderKindPatchMulti:
-		return sva.PatchMulti(returnType)
-	}
-	return nil
-}
+type fileDecoderAdaptor = *decoderAdaptor[*multipart.FileHeader]
 
 // adaptDecoder adapts a decoder (of Decoder[DT]) to a decoderAdaptor.
 // It returns nil if the decoder is not supported.
-func adaptDecoder(returnType reflect.Type, decoder interface{}) interface{} {
+func adaptDecoder(baseType reflect.Type, decoder any) any {
 	switch decoder := decoder.(type) {
-	case ValueTypeDecoder:
-		return &decoderAdaptorImpl[string]{decoder, returnType}
-	case FileTypeDecoder:
-		return &decoderAdaptorImpl[*multipart.FileHeader]{decoder, returnType}
+	case Decoder[any]:
+		return &decoderAdaptor[string]{decoder, baseType}
+	case FileDecoder[any]:
+		return &decoderAdaptor[*multipart.FileHeader]{decoder, baseType}
 	default:
 		return nil
 	}
 }
 
-type scalarTypeDecoder[DT DataSource] struct {
-	*decoderAdaptorImpl[DT]
+// Scalar returns an adapted decoder for type T.
+func (sva *decoderAdaptor[DT]) Scalar(returnType reflect.Type) decoder2d[DT] {
+	return &scalarTypeDecoder[DT]{sva, returnType}
+}
+
+// Multi returns an adapted decoder for []T.
+func (sva *decoderAdaptor[DT]) Multi(returnType reflect.Type) decoder2d[DT] {
+	return &multiTypeDecoder[DT]{sva, returnType}
+}
+
+// Patch returns an adapted decoder for patch.Field[T].
+func (sva *decoderAdaptor[DT]) Patch(returnType reflect.Type) decoder2d[DT] {
+	return &patchFieldTypeDecoder[DT]{sva, returnType}
+}
+
+// PatchMulti returns an adapted decoder for patch.Field[[]T].
+func (sva *decoderAdaptor[DT]) PatchMulti(returnType reflect.Type) decoder2d[DT] {
+	return &patchFieldMultiTypeDecoder[DT]{sva, returnType}
+}
+
+func (sva *decoderAdaptor[DT]) DecoderByKind(kind typeKind, returnType reflect.Type) decoder2d[DT] {
+	switch kind {
+	case typeKindScalar:
+		return sva.Scalar(returnType)
+	case typeKindMulti:
+		return sva.Multi(returnType)
+	case typeKindPatch:
+		return sva.Patch(returnType)
+	case typeKindPatchMulti:
+		return sva.PatchMulti(returnType)
+	default:
+		return nil
+	}
+}
+
+type scalarTypeDecoder[DT dataSource] struct {
+	*decoderAdaptor[DT]
 	ReturnType reflect.Type
 }
 
 // DecodeX of scalarTypeDecoder[DT] decodes a single value.
 // It only decodes the first value in the given slice. Returns T.
-func (s *scalarTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* T */, error) {
-	return s.Decoder.Decode(values[0])
+func (s *scalarTypeDecoder[DT]) DecodeX(values []DT) (any /* T */, error) {
+	return s.BaseDecoder.Decode(values[0])
 }
 
-type multiTypeDecoder[DT DataSource] struct {
-	*decoderAdaptorImpl[DT]
+type multiTypeDecoder[DT dataSource] struct {
+	*decoderAdaptor[DT]
 	ReturnType reflect.Type
 }
 
 // DecodeX of multiTypeDecoder[DT] decodes multiple values. Returns []T.
-func (m *multiTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* []T */, error) {
+func (m *multiTypeDecoder[DT]) DecodeX(values []DT) (any /* []T */, error) {
 	res := reflect.MakeSlice(m.ReturnType, len(values), len(values))
 	for i, value := range values {
-		if gotValue, err := m.Decoder.Decode(value); err != nil {
+		if gotValue, err := m.BaseDecoder.Decode(value); err != nil {
 			return nil, fmt.Errorf("at index %d: %w", i, err)
 		} else {
 			res.Index(i).Set(reflect.ValueOf(gotValue))
@@ -114,16 +98,16 @@ func (m *multiTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* []T */, erro
 	return res.Interface(), nil
 }
 
-type patchFieldTypeDecoder[DT DataSource] struct {
-	*decoderAdaptorImpl[DT]
+type patchFieldTypeDecoder[DT dataSource] struct {
+	*decoderAdaptor[DT]
 	ReturnType reflect.Type
 }
 
 // DecodeX of patchFieldTypeDecoder[DT] decodes a single value.
 // It only decodes the first value in the given slice. Returns patch.Field[T].
-func (p *patchFieldTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* patch.Field[T] */, error) {
+func (p *patchFieldTypeDecoder[DT]) DecodeX(values []DT) (any /* patch.Field[T] */, error) {
 	res := reflect.New(p.ReturnType)
-	if gotValue, err := p.Decoder.Decode(values[0]); err != nil {
+	if gotValue, err := p.BaseDecoder.Decode(values[0]); err != nil {
 		return res.Interface(), err
 	} else {
 		res.Elem().FieldByName("Value").Set(reflect.ValueOf(gotValue))
@@ -132,30 +116,23 @@ func (p *patchFieldTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* patch.F
 	}
 }
 
-type patchFieldMultiTypeDecoder[DT DataSource] struct {
-	*decoderAdaptorImpl[DT]
+type patchFieldMultiTypeDecoder[DT dataSource] struct {
+	*decoderAdaptor[DT]
 	ReturnType reflect.Type
 }
 
 // DecodeX of patchFieldMultiTypeDecoder[DT] decodes multiple values. Returns patch.Field[[]T].
-func (p *patchFieldMultiTypeDecoder[DT]) DecodeX(values []DT) (interface{} /* patch.Field[[]T] */, error) {
-	subValue := reflect.MakeSlice(reflect.SliceOf(p.BaseType()), len(values), len(values))
+func (pm *patchFieldMultiTypeDecoder[DT]) DecodeX(values []DT) (any /* patch.Field[[]T] */, error) {
+	subValue := reflect.MakeSlice(reflect.SliceOf(pm.BaseType), len(values), len(values))
 	for i, value := range values {
-		if gotValue, err := p.Decoder.Decode(value); err != nil {
+		if gotValue, err := pm.BaseDecoder.Decode(value); err != nil {
 			return nil, fmt.Errorf("at index %d: %w", i, err)
 		} else {
 			subValue.Index(i).Set(reflect.ValueOf(gotValue))
 		}
 	}
-	res := reflect.New(p.ReturnType)
+	res := reflect.New(pm.ReturnType)
 	res.Elem().FieldByName("Value").Set(subValue)
 	res.Elem().FieldByName("Valid").SetBool(true)
 	return res.Elem().Interface(), nil
-}
-
-// typeOf returns the reflect.Type of a given type.
-// e.g. typeOf[int]() returns reflect.TypeOf(0)
-func typeOf[T any]() reflect.Type {
-	var zero [0]T
-	return reflect.TypeOf(zero).Elem()
 }

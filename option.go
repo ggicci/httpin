@@ -1,15 +1,18 @@
 package httpin
 
+import "errors"
+
 type Option func(*Core) error
 
 // WithErrorHandler overrides the default error handler.
-func WithErrorHandler(custom ErrorHandler) Option {
+func WithErrorHandler(custom errorHandler) Option {
 	return func(c *Core) error {
-		if custom == nil {
-			return ErrNilErrorHandler
+		if err := validateErrorHandler(custom); err != nil {
+			return err
+		} else {
+			c.errorHandler = custom
+			return nil
 		}
-		c.errorHandler = custom
-		return nil
 	}
 }
 
@@ -19,7 +22,7 @@ func WithErrorHandler(custom ErrorHandler) Option {
 func WithMaxMemory(maxMemory int64) Option {
 	return func(c *Core) error {
 		if maxMemory < minimumMaxMemory {
-			return ErrMaxMemoryTooSmall
+			return errors.New("max memory too small")
 		}
 		c.maxMemory = maxMemory
 		return nil

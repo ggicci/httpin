@@ -2,48 +2,32 @@ package httpin
 
 import (
 	"mime/multipart"
-	"net/http"
-	"reflect"
 )
 
 type extractor struct {
+	Runtime *DirectiveRuntime
 	multipart.Form
-
 	KeyNormalizer func(string) string
 }
 
-func newExtractor(r *http.Request) *extractor {
-	var form multipart.Form
-
-	if r.MultipartForm != nil {
-		form = *r.MultipartForm
-	} else {
-		if r.Form != nil {
-			form.Value = r.Form
-		}
+func (e *extractor) Extract(keys ...string) error {
+	if len(keys) == 0 {
+		keys = e.Runtime.Directive.Argv
 	}
-
-	return &extractor{
-		Form:          form,
-		KeyNormalizer: nil,
-	}
-}
-
-func (e *extractor) Execute(ctx *DirectiveRuntime) error {
-	for _, key := range ctx.Directive.Argv {
+	for _, key := range keys {
 		if e.KeyNormalizer != nil {
 			key = e.KeyNormalizer(key)
 		}
-		if err := e.extract(ctx, key); err != nil {
+		if err := e.extract(key); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (e *extractor) extract(rtm *DirectiveRuntime, key string) error {
-	if rtm.Context.Value(FieldSet) == true {
-		return nil
+func (e *extractor) extract(key string) error {
+	if e.Runtime.IsFieldSet() {
+		return nil // skip when already extracted by former directives
 	}
 
 	values := e.Form.Value[key]
@@ -54,67 +38,54 @@ func (e *extractor) extract(rtm *DirectiveRuntime, key string) error {
 		return nil
 	}
 
-	rtmHelper := directiveRuntimeHelper{rtm}
-	valueType := rtm.Value.Type().Elem()
-	elemType, decoderKind := scalarElemTypeOf(valueType)
-	decoder := rtmHelper.decoderOf(elemType)
+	valueType := e.Runtime.Value.Type().Elem()
+	baseType, typeKind := baseTypeOf(valueType)
+	fileDecoder := fileDecoderByType(baseType) // file decoder, for file uploads
 
-	var decodedValue interface{}
+	var decodedValue any
+	var sourceValue any
 	var err error
 
-	switch ada := decoder.(type) {
-	case decoderAdaptor[string]:
-		decodedValue, err = ada.DecoderByKind(decoderKind, valueType).DecodeX(values)
-	case decoderAdaptor[*multipart.FileHeader]:
-		decodedValue, err = ada.DecoderByKind(decoderKind, valueType).DecodeX(files)
-	default:
-		err = unsupportedTypeError(elemType)
+	if fileDecoder != nil {
+		// When fileDecoder is not nil, it means that the field is a file upload.
+		// We should decode files instead of values.
+		if len(files) == 0 {
+			return nil // skip when no file uploaded
+		}
+		sourceValue = files
+
+		// Adapt the fileDecoder which is for the baseType, to a fileDecoder
+		// which is for the valueType.
+		decodedValue, err = fileDecoder.DecoderByKind(typeKind, valueType).DecodeX(files)
+	} else {
+		if len(values) == 0 {
+			return nil // skip when no value given
+		}
+		sourceValue = values
+
+		var decoder *decoderAdaptor[string]
+		decoderInfo := e.Runtime.getCustomDecoder() // custom decoder, specified by "decoder" directive
+		// Fallback to use default decoders for registered types.
+		if decoderInfo != nil {
+			decoder = decoderInfo.Adapted
+		} else {
+			decoder = decoderByType(baseType)
+		}
+
+		if decoder != nil {
+			decodedValue, err = decoder.DecoderByKind(typeKind, valueType).DecodeX(values)
+		} else {
+			err = unsupportedTypeError(valueType)
+		}
 	}
 
 	if err == nil {
-		err = setDirectiveRuntimeValue(rtm, decodedValue)
+		err = e.Runtime.SetValue(decodedValue)
 	}
 	if err != nil {
-		return &fieldError{key, values, err}
+		return &fieldError{key, sourceValue, err}
 	}
-	rtmHelper.DeliverContextValue(FieldSet, true)
+
+	e.Runtime.MarkFieldSet(true)
 	return nil
-}
-
-func setDirectiveRuntimeValue(rtm *DirectiveRuntime, value interface{}) error {
-	if value == nil {
-		// NOTE: should we wipe the value here? i.e. set the value to nil if necessary.
-		// No case found yet, at lease for now.
-		return nil
-	}
-	newValue := reflect.ValueOf(value)
-	targetType := rtm.Value.Type().Elem()
-	if newValue.Type().AssignableTo(targetType) {
-		rtm.Value.Elem().Set(newValue)
-		return nil
-	}
-	return invalidDecodeReturnType(targetType, reflect.TypeOf(value))
-}
-
-// scalarElemTypeOf returns the scalar element type of a given type.
-//   - T -> T, decoderKindScalar
-//   - []T -> T, decoderKindMulti
-//   - patch.Field[T] -> T, decoderKindPatch
-//   - patch.Field[[]T] -> T, decoderKindPatchMulti
-//
-// The given type is gonna use the decoder of the scalar element type to decode
-// the input values.
-func scalarElemTypeOf(valueType reflect.Type) (reflect.Type, decoderKindType) {
-	if valueType.Kind() == reflect.Slice {
-		return valueType.Elem(), decoderKindMulti
-	}
-	if isPatchField(valueType) {
-		subElemType, isMulti := patchFieldElemType(valueType)
-		if isMulti {
-			return subElemType, decoderKindPatchMulti
-		} else {
-			return subElemType, decoderKindPatch
-		}
-	}
-	return valueType, decoderKindScalar
 }

@@ -19,16 +19,18 @@ type GorillaMuxVarsFunc func(*http.Request) map[string]string
 //	func init() {
 //	    httpin.UseGorillaMux("path", mux.Vars)
 //	}
-func UseGorillaMux(executor string, fnVars GorillaMuxVarsFunc) {
-	RegisterDirectiveExecutor(executor, &gorillaMuxVarsExtractor{Vars: fnVars}, noopDirective)
+func UseGorillaMux(name string, fnVars GorillaMuxVarsFunc) {
+	RegisterDirective(name, &directivePath{
+		overrideDecode: (&gorillaMuxVarsExtractor{Vars: fnVars}).Execute,
+	})
 }
 
 type gorillaMuxVarsExtractor struct {
 	Vars GorillaMuxVarsFunc
 }
 
-func (mux *gorillaMuxVarsExtractor) Execute(ctx *DirectiveRuntime) error {
-	req := ctx.Context.Value(RequestValue).(*http.Request)
+func (mux *gorillaMuxVarsExtractor) Execute(rtm *DirectiveRuntime) error {
+	req := rtm.GetRequest()
 	kvs := make(map[string][]string)
 
 	for key, value := range mux.Vars(req) {
@@ -36,9 +38,10 @@ func (mux *gorillaMuxVarsExtractor) Execute(ctx *DirectiveRuntime) error {
 	}
 
 	extractor := &extractor{
+		Runtime: rtm,
 		Form: multipart.Form{
 			Value: kvs,
 		},
 	}
-	return extractor.Execute(ctx)
+	return extractor.Extract()
 }

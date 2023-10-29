@@ -5,21 +5,27 @@ package httpin
 
 import "mime/multipart"
 
-func defaultValueSetter(ctx *DirectiveRuntime) error {
-	if ctx.Context.Value(FieldSet) != nil {
+type directiveDefault struct{}
+
+func (*directiveDefault) Decode(rtm *DirectiveRuntime) error {
+	if rtm.IsFieldSet() {
 		return nil // noop, the field was set by a former executor
 	}
 
 	// Transform:
 	// 1. ctx.Argv -> input values
-	// 2. ["default"] -> ctx.Argv
+	// 2. ["default"] -> keys
 	extractor := &extractor{
+		Runtime: rtm,
 		Form: multipart.Form{
 			Value: map[string][]string{
-				"default": ctx.Directive.Argv,
+				"default": rtm.Directive.Argv,
 			},
 		},
 	}
-	ctx.Directive.Argv = []string{"default"}
-	return extractor.Execute(ctx)
+	return extractor.Extract("default")
+}
+
+func (*directiveDefault) Encode(rtm *DirectiveRuntime) error {
+	return nil // noop
 }

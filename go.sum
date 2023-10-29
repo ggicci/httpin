@@ -1,12 +1,10 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-<<<<<<< HEAD
 github.com/ggicci/owl v0.4.0 h1:1cwRlynLe6P5ylLyjNWtOP5qVO1bYUmziPYVbOphGHQ=
 github.com/ggicci/owl v0.4.0/go.mod h1:TRPWshRwYej6uES//YW5aNgLB370URwyta1Ytfs7KXs=
-=======
-github.com/ggicci/owl v0.3.0 h1:bUaW+V7iiydxDx12l1qNSbVB9X+SqpUk82VHKubfMSM=
-github.com/ggicci/owl v0.3.0/go.mod h1:FLuwmWWQC1MnhyDhT9G3/NTOyCMnojzd6oAriRg4Vbw=
->>>>>>> e152079 (chore: go mod tidy)
+github.com/ggicci/owl v0.4.0 h1:1cwRlynLe6P5ylLyjNWtOP5qVO1bYUmziPYVbOphGHQ=
+github.com/ggicci/owl v0.4.0/go.mod h1:TRPWshRwYej6uES//YW5aNgLB370URwyta1Ytfs7KXs=
+>>>>>>> 0f4128f (feat: encoder implementation)
 github.com/go-chi/chi/v5 v5.0.8 h1:lD+NLqFcAi1ovnVZpsnObHGW4xb4J8lNmoYVfECH1Y0=
 github.com/go-chi/chi/v5 v5.0.8/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=

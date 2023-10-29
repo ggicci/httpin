@@ -8,36 +8,36 @@ import (
 
 func TestRegisterDirectiveExecutor(t *testing.T) {
 	assert.NotPanics(t, func() {
-		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor", noopDirective, noopDirective)
+		RegisterDirective("noop_TestRegisterDirectiveExecutor", noopDirective)
 	})
 
 	assert.Panics(t, func() {
-		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor", noopDirective, noopDirective)
+		RegisterDirective("noop_TestRegisterDirectiveExecutor", noopDirective)
 	}, "should panic on duplicate name")
 
 	assert.Panics(t, func() {
-		RegisterDirectiveExecutor("nil_TestRegisterDirectiveExecutor", nil, nil)
+		RegisterDirective("nil_TestRegisterDirectiveExecutor", nil)
 	}, "should panic on nil executor")
 
 	assert.Panics(t, func() {
-		RegisterDirectiveExecutor("decoder", noopDirective, noopDirective)
+		RegisterDirective("decoder", noopDirective)
 	}, "should panic on reserved name")
 }
 
 func TestRegisterDirectiveExecutor_forceReplace(t *testing.T) {
 	assert.NotPanics(t, func() {
-		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor_forceReplace", noopDirective, noopDirective, true)
+		RegisterDirective("noop_TestRegisterDirectiveExecutor_forceReplace", noopDirective, true)
 	})
 
 	assert.NotPanics(t, func() {
-		RegisterDirectiveExecutor("noop_TestRegisterDirectiveExecutor_forceReplace", noopDirective, noopDirective, true)
+		RegisterDirective("noop_TestRegisterDirectiveExecutor_forceReplace", noopDirective, true)
 	}, "should not panic on duplicate name")
 
 	assert.Panics(t, func() {
-		RegisterDirectiveExecutor("nil_TestRegisterDirectiveExecutor_forceReplace", nil, nil, true)
+		RegisterDirective("nil_TestRegisterDirectiveExecutor_forceReplace", nil, true)
 	}, "should panic on nil executor")
 
 	assert.Panics(t, func() {
-		RegisterDirectiveExecutor("decoder", noopDirective, noopDirective, true)
+		RegisterDirective("decoder", noopDirective, true)
 	}, "should panic on reserved name")
 }
