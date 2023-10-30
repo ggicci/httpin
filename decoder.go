@@ -87,7 +87,7 @@ func RegisterNamedDecoder[T any](name string, decoder Decoder[T], replace ...boo
 	namedDecoders[name] = &namedDecoderInfo{
 		Name:     name,
 		Original: decoder,
-		Adapted:  adaptDecoder(typ, newSmartDecoder(typ, toAnyDecoder(decoder))).(*decoderAdaptor[string]),
+		Adapted:  adaptDecoder(typ, newSmartDecoder(typ, toAnyDecoder(decoder))).(valueDecoderAdaptor),
 	}
 }
 
@@ -189,7 +189,7 @@ func (sd *smartDecoder) Decode(value string) (any, error) {
 }
 
 func validateDecoder(decoder any) error {
-	if decoder == nil || reflect.ValueOf(decoder).IsNil() {
+	if decoder == nil || isNil(reflect.ValueOf(decoder)) {
 		return errors.New("nil decoder")
 	}
 	return nil
@@ -201,13 +201,13 @@ func decoderByName(name string) *namedDecoderInfo {
 }
 
 // decoderByType retrieves a decoder by type, from the global registerred decoders.
-func decoderByType(t reflect.Type) *decoderAdaptor[string] {
+func decoderByType(t reflect.Type) valueDecoderAdaptor {
 	d := customDecoders.GetOne(t)
 	if d == nil {
 		d = builtinDecoders.GetOne(t)
 	}
 	if d != nil {
-		return d.(*decoderAdaptor[string])
+		return d.(valueDecoderAdaptor)
 	} else {
 		return nil
 	}
@@ -216,5 +216,5 @@ func decoderByType(t reflect.Type) *decoderAdaptor[string] {
 type namedDecoderInfo struct {
 	Name     string
 	Original any
-	Adapted  *decoderAdaptor[string]
+	Adapted  valueDecoderAdaptor
 }

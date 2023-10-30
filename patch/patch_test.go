@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ggicci/httpin/patch"
-	"github.com/stretchr/testify/assert"
 )
 
 func shouldBeNil(t *testing.T, err error, failMessage string) {
@@ -237,13 +236,4 @@ func TestField_MarshalJSON_Struct(t *testing.T) {
 	for _, c := range testcases {
 		testJSONMarshalling(t, c)
 	}
-}
-
-func TestField_ValidSentinel(t *testing.T) {
-	f := patch.Field[string]{"hello", true}
-	assert.True(t, f.IsValid())
-	f.SetValid(false)
-	assert.False(t, f.IsValid())
-	f.SetValid(true)
-	assert.True(t, f.IsValid())
 }

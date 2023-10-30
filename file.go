@@ -35,7 +35,9 @@ func RegisterFileType[T FileEncoder](fd FileDecoder[T]) {
 	if isFileType(typ) {
 		panicOnError(fmt.Errorf("duplicate file type: %v", typ))
 	}
-
+	if fd == nil {
+		panicOnError(errors.New("nil decoder"))
+	}
 	fileTypes[typ] = adaptDecoder(typ, toAnyFileDecoder(fd)).(fileDecoderAdaptor)
 }
 
@@ -87,6 +89,7 @@ func (f *File) IsUpload() bool {
 }
 
 // OpenUploadStream returns a io.ReadCloser for the file to be uploaded.
+// Call this method on the client side for uploading a file.
 func (f *File) OpenUploadStream() (io.ReadCloser, error) {
 	if f.uploadReader != nil {
 		return f.uploadReader, nil
@@ -94,12 +97,14 @@ func (f *File) OpenUploadStream() (io.ReadCloser, error) {
 	if f.uploadFilename != "" {
 		return os.Open(f.uploadFilename)
 	}
-	return nil, errors.New("invalid upload: no filename or reader")
+	return nil, errors.New("invalid upload (client): no filename or reader")
 }
 
+// OpenReceiveStream returns a io.Reader for the file in the multipart/form-data request.
+// Call this method on the server side to read the file content.
 func (f *File) OpenReceiveStream() (multipart.File, error) {
 	if f.Header == nil {
-		return nil, errors.New("nil file header")
+		return nil, errors.New("invalid upload (server): nil file header")
 	}
 	return f.Header.Open()
 }

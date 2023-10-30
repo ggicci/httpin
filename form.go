@@ -32,6 +32,8 @@ func (*directvieForm) Decode(rtm *DirectiveRuntime) error {
 //   - form data
 //   - multipart form data (file upload)
 func (*directvieForm) Encode(rtm *DirectiveRuntime) error {
-	encoder := &formEncoder{rtm.GetRequestBuilder().setForm}
+	encoder := &formEncoder{
+		Setter: rtm.GetRequestBuilder().setForm,
+	}
 	return encoder.Execute(rtm)
 }

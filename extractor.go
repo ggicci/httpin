@@ -63,7 +63,7 @@ func (e *extractor) extract(key string) error {
 		}
 		sourceValue = values
 
-		var decoder *decoderAdaptor[string]
+		var decoder valueDecoderAdaptor
 		decoderInfo := e.Runtime.getCustomDecoder() // custom decoder, specified by "decoder" directive
 		// Fallback to use default decoders for registered types.
 		if decoderInfo != nil {

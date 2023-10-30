@@ -2,6 +2,8 @@ package httpin
 
 import (
 	"encoding/base64"
+	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -89,6 +91,9 @@ type patchFormValueEncoder encoderAdaptor
 
 // EncodeX encodes value of patch.Field[T] to []string, where T is the BaseType.
 func (e *patchFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
+	if !value.FieldByName("Valid").Bool() {
+		return nil, nil
+	}
 	innerValue := value.FieldByName("Value")
 	return (*scalarFormValueEncoder)(e).EncodeX(innerValue)
 }
@@ -97,32 +102,59 @@ type patchMultiFormValueEncoder encoderAdaptor
 
 // EncodeX encodes value of patch.Field[[]T] to []string, where T is the BaseType.
 func (e *patchMultiFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
+	if !value.FieldByName("Valid").Bool() {
+		return nil, nil
+	}
 	innerValue := value.FieldByName("Value")
 	return (*multiFormValueEncoder)(e).EncodeX(innerValue)
 }
 
-func toFileEncoders(value reflect.Value, typeKind typeKind) []FileEncoder {
+func toFileEncoders(value reflect.Value, typeKind typeKind) ([]FileEncoder, error) {
+	if isNil(value) {
+		return nil, nil // skip no file upload: value is nil
+	}
+
 	switch typeKind {
 	case typeKindScalar:
 		return toFileEncodersOne(value)
 	case typeKindPatch:
+		if !value.FieldByName("Valid").Bool() {
+			return nil, nil // skip no file upload: patch.Field.Valid is false
+		}
 		return toFileEncodersOne(value.FieldByName("Value"))
 	case typeKindMulti:
 		return toFileEncodersMulti(value)
 	case typeKindPatchMulti:
+		if !value.FieldByName("Valid").Bool() {
+			return nil, nil // skip no file upload: patch.Field.Valid is false
+		}
 		return toFileEncodersMulti(value.FieldByName("Value"))
 	}
-	return nil
+	return nil, nil
 }
 
-func toFileEncodersOne(one reflect.Value) []FileEncoder {
-	return []FileEncoder{one.Interface().(FileEncoder)}
+func toFileEncodersOne(one reflect.Value) ([]FileEncoder, error) {
+	if err := validateFileEncoderValue(one); err != nil {
+		return nil, err
+	}
+	return []FileEncoder{one.Interface().(FileEncoder)}, nil
 }
 
-func toFileEncodersMulti(multi reflect.Value) []FileEncoder {
+func toFileEncodersMulti(multi reflect.Value) ([]FileEncoder, error) {
 	files := make([]FileEncoder, multi.Len())
 	for i := 0; i < multi.Len(); i++ {
-		files[i] = multi.Index(i).Interface().(FileEncoder)
+		if err := validateFileEncoderValue(multi.Index(i)); err != nil {
+			return nil, fmt.Errorf("at index %d: %v", i, err)
+		} else {
+			files[i] = multi.Index(i).Interface().(FileEncoder)
+		}
 	}
-	return files
+	return files, nil
+}
+
+func validateFileEncoderValue(value reflect.Value) error {
+	if isNil(value) {
+		return errors.New("file encoder cannot be nil")
+	}
+	return nil
 }

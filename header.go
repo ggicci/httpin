@@ -25,6 +25,8 @@ func (*directiveHeader) Decode(rtm *DirectiveRuntime) error {
 }
 
 func (*directiveHeader) Encode(rtm *DirectiveRuntime) error {
-	encoder := &formEncoder{rtm.GetRequestBuilder().setHeader}
+	encoder := &formEncoder{
+		Setter: rtm.GetRequestBuilder().setHeader,
+	}
 	return encoder.Execute(rtm)
 }

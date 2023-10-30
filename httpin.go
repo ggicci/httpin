@@ -38,12 +38,25 @@ func Decode(req *http.Request, input any) error {
 	}
 }
 
+// Encode is an alias of NewRequest.
 func Encode(method, url string, input any) (*http.Request, error) {
+	return NewRequest(method, url, input)
+}
+
+// NewRequest wraps NewRequestWithContext using context.Background.
+func NewRequest(method, url string, input any) (*http.Request, error) {
+	return NewRequestWithContext(context.Background(), method, url, input)
+}
+
+// NewRequestWithContext returns a new http.Request given a method, url and an
+// input struct instance. The fields of the input struct will be encoded to the
+// request by resolving the "in" tags and executing the directives.
+func NewRequestWithContext(ctx context.Context, method, url string, input any) (*http.Request, error) {
 	core, err := New(input)
 	if err != nil {
 		return nil, err
 	}
-	return core.Encode(method, url, input)
+	return core.NewRequestWithContext(ctx, method, url, input)
 }
 
 // NewInput creates a "Middleware". A middleware is a function that takes a

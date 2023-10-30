@@ -61,7 +61,7 @@ func TestDirectiveQuery_Encode(t *testing.T) {
 
 	core, err := New(SearchQuery{})
 	assert.NoError(t, err)
-	req, err := core.Encode("GET", "/pets", query)
+	req, err := core.NewRequest("GET", "/pets", query)
 	assert.NoError(t, err)
 
 	expected, _ := http.NewRequest("GET", "/pets", nil)
@@ -75,8 +75,7 @@ func TestDirectiveQuery_Encode(t *testing.T) {
 	expectedQuery.Set("name_pointer", *query.NamePointer) // query.NamePointer
 	expectedQuery.Set("age_pointer", "19")                // query.PointerAge
 	expected.URL.RawQuery = expectedQuery.Encode()
-
-	assertRequest(t, expected, req)
+	assert.Equal(t, expected, req)
 }
 
 func TestDirectiveQuery_Encode_useMarshalerInterfaces(t *testing.T) {
@@ -105,7 +104,7 @@ func TestDirectiveQuery_Encode_useMarshalerInterfaces(t *testing.T) {
 
 	core, err := New(SearchQuery{})
 	assert.NoError(t, err)
-	req, err := core.Encode("GET", "/pets", query)
+	req, err := core.NewRequest("GET", "/pets", query)
 	assert.NoError(t, err)
 
 	expected, _ := http.NewRequest("GET", "/pets", nil)
@@ -115,8 +114,7 @@ func TestDirectiveQuery_Encode_useMarshalerInterfaces(t *testing.T) {
 	expectedQuery.Set("l2", "MarshalText:1.234000,5.678000")
 	expectedQuery.Set("radius", "1000")
 	expected.URL.RawQuery = expectedQuery.Encode()
-
-	assertRequest(t, req, expected)
+	assert.Equal(t, expected, req)
 }
 
 func TestDirectiveQuery_Encode_ErrUnsupportedType(t *testing.T) {
@@ -126,6 +124,6 @@ func TestDirectiveQuery_Encode_ErrUnsupportedType(t *testing.T) {
 
 	core, err := New(SearchQuery{})
 	assert.NoError(t, err)
-	_, err = core.Encode("GET", "/pets", &SearchQuery{})
+	_, err = core.NewRequest("GET", "/pets", &SearchQuery{})
 	assert.ErrorIs(t, err, errUnsupportedType)
 }

@@ -40,13 +40,12 @@ func TestDirectiveHeader_Encode(t *testing.T) {
 
 	core, err := New(ApiQuery{})
 	assert.NoError(t, err)
-	req, err := core.Encode("POST", "/api", query)
+	req, err := core.NewRequest("POST", "/api", query)
 	assert.NoError(t, err)
 
 	expected, _ := http.NewRequest("POST", "/api", nil)
 	// NOTE: the key will be canonicalized
 	expected.Header.Set("x-api-uid", "91241844")
 	expected.Header.Set("X-Api-Token", "some-secret-token")
-
-	assertRequest(t, expected, req)
+	assert.Equal(t, expected, req)
 }

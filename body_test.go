@@ -206,7 +206,7 @@ func TestBodyEncoder_JSON(t *testing.T) {
 	assert := assert.New(t)
 	core, err := New(JSONBodyPayloadWithBodyDirective{})
 	assert.NoError(err)
-	req, err := core.Encode("POST", "/data", sampleObject_JSONBodyPayloadWithBodyDirective)
+	req, err := core.NewRequest("POST", "/data", sampleObject_JSONBodyPayloadWithBodyDirective)
 	expected, _ := http.NewRequest("POST", "/data", nil)
 	expected.Form = url.Values{
 		"page":      {"4"},
@@ -232,7 +232,7 @@ func TestBodyEncoder_XML(t *testing.T) {
 	assert := assert.New(t)
 	core, err := New(XMLBodyPayloadWithBodyDirective{})
 	assert.NoError(err)
-	req, err := core.Encode("POST", "/data", sampleObject_XMLBodyPayloadWithBodyDirective)
+	req, err := core.NewRequest("POST", "/data", sampleObject_XMLBodyPayloadWithBodyDirective)
 	expected, _ := http.NewRequest("POST", "/data", nil)
 	expected.Header.Set("Content-Type", "application/xml")
 	assert.NoError(err)
@@ -248,4 +248,31 @@ func TestBodyEncoder_XML(t *testing.T) {
 	got, ok := gotValue.(*XMLBodyPayloadWithBodyDirective)
 	assert.True(ok)
 	assert.Equal(sampleObject_XMLBodyPayloadWithBodyDirective, got)
+}
+
+func assertRequest(t *testing.T, expected, actual *http.Request) {
+	assert := assert.New(t)
+	assert.Equal(expected.Method, actual.Method)
+	assert.Equal(expected.URL.Path, actual.URL.Path)
+	assert.Equal(expected.URL.RawQuery, actual.URL.RawQuery)
+	assert.Equal(expected.Header, actual.Header)
+	assert.Equal(expected.Form, actual.Form)
+	assert.Equal(expected.MultipartForm, actual.MultipartForm)
+	assert.Equal(expected.PostForm, actual.PostForm)
+	assert.Equal(expected.Cookies(), actual.Cookies())
+	assert.Equal(expected.ContentLength, actual.ContentLength)
+
+	if expected.Body == nil {
+		assert.Nil(actual.Body)
+	} else {
+		expectedContent, err := io.ReadAll(expected.Body)
+		assert.NoError(err)
+
+		// Make a copy. The actual request may be used later to send request for an integration test.
+		var bodyCopy bytes.Buffer
+		actualContent, err := io.ReadAll(io.TeeReader(actual.Body, &bodyCopy))
+		actual.Body = io.NopCloser(&bodyCopy) // replace the body that has been consumed
+		assert.NoError(err)
+		assert.Equal(expectedContent, actualContent)
+	}
 }

@@ -1,8 +1,6 @@
 package httpin
 
 import (
-	"bytes"
-	"io"
 	"net/http"
 	"net/url"
 	"testing"
@@ -164,7 +162,7 @@ func TestDirectiveForm(t *testing.T) {
 func TestDirectiveForm_Encode(t *testing.T) {
 	core, err := New(ChaosQuery{})
 	assert.NoError(t, err)
-	req, err := core.Encode("POST", "/signup", sampleChaosQuery)
+	req, err := core.NewRequest("POST", "/signup", sampleChaosQuery)
 	assert.NoError(t, err)
 
 	expected, _ := http.NewRequest("POST", "/signup", nil)
@@ -212,33 +210,5 @@ func TestDirectiveForm_Encode(t *testing.T) {
 		"times":   {"2000-01-02T22:04:05Z", "1991-06-28T06:00:00Z"},
 	}
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	assertRequest(t, expected, req)
-}
-
-func assertRequest(t *testing.T, expected, actual *http.Request) {
-	assert := assert.New(t)
-	assert.Equal(expected.Method, actual.Method)
-	assert.Equal(expected.URL.Path, actual.URL.Path)
-	assert.Equal(expected.URL.RawQuery, actual.URL.RawQuery)
-	assert.Equal(expected.Header, actual.Header)
-	assert.Equal(expected.Form, actual.Form)
-	assert.Equal(expected.MultipartForm, actual.MultipartForm)
-	assert.Equal(expected.PostForm, actual.PostForm)
-	assert.Equal(expected.Cookies(), actual.Cookies())
-	assert.Equal(expected.ContentLength, actual.ContentLength)
-
-	if expected.Body == nil {
-		assert.Nil(actual.Body)
-	} else {
-		expectedContent, err := io.ReadAll(expected.Body)
-		assert.NoError(err)
-
-		// Make a copy. The actual request may be used later to send request for an integration test.
-		var bodyCopy bytes.Buffer
-		actualContent, err := io.ReadAll(io.TeeReader(actual.Body, &bodyCopy))
-		actual.Body = io.NopCloser(&bodyCopy) // replace the body that has been consumed
-		assert.NoError(err)
-		assert.Equal(expectedContent, actualContent)
-	}
+	assert.Equal(t, expected, req)
 }

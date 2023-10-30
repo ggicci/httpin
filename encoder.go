@@ -134,7 +134,7 @@ func (ie interfaceEncoder) Encode(value reflect.Value) (string, error) {
 }
 
 func validateEncoder(encoder any) error {
-	if encoder == nil || reflect.ValueOf(encoder).IsNil() {
+	if encoder == nil || isNil(reflect.ValueOf(encoder)) {
 		return errors.New("nil encoder")
 	}
 	return nil

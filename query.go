@@ -23,6 +23,8 @@ func (*directiveQuery) Decode(rtm *DirectiveRuntime) error {
 }
 
 func (*directiveQuery) Encode(rtm *DirectiveRuntime) error {
-	encoder := &formEncoder{rtm.GetRequestBuilder().setQuery}
+	encoder := &formEncoder{
+		Setter: rtm.GetRequestBuilder().setQuery,
+	}
 	return encoder.Execute(rtm)
 }

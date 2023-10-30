@@ -13,6 +13,8 @@ func (dir *directivePath) Decode(rtm *DirectiveRuntime) error {
 
 // Encode replaces the placeholders in URL path with the given value.
 func (*directivePath) Encode(rtm *DirectiveRuntime) error {
-	encoder := &formEncoder{rtm.GetRequestBuilder().setPath}
+	encoder := &formEncoder{
+		Setter: rtm.GetRequestBuilder().setPath,
+	}
 	return encoder.Execute(rtm)
 }

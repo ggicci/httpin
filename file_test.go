@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -38,6 +39,35 @@ type UpdateUserProfileInput struct {
 type UpdateGitHubIssueInput struct {
 	Title       string  `in:"form=title"`
 	Attachments []*File `in:"form=attachment"`
+}
+
+func TestRegisterFileType(t *testing.T) {
+	assert.PanicsWithError(t, "httpin: duplicate file type: *httpin.File", func() {
+		RegisterFileType[*File](nil)
+	})
+	assert.PanicsWithError(t, "httpin: nil decoder", func() {
+		RegisterFileType[*BadFile](nil)
+	})
+}
+
+func TestFile_OpenUploadStream_FailOnInvalidUpload(t *testing.T) {
+	file := &File{} // invalid upload, must use UploadWithFilename or UploadWithReader
+	_, err := file.OpenUploadStream()
+	assert.ErrorContains(t, err, "invalid upload (client)")
+}
+
+func TestFile_ReceiveStream_FailOnInvalidUpload(t *testing.T) {
+	// invalid upload, on the server side, the file should be decoded with an
+	// FileDecoder
+	file := &File{}
+	_, err := file.OpenReceiveStream()
+	assert.ErrorContains(t, err, "invalid upload (server)")
+}
+
+func TestFile_EncodeError(t *testing.T) {
+	file := &File{}
+	_, _, err := file.Encode()
+	assert.Error(t, err)
 }
 
 func TestMultipartForm_DecodeFile_FailOnNilFileHeader(t *testing.T) {
@@ -175,7 +205,7 @@ func TestMultipartFormEncode_UploadFilename(t *testing.T) {
 	}
 	core, err := New(Post{})
 	assert.NoError(t, err)
-	req, err := core.Encode("POST", "/post", payload)
+	req, err := core.NewRequest("POST", "/post", payload)
 	assert.NoError(t, err)
 
 	// Server side: receive files (decode).
@@ -212,7 +242,7 @@ func TestMultipartFormEncode_UploadReader(t *testing.T) {
 	}
 	core, err := New(Post{})
 	assert.NoError(t, err)
-	req, err := core.Encode("POST", "/post", payload)
+	req, err := core.NewRequest("POST", "/post", payload)
 	assert.NoError(t, err)
 
 	// Server side: receive files (decode).
@@ -225,6 +255,39 @@ func TestMultipartFormEncode_UploadReader(t *testing.T) {
 	assert.Len(t, got.Pictures, 2)
 	assertDecodedFile(t, got.Pictures[0], "pictures_0", []byte("pic1 content"))
 	assertDecodedFile(t, got.Pictures[1], "pictures_1", []byte("pic2 content"))
+}
+
+func TestUpload_withNilFile(t *testing.T) {
+	payload := &UpdateUserProfileInput{
+		Avatar: nil,
+	}
+	expected, _ := http.NewRequest("POST", "/post", nil)
+	expected.Form = url.Values{
+		"name":   {""},
+		"gender": {""},
+	}
+	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	core, err := New(UpdateUserProfileInput{})
+	assert.NoError(t, err)
+	req, err := core.NewRequest("POST", "/post", payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, req)
+}
+
+func TestUpload_withNilMultiFile(t *testing.T) {
+	payload := &UpdateGitHubIssueInput{
+		Attachments: nil,
+	}
+	expected, _ := http.NewRequest("POST", "/post", nil)
+	expected.Form = url.Values{
+		"title": {""},
+	}
+	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	core, err := New(UpdateGitHubIssueInput{})
+	assert.NoError(t, err)
+	req, err := core.NewRequest("POST", "/post", payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, req)
 }
 
 func TestIsFileType(t *testing.T) {

@@ -14,15 +14,17 @@ type decoder2d[DT dataSource] interface {
 	DecodeX(values []DT) (any, error)
 }
 
+type (
+	valueDecoderAdaptor = *decoderAdaptor[string]
+	fileDecoderAdaptor  = *decoderAdaptor[*multipart.FileHeader]
+)
+
 type decoderAdaptor[DT dataSource] struct {
 	BaseDecoder decoderInterface[DT, any]
 	BaseType    reflect.Type
 }
 
-type fileDecoderAdaptor = *decoderAdaptor[*multipart.FileHeader]
-
-// adaptDecoder adapts a decoder (of Decoder[DT]) to a decoderAdaptor.
-// It returns nil if the decoder is not supported.
+// adaptDecoder adapts a decoder of baseType to a decoderAdaptor.
 func adaptDecoder(baseType reflect.Type, decoder any) any {
 	switch decoder := decoder.(type) {
 	case Decoder[any]:

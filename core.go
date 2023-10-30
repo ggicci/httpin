@@ -30,7 +30,7 @@ type Core struct {
 
 // New creates a new Core instance, which holds the resolver of the inputStruct.
 //   - Use Core.Decode() to decode an HTTP request to an instance of the inputStruct.
-//   - Use Core.Encode() to encode an instance of the inputStruct to an HTTP request.
+//   - Use Core.NewRequest() to encode an instance of the inputStruct to an HTTP request.
 //   - Use NewInput() to create an HTTP middleware.
 func New(inputStruct any, opts ...Option) (*Core, error) {
 	resolver, err := buildResolver(inputStruct)
@@ -84,13 +84,21 @@ func (c *Core) Decode(req *http.Request) (any, error) {
 	return rv.Interface(), nil
 }
 
-// Encode encodes an input struct to an HTTP request. Note that one Core instance can
-// only encode one specific type of struct. If the input is not the type of the struct
-// that the Core instance holds, an ErrTypeMismatch error will be returned. In order to
-// avoid this error, you can use httpin.Encode() function instead. Which will create a
-// Core instance for you.
-func (c *Core) Encode(method string, url string, input any) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, nil)
+// NewRequest wraps NewRequestWithContext using context.Background.
+func (c *Core) NewRequest(method string, url string, input any) (*http.Request, error) {
+	return c.NewRequestWithContext(context.Background(), method, url, input)
+}
+
+// NewRequestWithContext returns a new http.Request given a method, url and an
+// input struct instance. Note that the Core instance is bound to a specific
+// type of struct. Which means when the given input is not the type of the
+// struct that the Core instance holds, error of type mismatch will be returned.
+// In order to avoid this error, you can always use httpin.NewRequest() function
+// instead. Which will create a Core instance for you when needed. There's no
+// performance penalty for doing so. Because there's a cache layer for all the
+// Core instances.
+func (c *Core) NewRequestWithContext(ctx context.Context, method string, url string, input any) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, err
 	}

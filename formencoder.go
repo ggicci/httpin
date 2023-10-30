@@ -19,7 +19,14 @@ func (e *formEncoder) Execute(rtm *DirectiveRuntime) error {
 
 	// When baseType is a file type, we treat it as a file upload.
 	if isFileType(baseType) {
-		return fileUploadBuilder(rtm, toFileEncoders(rtm.Value, typeKind))
+		fileEncoders, err := toFileEncoders(rtm.Value, typeKind)
+		if err != nil {
+			return err
+		}
+		if len(fileEncoders) == 0 {
+			return nil // skip when no file upload
+		}
+		return fileUploadBuilder(rtm, fileEncoders)
 	}
 
 	_, encoder := rtm.GetCustomEncoder() // custom encoder, specified by "encoder" directive
