@@ -1,7 +1,6 @@
 package httpin
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"reflect"
@@ -73,7 +72,8 @@ type multiFormValueEncoder encoderAdaptor
 func (e *multiFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
 	// Special case: []byte => base64.
 	if e.BaseType == byteType {
-		return []string{base64.URLEncoding.EncodeToString(value.Bytes())}, nil
+		bs, _ := encodeByteSlice(value.Bytes())
+		return []string{bs}, nil
 	}
 
 	var res []string

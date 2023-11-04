@@ -1,6 +1,7 @@
 package httpin
 
 import (
+	"encoding/base64"
 	"strconv"
 	"time"
 )
@@ -35,6 +36,11 @@ func encodeUint(value uint) (string, error) {
 
 func encodeUint8(value uint8) (string, error) {
 	return strconv.FormatUint(uint64(value), 10), nil
+}
+
+func encodeByteSlice(bytes []byte) (string, error) {
+	// NOTE: we're using base64.StdEncoding here, not base64.URLEncoding.
+	return base64.StdEncoding.EncodeToString(bytes), nil
 }
 
 func encodeUint16(value uint16) (string, error) {

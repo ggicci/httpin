@@ -1,6 +1,7 @@
 package httpin
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/url"
 	"testing"
@@ -210,5 +211,33 @@ func TestDirectiveForm_Encode(t *testing.T) {
 		"times":   {"2000-01-02T22:04:05Z", "1991-06-28T06:00:00Z"},
 	}
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	assert.Equal(t, expected, req)
+}
+
+func TestDirectiveForm_Encode_ByteSlice(t *testing.T) {
+	type ByteSlice struct {
+		Bytes      []byte   `in:"form=bytes"`
+		MultiBytes [][]byte `in:"form=multi_bytes"`
+	}
+	core, err := New(ByteSlice{})
+	assert.NoError(t, err)
+	payload := &ByteSlice{
+		Bytes: []byte("hello"),
+		MultiBytes: [][]byte{
+			[]byte("hello"),
+			[]byte("world"),
+		},
+	}
+	expected, _ := http.NewRequest("POST", "/api", nil)
+	expected.Form = url.Values{
+		"bytes": {base64.StdEncoding.EncodeToString(payload.Bytes)},
+		"multi_bytes": {
+			base64.StdEncoding.EncodeToString(payload.MultiBytes[0]),
+			base64.StdEncoding.EncodeToString(payload.MultiBytes[1]),
+		},
+	}
+	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, err := core.NewRequest("POST", "/api", payload)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, req)
 }

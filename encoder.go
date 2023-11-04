@@ -33,6 +33,7 @@ func init() {
 	registerBuiltinEncoder[complex128](encodeComplex128)
 	registerBuiltinEncoder[string](encodeString)
 	registerBuiltinEncoder[time.Time](encodeTime)
+	registerBuiltinEncoder[[]byte](encodeByteSlice) // []byte is a special case
 }
 
 // Encoder is a type that can encode a value of type T to a string. It is
