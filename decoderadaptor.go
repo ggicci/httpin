@@ -36,49 +36,49 @@ func adaptDecoder(baseType reflect.Type, decoder any) any {
 	}
 }
 
-// Scalar returns an adapted decoder for type T.
-func (sva *decoderAdaptor[DT]) Scalar(returnType reflect.Type) decoder2d[DT] {
-	return &scalarTypeDecoder[DT]{sva, returnType}
+// T returns an adapted decoder for type T.
+func (sva *decoderAdaptor[DT]) T(returnType reflect.Type) decoder2d[DT] {
+	return &singleTypeDecoder[DT]{sva, returnType}
 }
 
-// Multi returns an adapted decoder for []T.
-func (sva *decoderAdaptor[DT]) Multi(returnType reflect.Type) decoder2d[DT] {
+// TSlice returns an adapted decoder for []T.
+func (sva *decoderAdaptor[DT]) TSlice(returnType reflect.Type) decoder2d[DT] {
 	return &multiTypeDecoder[DT]{sva, returnType}
 }
 
-// Patch returns an adapted decoder for patch.Field[T].
-func (sva *decoderAdaptor[DT]) Patch(returnType reflect.Type) decoder2d[DT] {
+// PatchT returns an adapted decoder for patch.Field[T].
+func (sva *decoderAdaptor[DT]) PatchT(returnType reflect.Type) decoder2d[DT] {
 	return &patchFieldTypeDecoder[DT]{sva, returnType}
 }
 
-// PatchMulti returns an adapted decoder for patch.Field[[]T].
-func (sva *decoderAdaptor[DT]) PatchMulti(returnType reflect.Type) decoder2d[DT] {
+// PatchTSlice returns an adapted decoder for patch.Field[[]T].
+func (sva *decoderAdaptor[DT]) PatchTSlice(returnType reflect.Type) decoder2d[DT] {
 	return &patchFieldMultiTypeDecoder[DT]{sva, returnType}
 }
 
 func (sva *decoderAdaptor[DT]) DecoderByKind(kind typeKind, returnType reflect.Type) decoder2d[DT] {
 	switch kind {
-	case typeKindScalar:
-		return sva.Scalar(returnType)
-	case typeKindMulti:
-		return sva.Multi(returnType)
-	case typeKindPatch:
-		return sva.Patch(returnType)
-	case typeKindPatchMulti:
-		return sva.PatchMulti(returnType)
+	case typeT:
+		return sva.T(returnType)
+	case typeTSlice:
+		return sva.TSlice(returnType)
+	case typePatchT:
+		return sva.PatchT(returnType)
+	case typePatchTSlice:
+		return sva.PatchTSlice(returnType)
 	default:
 		return nil
 	}
 }
 
-type scalarTypeDecoder[DT dataSource] struct {
+type singleTypeDecoder[DT dataSource] struct {
 	*decoderAdaptor[DT]
 	ReturnType reflect.Type
 }
 
-// DecodeX of scalarTypeDecoder[DT] decodes a single value.
+// DecodeX of singleTypeDecoder decodes a single value.
 // It only decodes the first value in the given slice. Returns T.
-func (s *scalarTypeDecoder[DT]) DecodeX(values []DT) (any /* T */, error) {
+func (s *singleTypeDecoder[DT]) DecodeX(values []DT) (any /* T */, error) {
 	return s.BaseDecoder.Decode(values[0])
 }
 
@@ -87,7 +87,7 @@ type multiTypeDecoder[DT dataSource] struct {
 	ReturnType reflect.Type
 }
 
-// DecodeX of multiTypeDecoder[DT] decodes multiple values. Returns []T.
+// DecodeX of multiTypeDecoder decodes multiple values. Returns []T.
 func (m *multiTypeDecoder[DT]) DecodeX(values []DT) (any /* []T */, error) {
 	res := reflect.MakeSlice(m.ReturnType, len(values), len(values))
 	for i, value := range values {
@@ -105,7 +105,7 @@ type patchFieldTypeDecoder[DT dataSource] struct {
 	ReturnType reflect.Type
 }
 
-// DecodeX of patchFieldTypeDecoder[DT] decodes a single value.
+// DecodeX of patchFieldTypeDecoder decodes a single value.
 // It only decodes the first value in the given slice. Returns patch.Field[T].
 func (p *patchFieldTypeDecoder[DT]) DecodeX(values []DT) (any /* patch.Field[T] */, error) {
 	res := reflect.New(p.ReturnType)
@@ -123,7 +123,7 @@ type patchFieldMultiTypeDecoder[DT dataSource] struct {
 	ReturnType reflect.Type
 }
 
-// DecodeX of patchFieldMultiTypeDecoder[DT] decodes multiple values. Returns patch.Field[[]T].
+// DecodeX of patchFieldMultiTypeDecoder decodes multiple values. Returns patch.Field[[]T].
 func (pm *patchFieldMultiTypeDecoder[DT]) DecodeX(values []DT) (any /* patch.Field[[]T] */, error) {
 	subValue := reflect.MakeSlice(reflect.SliceOf(pm.BaseType), len(values), len(values))
 	for i, value := range values {

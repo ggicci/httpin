@@ -79,7 +79,7 @@ func Test_scaler2pointerEncoder(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal("no", actual)
 
-	enc := scalar2pointerEncoder{EncoderFunc[bool](encodeCustomBool)}
+	enc := toPointerEncoder{EncoderFunc[bool](encodeCustomBool)}
 
 	actual, err = enc.Encode(reflect.ValueOf(asPointerValue[bool](true)))
 	assert.NoError(err)

@@ -91,17 +91,17 @@ func registerEncoderTo[T any](p priorityPair, encoder Encoder, force bool) {
 		// When we have a non-pointer type (T), we also register the encoder for its
 		// pointer type (*T). The encoder for the pointer type (*T) will be registered
 		// as the secondary encoder.
-		panicOnError(p.SetPair(reflect.PtrTo(typ), nil, scalar2pointerEncoder{encoder}, force))
+		panicOnError(p.SetPair(reflect.PtrTo(typ), nil, toPointerEncoder{encoder}, force))
 	}
 }
 
-// scalar2pointerEncoder makes an encoder for a scalar type (T) be able to used as an
-// encoder for a pointer type (*T).
-type scalar2pointerEncoder struct {
+// toPointerEncoder makes an encoder for a type (T) be able to used as an
+// encoder for a T's pointer type (*T).
+type toPointerEncoder struct {
 	Encoder
 }
 
-func (pe scalar2pointerEncoder) Encode(value reflect.Value) (string, error) {
+func (pe toPointerEncoder) Encode(value reflect.Value) (string, error) {
 	return pe.Encoder.Encode(value.Elem())
 }
 

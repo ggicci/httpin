@@ -27,39 +27,39 @@ func adaptEncoder(baseType reflect.Type, encoder Encoder) *encoderAdaptor {
 
 func (adaptor *encoderAdaptor) EncoderByKind(kind typeKind) formValueEncoder {
 	switch kind {
-	case typeKindScalar:
-		return adaptor.Scalar()
-	case typeKindMulti:
-		return adaptor.Multi()
-	case typeKindPatch:
-		return adaptor.Patch()
-	case typeKindPatchMulti:
-		return adaptor.PatchMulti()
+	case typeT:
+		return adaptor.T()
+	case typeTSlice:
+		return adaptor.TSlice()
+	case typePatchT:
+		return adaptor.PatchT()
+	case typePatchTSlice:
+		return adaptor.PatchTSlice()
 	default:
 		return nil
 	}
 }
 
-func (adaptor *encoderAdaptor) Scalar() formValueEncoder {
-	return (*scalarFormValueEncoder)(adaptor)
+func (adaptor *encoderAdaptor) T() formValueEncoder {
+	return (*singleFormValueEncoder)(adaptor)
 }
 
-func (adaptor *encoderAdaptor) Multi() formValueEncoder {
+func (adaptor *encoderAdaptor) TSlice() formValueEncoder {
 	return (*multiFormValueEncoder)(adaptor)
 }
 
-func (adaptor *encoderAdaptor) Patch() formValueEncoder {
-	return (*patchFormValueEncoder)(adaptor)
+func (adaptor *encoderAdaptor) PatchT() formValueEncoder {
+	return (*patchFieldFormValueEncoder)(adaptor)
 }
 
-func (adaptor *encoderAdaptor) PatchMulti() formValueEncoder {
-	return (*patchMultiFormValueEncoder)(adaptor)
+func (adaptor *encoderAdaptor) PatchTSlice() formValueEncoder {
+	return (*patchFieldMultiFormValueEncoder)(adaptor)
 }
 
-type scalarFormValueEncoder encoderAdaptor
+type singleFormValueEncoder encoderAdaptor
 
 // EncodeX encodes value of T to []string, a single string element in the result. Where T is the BaseType.
-func (e *scalarFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
+func (e *singleFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
 	if s, err := e.BaseEncoder.Encode(value); err != nil {
 		return nil, err
 	} else {
@@ -87,21 +87,21 @@ func (e *multiFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
 	return res, nil
 }
 
-type patchFormValueEncoder encoderAdaptor
+type patchFieldFormValueEncoder encoderAdaptor
 
 // EncodeX encodes value of patch.Field[T] to []string, where T is the BaseType.
-func (e *patchFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
+func (e *patchFieldFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
 	if !value.FieldByName("Valid").Bool() {
 		return nil, nil
 	}
 	innerValue := value.FieldByName("Value")
-	return (*scalarFormValueEncoder)(e).EncodeX(innerValue)
+	return (*singleFormValueEncoder)(e).EncodeX(innerValue)
 }
 
-type patchMultiFormValueEncoder encoderAdaptor
+type patchFieldMultiFormValueEncoder encoderAdaptor
 
 // EncodeX encodes value of patch.Field[[]T] to []string, where T is the BaseType.
-func (e *patchMultiFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
+func (e *patchFieldMultiFormValueEncoder) EncodeX(value reflect.Value) ([]string, error) {
 	if !value.FieldByName("Valid").Bool() {
 		return nil, nil
 	}
@@ -115,16 +115,16 @@ func toFileEncoders(value reflect.Value, typeKind typeKind) ([]FileEncoder, erro
 	}
 
 	switch typeKind {
-	case typeKindScalar:
+	case typeT:
 		return toFileEncodersOne(value)
-	case typeKindPatch:
+	case typePatchT:
 		if !value.FieldByName("Valid").Bool() {
 			return nil, nil // skip no file upload: patch.Field.Valid is false
 		}
 		return toFileEncodersOne(value.FieldByName("Value"))
-	case typeKindMulti:
+	case typeTSlice:
 		return toFileEncodersMulti(value)
-	case typeKindPatchMulti:
+	case typePatchTSlice:
 		if !value.FieldByName("Valid").Bool() {
 			return nil, nil // skip no file upload: patch.Field.Valid is false
 		}

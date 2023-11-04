@@ -5,33 +5,31 @@ import "reflect"
 type typeKind int
 
 const (
-	typeKindScalar     typeKind = iota // T
-	typeKindMulti                      // []T
-	typeKindPatch                      // patch.Field[T]
-	typeKindPatchMulti                 // patch.Field[[]T]
+	typeT           typeKind = iota // T
+	typeTSlice                      // []T
+	typePatchT                      // patch.Field[T]
+	typePatchTSlice                 // patch.Field[[]T]
 )
 
-// baseTypeOf returns the scalar element type of a given type.
-//   - T -> T, typeKindScalar
-//   - []T -> T, typeKindMulti
-//   - patch.Field[T] -> T, typeKindPatch
-//   - patch.Field[[]T] -> T, typeKindPatchMulti
-//
-// The given type is gonna use the decoder of the scalar element type to decode
-// the input values.
+// baseTypeOf returns the base type of the given type its kind. The kind
+// represents how the given type is constructed from the base type.
+//   - T -> T, typeT
+//   - []T -> T, typeTSlice
+//   - patch.Field[T] -> T, typePatchT
+//   - patch.Field[[]T] -> T, typePatchTSlice
 func baseTypeOf(valueType reflect.Type) (reflect.Type, typeKind) {
 	if valueType.Kind() == reflect.Slice {
-		return valueType.Elem(), typeKindMulti
+		return valueType.Elem(), typeTSlice
 	}
 	if isPatchField(valueType) {
 		subElemType, isMulti := patchFieldElemType(valueType)
 		if isMulti {
-			return subElemType, typeKindPatchMulti
+			return subElemType, typePatchTSlice
 		} else {
-			return subElemType, typeKindPatch
+			return subElemType, typePatchT
 		}
 	}
-	return valueType, typeKindScalar
+	return valueType, typeT
 }
 
 // typeOf returns the reflect.Type of a given type.
