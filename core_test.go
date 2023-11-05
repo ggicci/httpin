@@ -1,12 +1,20 @@
 package httpin
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/ggicci/httpin/directive"
+	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/httpin/patch"
 	"github.com/ggicci/owl"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,29 +36,6 @@ type ProductQuery struct {
 	SortDesc  []bool    `in:"form=sort_desc"`
 	Pagination
 	Authorization
-}
-
-type InvalidDate struct {
-	Value string
-	Err   error
-}
-
-func decodeMyDate(value string) (time.Time, error) {
-	t, err := time.Parse("2006-01-02", value)
-	if err != nil {
-		return time.Time{}, &InvalidDate{Value: value, Err: err}
-	}
-	return t, nil
-}
-
-var myDateDecoder = DecoderFunc[time.Time](decodeMyDate)
-
-func (e *InvalidDate) Error() string {
-	return fmt.Sprintf("invalid date: %q (date must conform to format \"2006-01-02\"), %s", e.Value, e.Err)
-}
-
-func (e *InvalidDate) Unwrap() error {
-	return e.Err
 }
 
 func TestNew_WithNonStructType(t *testing.T) {
@@ -182,7 +167,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		core, err := New(Cursor{})
 		assert.NoError(t, err)
 		got, err := core.Decode(r)
-		assert.ErrorIs(t, err, errUnsupportedType)
+		assert.ErrorIs(t, err, internal.ErrUnsupportedType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -200,7 +185,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		core, err := New(Payload{})
 		assert.NoError(t, err)
 		got, err := core.Decode(r)
-		assert.ErrorIs(t, err, errUnsupportedType)
+		assert.ErrorIs(t, err, internal.ErrUnsupportedType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -229,8 +214,8 @@ func TestCore_Decode_UnexportedFields(t *testing.T) {
 }
 
 func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
-	RegisterDecoder[bool](myBoolDecoder) // usually done in init()
-	RegisterDecoder[Place](myPlaceDecoder)
+	directive.RegisterDecoder[bool](myBoolDecoder) // usually done in init()
+	directive.RegisterDecoder[Place](myPlaceDecoder)
 
 	type Input struct {
 		IsMember           bool   `in:"form=is_member"`
@@ -259,7 +244,7 @@ func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
 }
 
 func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
-	RegisterDecoder[*Place](myPlacePointerDecoder) // usually done in init()
+	directive.RegisterDecoder[*Place](myPlacePointerDecoder) // usually done in init()
 	type Input struct {
 		BornPlace *Place `in:"form=born_place"`
 		LivePlace Place  `in:"form=live_place"`
@@ -287,7 +272,7 @@ func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
 func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert := assert.New(t)
 
-	RegisterDecoder[Place](myPlaceDecoder) // usually done in init()
+	directive.RegisterDecoder[Place](myPlaceDecoder) // usually done in init()
 	type Input struct {
 		IsMember       *bool  `in:"form=is_member"`
 		Limit          *int   `in:"form=limit"`
@@ -344,7 +329,7 @@ type CustomNamedDecoderInput struct {
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder(t *testing.T) {
-	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+	directive.RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
@@ -395,7 +380,7 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrUnregisteredDecoder(t *testin
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
-	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+	directive.RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 	type Input struct {
 		Avatar *File `in:"form=avatar;decoder=decodeMyDate"`
 	}
@@ -405,7 +390,7 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrCannotSpecifyOnFileTypeFields
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_ErrValueTypeMismatch(t *testing.T) {
-	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+	directive.RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 
 	type Input struct {
 		Birthday string `in:"form=birthday;decoder=decodeMyDate"` // cause ErrValueTypeMismatch
@@ -416,14 +401,14 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrValueTypeMismatch(t *testing.
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{"birthday": {"1991-11-10"}} // birthday is string, not time.Time
 	_, err = core.Decode(r)
-	assert.ErrorIs(t, err, errTypeMismatch)
+	assert.ErrorIs(t, err, internal.ErrTypeMismatch)
 	assert.ErrorContains(t, err, "birthday")
 	assert.ErrorContains(t, err, "string")
 	assert.ErrorContains(t, err, "time.Time")
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_DecodeError(t *testing.T) {
-	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+	directive.RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
@@ -439,4 +424,144 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_DecodeError(t *testing.T) {
 	assert.ErrorAs(t, err, &invalidDate)
 	assert.ErrorContains(t, err, "invalid date: \"1991-11-10 08:00:00\"")
 	assert.Nil(t, got)
+}
+
+// FIXME(ggicci): remove the following code after the issue is fixed.
+
+func encodeCustomBool(value bool) (string, error) {
+	if value {
+		return "yes", nil
+	}
+	return "no", nil
+}
+
+// decodeCustomBool additionally parses "yes/no".
+func decodeCustomBool(value string) (bool, error) {
+	sdata := strings.ToLower(value)
+	if sdata == "yes" {
+		return true, nil
+	}
+	if sdata == "no" {
+		return false, nil
+	}
+	return strconv.ParseBool(sdata)
+}
+
+var myBoolDecoder = directive.DecoderFunc[bool](decodeCustomBool)
+
+type InvalidDate struct {
+	Value string
+	Err   error
+}
+
+func (e *InvalidDate) Error() string {
+	return fmt.Sprintf("invalid date: %q (date must conform to format \"2006-01-02\"), %s", e.Value, e.Err)
+}
+
+func (e *InvalidDate) Unwrap() error {
+	return e.Err
+}
+
+func decodeMyDate(value string) (time.Time, error) {
+	t, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		return time.Time{}, &InvalidDate{Value: value, Err: err}
+	}
+	return t, nil
+}
+
+var myDateDecoder = directive.DecoderFunc[time.Time](decodeMyDate)
+
+type Place struct {
+	Country string
+	City    string
+}
+
+// decodePlace parses "country.city", e.g. "Canada.Toronto".
+// It returns a Place.
+func decodePlace(value string) (Place, error) {
+	parts := strings.Split(value, ".")
+	if len(parts) != 2 {
+		return Place{}, errors.New("invalid place")
+	}
+	return Place{Country: parts[0], City: parts[1]}, nil
+}
+
+// decodePlacePointer parses "country.city", e.g. "Canada.Toronto".
+// It returns *Place.
+func decodePlacePointer(value string) (*Place, error) {
+	parts := strings.Split(value, ".")
+	if len(parts) != 2 {
+		return nil, errors.New("invalid place")
+	}
+	return &Place{Country: parts[0], City: parts[1]}, nil
+}
+
+var myPlaceDecoder = directive.DecoderFunc[Place](decodePlace)
+var myPlacePointerDecoder = directive.DecoderFunc[*Place](decodePlacePointer)
+
+func removeTypeEncoder[T any]() {
+	internal.DefaultRegistry.RemoveEncoder(internal.TypeOf[T]())
+	internal.DefaultRegistry.RemoveEncoder(internal.TypeOf[*T]())
+}
+
+func removeNamedEncoder(name string) {
+	internal.DefaultRegistry.RemoveNamedEncoder(name)
+}
+
+func removeTypeDecoder[T any]() {
+	internal.DefaultRegistry.RemoveDecoder(internal.TypeOf[T]())
+	internal.DefaultRegistry.RemoveDecoder(internal.TypeOf[[]T]())
+	internal.DefaultRegistry.RemoveDecoder(internal.TypeOf[patch.Field[T]]())
+	internal.DefaultRegistry.RemoveDecoder(internal.TypeOf[patch.Field[[]T]]())
+}
+
+func removeNamedDecoder(name string) {
+	internal.DefaultRegistry.RemoveNamedDecoder(name)
+}
+
+func newMultipartFormRequestFromMap(m map[string]any) *http.Request {
+	body, writer := newMultipartFormWriterFromMap(m)
+	r, _ := http.NewRequest("POST", "/", body)
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	return r
+}
+
+func newMultipartFormWriterFromMap(m map[string]any) (body *bytes.Buffer, writer *multipart.Writer) {
+	body = new(bytes.Buffer)
+	writer = multipart.NewWriter(body)
+
+	appendValue := func(key, value string) {
+		fieldWriter, _ := writer.CreateFormField(key)
+		fieldWriter.Write([]byte(value))
+	}
+	appendFile := func(key string, value []byte) {
+		fileWriter, _ := writer.CreateFormFile(key, key+".txt")
+		fileWriter.Write(value)
+	}
+
+	for k, v := range m {
+		switch cv := v.(type) {
+		case string:
+			appendValue(k, cv)
+		case []byte:
+			appendFile(k, cv)
+		case []string:
+			for _, sv := range cv {
+				appendValue(k, sv)
+			}
+		case [][]byte:
+			for _, bv := range cv {
+				appendFile(k, bv)
+			}
+		default:
+			panic("invalid type")
+		}
+	}
+	_ = writer.Close() // error ignored
+	return
+}
+
+func removeFileType[T any]() {
+	internal.DefaultRegistry.RemoveFileType(internal.TypeOf[T]())
 }

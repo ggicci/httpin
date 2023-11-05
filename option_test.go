@@ -2,6 +2,7 @@ package httpin
 
 import (
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,4 +35,8 @@ func TestWithMaxMemory(t *testing.T) {
 	// Fail on too small max memory.
 	_, err := New(ProductQuery{}, WithMaxMemory(100))
 	assert.ErrorContains(t, err, "max memory too small")
+}
+
+func equalFuncs(expected, actual any) bool {
+	return reflect.ValueOf(expected).Pointer() == reflect.ValueOf(actual).Pointer()
 }

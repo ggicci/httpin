@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"strings"
 	"sync"
 
+	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/owl"
 )
 
@@ -15,6 +17,8 @@ const (
 	minimumMaxMemory = int64(1 << 10)  // 1KB
 	defaultMaxMemory = int64(32 << 20) // 32 MB
 )
+
+type RequestBuilder = internal.RequestBuilder
 
 var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 
@@ -77,9 +81,12 @@ func (c *Core) Decode(req *http.Request) (any, error) {
 		return nil, err
 	}
 
-	rv, err := c.resolver.Resolve(owl.WithNamespace(decoderNamespace), owl.WithValue(ctxRequest, req))
+	rv, err := c.resolver.Resolve(
+		owl.WithNamespace(decoderNamespace),
+		owl.WithValue(internal.CtxRequest, req),
+	)
 	if err != nil {
-		return nil, newInvalidFieldError(err.(*owl.ResolveError))
+		return nil, internal.NewInvalidFieldError(err.(*owl.ResolveError))
 	}
 	return rv.Interface(), nil
 }
@@ -107,7 +114,7 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 	if err = c.resolver.Scan(
 		input,
 		owl.WithNamespace(encoderNamespace),
-		owl.WithValue(ctxRequestBuilder, rb),
+		owl.WithValue(internal.CtxRequestBuilder, rb),
 	); err != nil {
 		return nil, err
 	}
@@ -174,14 +181,14 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 	if len(d.Argv) == 0 {
 		return errors.New("missing decoder name")
 	}
-	decoder := decoderByName(d.Argv[0])
+	decoder := internal.DefaultRegistry.GetNamedDecoder(d.Argv[0])
 	if decoder == nil {
 		return fmt.Errorf("unregistered decoder: %q", d.Argv[0])
 	}
-	if isFileType(r.Type) {
+	if internal.DefaultRegistry.IsFileType(r.Type) {
 		return errors.New("cannot use decoder directive on a file type field")
 	}
-	r.Context = context.WithValue(r.Context, ctxCustomDecoder, decoder)
+	r.Context = context.WithValue(r.Context, internal.CtxCustomDecoder, decoder)
 	return nil
 }
 
@@ -193,14 +200,33 @@ func reserveEncoderDirective(r *owl.Resolver) error {
 	if len(d.Argv) == 0 {
 		return errors.New("missing encoder name")
 	}
-	encoder := encoderByName(d.Argv[0])
+	encoder := internal.DefaultRegistry.GetNamedEncoder(d.Argv[0])
 	if encoder == nil {
 		return fmt.Errorf("unregistered encoder: %q", d.Argv[0])
 	}
-	if isFileType(r.Type) {
+	if internal.DefaultRegistry.IsFileType(r.Type) {
 		return errors.New("cannot use encoder directive on a file type field")
 	}
-	r.Context = context.WithValue(r.Context, ctxCustomEncoder, encoder)
+	r.Context = context.WithValue(r.Context, internal.CtxCustomEncoder, encoder)
+	return nil
+}
+
+// normalizeBodyDirective normalizes the body directive of the resolver.
+// If no body format specified, the default type is "json".
+func normalizeBodyDirective(r *owl.Resolver) error {
+	dir := r.GetDirective("body")
+	if dir == nil || dir.Name != "body" {
+		return nil
+	}
+	if len(dir.Argv) == 0 {
+		dir.Argv = []string{"json"} // use json as default when no body format specified
+	}
+	dir.Argv[0] = strings.ToLower(dir.Argv[0])
+
+	var bodyFormat = dir.Argv[0]
+	if internal.DefaultRegistry.GetBodyDecoder(bodyFormat) == nil {
+		return fmt.Errorf("unknown body format: %q", bodyFormat)
+	}
 	return nil
 }
 

@@ -102,7 +102,7 @@ func TestNewInput_Error_byDefaultErrorHandler(t *testing.T) {
 	assert.Equal(t, 422, rw.Code)
 	assert.Equal(t, "Token", out["field"])
 	assert.Equal(t, "required", out["source"])
-	assert.Contains(t, out["error"], errMissingField.Error())
+	assert.Contains(t, out["error"], "missing required field")
 }
 
 func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {

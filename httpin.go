@@ -8,6 +8,19 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+
+	"github.com/ggicci/httpin/internal"
+)
+
+type InvalidFieldError = internal.InvalidFieldError
+
+type ContextKey int
+
+const (
+	// Input is the key to get the input object from Request.Context() injected by httpin. e.g.
+	//
+	//     input := r.Context().Value(httpin.Input).(*InputStruct)
+	Input ContextKey = iota
 )
 
 // Decode decodes an HTTP request to the given input struct. The input must be a
@@ -72,7 +85,7 @@ func NewRequestWithContext(ctx context.Context, method, url string, input any) (
 // already provided a middleware chaining mechanism.
 func NewInput(inputStruct any, opts ...Option) func(http.Handler) http.Handler {
 	core, err := New(inputStruct, opts...)
-	panicOnError(err)
+	internal.PanicOnError(err)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {

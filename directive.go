@@ -4,21 +4,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ggicci/httpin/directive"
+	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/owl"
 )
 
-type Directive = owl.Directive
-
-type DirectiveExecutor interface {
-	Encode(*DirectiveRuntime) error
-	Decode(*DirectiveRuntime) error
-}
-
 var (
-	noopDirective = &directiveNoop{}
-
-	reservedExecutorNames = []string{"decoder", "encoder"}
-
 	// decoderNamespace is the namespace for registering directive executors that are
 	// used to decode the http request to input struct.
 	decoderNamespace = owl.NewNamespace()
@@ -26,16 +17,26 @@ var (
 	// encoderNamespace is the namespace for registering directive executors that are
 	// used to encode the input struct to http request.
 	encoderNamespace = owl.NewNamespace()
+
+	reservedExecutorNames = []string{"decoder", "encoder"}
+	noopDirective         = &directiveNoop{}
 )
+
+type DirectiveRuntime = internal.DirectiveRuntime
+
+type DirectiveExecutor interface {
+	Encode(*DirectiveRuntime) error
+	Decode(*DirectiveRuntime) error
+}
 
 func init() {
 	// Register bulit-in directives.
-	RegisterDirective("form", &directvieForm{})
-	RegisterDirective("query", &directiveQuery{})
-	RegisterDirective("header", &directiveHeader{})
-	RegisterDirective("body", &directiveBody{})
-	RegisterDirective("required", &directiveRequired{})
-	RegisterDirective("default", &directiveDefault{})
+	RegisterDirective("form", &directive.DirectvieForm{})
+	RegisterDirective("query", &directive.DirectiveQuery{})
+	RegisterDirective("header", &directive.DirectiveHeader{})
+	RegisterDirective("body", &directive.DirectiveBody{})
+	RegisterDirective("required", &directive.DirectiveRequired{})
+	RegisterDirective("default", &directive.DirectiveDefault{})
 
 	// decoder is a special executor which does nothing, but is an indicator of
 	// overriding the decoder for a specific field.
@@ -59,7 +60,7 @@ func RegisterDirective(name string, executor DirectiveExecutor, replace ...bool)
 func registerDirectiveExecutorToNamespace(ns *owl.Namespace, name string, exe DirectiveExecutor, replace ...bool) {
 	panicOnReservedExecutorName(name)
 	if exe == nil {
-		panicOnError(errors.New("nil directive executor"))
+		internal.PanicOnError(errors.New("nil directive executor"))
 	}
 	if ns == decoderNamespace {
 		ns.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(exe.Decode), replace...)
@@ -77,7 +78,7 @@ func asOwlDirectiveExecutor(directiveFunc func(*DirectiveRuntime) error) owl.Dir
 func panicOnReservedExecutorName(name string) {
 	for _, reservedName := range reservedExecutorNames {
 		if name == reservedName {
-			panicOnError(fmt.Errorf("reserved executor name: %q", name))
+			internal.PanicOnError(fmt.Errorf("reserved executor name: %q", name))
 		}
 	}
 }
