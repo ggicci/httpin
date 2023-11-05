@@ -9,10 +9,9 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/ggicci/httpin/core"
 	"github.com/ggicci/httpin/internal"
 )
-
-type InvalidFieldError = internal.InvalidFieldError
 
 type contextKey int
 
@@ -22,6 +21,20 @@ const (
 	//     input := r.Context().Value(httpin.Input).(*InputStruct)
 	Input contextKey = iota
 )
+
+// New creates a new core.Core instance holding the resolver of the given inputStruct.
+//   - Use .Decode() to decode an HTTP request to an instance of the inputStruct.
+//   - Use .NewRequest() to encode an instance of the inputStruct to an HTTP request.
+//   - Call httpin.NewInput() to create an HTTP middleware.
+var New = core.New
+
+// WithMaxMemory overrides the default maximum memory size (32MB) when reading
+// the request body. See https://pkg.go.dev/net/http#Request.ParseMultipartForm
+// for more details.
+var WithMaxMemory = core.WithMaxMemory
+
+// WithErrorHandler overrides the default error handler.
+var WithErrorHandler = core.WithErrorHandler
 
 // Decode decodes an HTTP request to the given input struct. The input must be a
 // pointer to a struct instance. For example:
@@ -35,11 +48,11 @@ func Decode(req *http.Request, input any) error {
 	if originalType.Kind() != reflect.Ptr {
 		return fmt.Errorf("httpin: input must be a pointer")
 	}
-	core, err := New(originalType.Elem())
+	co, err := New(originalType.Elem())
 	if err != nil {
 		return err
 	}
-	if value, err := core.Decode(req); err != nil {
+	if value, err := co.Decode(req); err != nil {
 		return err
 	} else {
 		if originalType.Elem().Kind() == reflect.Ptr {
@@ -51,11 +64,6 @@ func Decode(req *http.Request, input any) error {
 	}
 }
 
-// Encode is an alias of NewRequest.
-func Encode(method, url string, input any) (*http.Request, error) {
-	return NewRequest(method, url, input)
-}
-
 // NewRequest wraps NewRequestWithContext using context.Background.
 func NewRequest(method, url string, input any) (*http.Request, error) {
 	return NewRequestWithContext(context.Background(), method, url, input)
@@ -65,11 +73,11 @@ func NewRequest(method, url string, input any) (*http.Request, error) {
 // input struct instance. The fields of the input struct will be encoded to the
 // request by resolving the "in" tags and executing the directives.
 func NewRequestWithContext(ctx context.Context, method, url string, input any) (*http.Request, error) {
-	core, err := New(input)
+	co, err := New(input)
 	if err != nil {
 		return nil, err
 	}
-	return core.NewRequestWithContext(ctx, method, url, input)
+	return co.NewRequestWithContext(ctx, method, url, input)
 }
 
 // NewInput creates a "Middleware". A middleware is a function that takes a
@@ -83,17 +91,17 @@ func NewRequestWithContext(ctx context.Context, method, url string, input any) (
 // We recommend using https://github.com/justinas/alice to chain your
 // middlewares. If you're using some popular web frameworks, they may have
 // already provided a middleware chaining mechanism.
-func NewInput(inputStruct any, opts ...coreOption) func(http.Handler) http.Handler {
-	core, err := New(inputStruct, opts...)
+func NewInput(inputStruct any, opts ...core.Option) func(http.Handler) http.Handler {
+	co, err := New(inputStruct, opts...)
 	internal.PanicOnError(err)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			// Here we read the request and decode it to fill our structure.
 			// Once failed, the request should end here.
-			input, err := core.Decode(r)
+			input, err := co.Decode(r)
 			if err != nil {
-				core.getErrorHandler()(rw, r, err)
+				co.GetErrorHandler()(rw, r, err)
 				return
 			}
 

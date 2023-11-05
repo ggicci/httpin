@@ -5,14 +5,14 @@ import (
 	"reflect"
 )
 
-// priorityPair maps a reflect.Type to a pair of (primary, secondary).
-type priorityPair map[reflect.Type][2]any
+// PriorityPair maps a reflect.Type to a pair of (primary, secondary).
+type PriorityPair map[reflect.Type][2]any
 
-func newPriorityPair() priorityPair {
-	return make(priorityPair)
+func NewPriorityPair() PriorityPair {
+	return make(PriorityPair)
 }
 
-func (m priorityPair) SetPair(typ reflect.Type, primary, secondary any, ignoreConflict bool) error {
+func (m PriorityPair) SetPair(typ reflect.Type, primary, secondary any, ignoreConflict bool) error {
 	olds, ok := m[typ]
 
 	if !ok {
@@ -31,15 +31,32 @@ func (m priorityPair) SetPair(typ reflect.Type, primary, secondary any, ignoreCo
 	if secondary != nil { // always set secondary
 		olds[1] = secondary
 	}
+	m[typ] = olds // NOTE: this is necessary
 	return nil
 }
 
 // GetOne returns the primary if it exists, otherwise the secondary.
-func (m priorityPair) GetOne(t reflect.Type) any {
+func (m PriorityPair) GetOne(t reflect.Type) any {
 	if pair, ok := m[t]; ok {
 		if pair[0] != nil {
 			return pair[0]
 		}
+		return pair[1]
+	} else {
+		return nil
+	}
+}
+
+func (m PriorityPair) GetPrimary(t reflect.Type) any {
+	if pair, ok := m[t]; ok {
+		return pair[0]
+	} else {
+		return nil
+	}
+}
+
+func (m PriorityPair) GetSecondary(t reflect.Type) any {
+	if pair, ok := m[t]; ok {
 		return pair[1]
 	} else {
 		return nil

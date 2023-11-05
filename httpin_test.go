@@ -9,9 +9,15 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/ggicci/httpin/core"
 	"github.com/justinas/alice"
 	"github.com/stretchr/testify/assert"
 )
+
+type Pagination struct {
+	Page    int `in:"form=page,page_index,index"`
+	PerPage int `in:"form=per_page,page_size"`
+}
 
 func TestDecode(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/", nil)
@@ -106,7 +112,7 @@ func TestNewInput_Error_byDefaultErrorHandler(t *testing.T) {
 }
 
 func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
-	var invalidFieldError *InvalidFieldError
+	var invalidFieldError *core.InvalidFieldError
 	if errors.As(err, &invalidFieldError) {
 		rw.WriteHeader(http.StatusBadRequest) // status: 400
 		io.WriteString(rw, invalidFieldError.Error())
@@ -135,7 +141,7 @@ func TestNewInput_Error_byCustomErrorHandler(t *testing.T) {
 func TestReplaceDefaultErrorHandler(t *testing.T) {
 	// Nil handler should panic.
 	assert.PanicsWithError(t, "httpin: nil error handler", func() {
-		Customizer().RegisterErrorHandler(nil)
+		core.RegisterErrorHandler(nil)
 	})
 
 	r, err := http.NewRequest("GET", "/", nil)
@@ -147,7 +153,7 @@ func TestReplaceDefaultErrorHandler(t *testing.T) {
 	rw := httptest.NewRecorder()
 	handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
 	// NOTE: replace global error handler after NewInput should work
-	Customizer().RegisterErrorHandler(CustomErrorHandler)
+	core.RegisterErrorHandler(CustomErrorHandler)
 
 	handler.ServeHTTP(rw, r)
 	assert.Equal(t, 400, rw.Code)

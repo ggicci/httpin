@@ -2,93 +2,129 @@ package internal
 
 import (
 	"errors"
-	"mime/multipart"
-	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 )
 
-type (
-	Decoder[T any]         decoderInterface[string, T]
-	DecoderFunc[T any]     func(string) (T, error)
-	FileDecoder[T any]     decoderInterface[*multipart.FileHeader, T]
-	FileDecoderFunc[T any] func(*multipart.FileHeader) (T, error)
-)
+var reUnixtime = regexp.MustCompile(`^\d+(\.\d{1,9})?$`)
 
-func (fn DecoderFunc[T]) Decode(value string) (T, error) {
-	return fn(value)
+func DecodeBool(value string) (bool, error) {
+	return strconv.ParseBool(value)
 }
 
-func (fn FileDecoderFunc[T]) Decode(fh *multipart.FileHeader) (T, error) {
-	return fn(fh)
+func DecodeInt(value string) (int, error) {
+	v, err := strconv.ParseInt(value, 10, 64)
+	return int(v), err
 }
 
-type DataSource interface {
-	string | *multipart.FileHeader
+func DecodeInt8(value string) (int8, error) {
+	v, err := strconv.ParseInt(value, 10, 8)
+	return int8(v), err
 }
 
-type decoderInterface[DT DataSource, RT any] interface {
-	Decode(DT) (RT, error)
+func DecodeInt16(value string) (int16, error) {
+	v, err := strconv.ParseInt(value, 10, 16)
+	return int16(v), err
 }
 
-func ToAnyDecoder[T any](decoder Decoder[T]) Decoder[any] {
-	if decoder == nil {
-		return nil
+func DecodeInt32(value string) (int32, error) {
+	v, err := strconv.ParseInt(value, 10, 32)
+	return int32(v), err
+}
+
+func DecodeInt64(value string) (int64, error) {
+	v, err := strconv.ParseInt(value, 10, 64)
+	return int64(v), err
+}
+
+func DecodeUint(value string) (uint, error) {
+	v, err := strconv.ParseUint(value, 10, 64)
+	return uint(v), err
+}
+
+func DecodeUint8(value string) (uint8, error) {
+	v, err := strconv.ParseUint(value, 10, 8)
+	return uint8(v), err
+}
+
+func DecodeUint16(value string) (uint16, error) {
+	v, err := strconv.ParseUint(value, 10, 16)
+	return uint16(v), err
+}
+
+func DecodeUint32(value string) (uint32, error) {
+	v, err := strconv.ParseUint(value, 10, 32)
+	return uint32(v), err
+}
+
+func DecodeUint64(value string) (uint64, error) {
+	v, err := strconv.ParseUint(value, 10, 64)
+	return uint64(v), err
+}
+
+func DecodeFloat32(value string) (float32, error) {
+	v, err := strconv.ParseFloat(value, 32)
+	return float32(v), err
+}
+
+func DecodeFloat64(value string) (float64, error) {
+	v, err := strconv.ParseFloat(value, 64)
+	return float64(v), err
+}
+
+func DecodeComplex64(value string) (complex64, error) {
+	v, err := strconv.ParseComplex(value, 64)
+	return complex64(v), err
+}
+
+func DecodeComplex128(value string) (complex128, error) {
+	v, err := strconv.ParseComplex(value, 128)
+	return complex128(v), err
+}
+
+func DecodeString(value string) (string, error) {
+	return value, nil
+}
+
+// DecodeTime parses data bytes as time.Time in UTC timezone.
+// Supported formats of the data bytes are:
+// 1. RFC3339Nano string, e.g. "2006-01-02T15:04:05-07:00".
+// 2. Date string, e.g. "2006-01-02".
+// 3. Unix timestamp, e.g. "1136239445", "1136239445.8", "1136239445.812738".
+func DecodeTime(value string) (time.Time, error) {
+	// Try parsing value as RFC3339 format.
+	if t, err := time.ParseInLocation(time.RFC3339Nano, value, time.UTC); err == nil {
+		return t.UTC(), nil
 	}
-	return DecoderFunc[any](func(s string) (any, error) {
-		return decoder.Decode(s)
-	})
+
+	// Try parsing value as date format.
+	if t, err := time.ParseInLocation("2006-01-02", value, time.UTC); err == nil {
+		return t.UTC(), nil
+	}
+
+	// Try parsing value as timestamp, both integer and float formats supported.
+	// e.g. "1618974933", "1618974933.284368".
+	if reUnixtime.MatchString(value) {
+		return DecodeUnixtime(value)
+	}
+
+	return time.Time{}, errors.New("invalid time value")
 }
 
-// SmartDecoder is a decoder that switches the return value of the inner Decoder[DT] to
-// WantType. For example, if the inner decoder returns a *T, and WantType is T, then the
-// SmartDecoder will return T instead of *T, vice versa.
-type SmartDecoder struct {
-	Decoder  Decoder[any]
-	WantType reflect.Type
+// value must be valid unix timestamp, matches reUnixtime.
+func DecodeUnixtime(value string) (time.Time, error) {
+	parts := strings.Split(value, ".")
+	// Note: errors are ignored, since we already validated the value.
+	sec, _ := strconv.ParseInt(parts[0], 10, 64)
+	var nsec int64
+	if len(parts) == 2 {
+		nsec, _ = strconv.ParseInt(nanoSecondPrecision(parts[1]), 10, 64)
+	}
+	return time.Unix(sec, nsec).UTC(), nil
 }
 
-func NewSmartDecoder(typ reflect.Type, decoder Decoder[any]) Decoder[any] {
-	return &SmartDecoder{Decoder: decoder, WantType: typ}
-}
-
-func (sd *SmartDecoder) Decode(value string) (any, error) {
-	gotValue, err := sd.Decoder.Decode(value)
-	if err != nil {
-		return nil, err
-	}
-	if gotValue == nil {
-		return nil, nil // nil value, return directly
-	}
-
-	gotType := reflect.TypeOf(gotValue) // returns nil if gotValue is nil
-
-	// Returns directly on the same type.
-	if gotType == sd.WantType {
-		return gotValue, nil
-	}
-
-	// Want T, got *T, return T.
-	if gotType.Kind() == reflect.Ptr && gotType.Elem() == sd.WantType {
-		rv := reflect.ValueOf(gotValue)
-		if rv.IsNil() {
-			return nil, nil
-		}
-		return rv.Elem().Interface(), nil
-	}
-
-	// Want *T, got T, return &T.
-	if sd.WantType.Kind() == reflect.Ptr && sd.WantType.Elem() == gotType {
-		res := reflect.New(gotType)
-		res.Elem().Set(reflect.ValueOf(gotValue))
-		return res.Interface(), nil
-	}
-
-	// Can't convert, return error.
-	return nil, InvalidDecodeReturnType(sd.WantType, gotType)
-}
-
-func validateDecoder(decoder any) error {
-	if decoder == nil || IsNil(reflect.ValueOf(decoder)) {
-		return errors.New("nil decoder")
-	}
-	return nil
+func nanoSecondPrecision(value string) string {
+	return value + strings.Repeat("0", 9-len(value))
 }

@@ -7,9 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	"github.com/ggicci/httpin"
-	"github.com/ggicci/httpin/directive"
-	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/httpin/core"
 )
 
 // GochiURLParamFunc is chi.URLParam
@@ -25,9 +23,9 @@ type GochiURLParamFunc func(r *http.Request, key string) string
 //	    httpin.UseGochiURLParam("path", chi.URLParam)
 //	}
 func UseGochiURLParam(name string, fn GochiURLParamFunc) {
-	httpin.Customizer().RegisterDirective(
+	core.RegisterDirective(
 		name,
-		directive.NewDirectivePath((&gochiURLParamExtractor{URLParam: fn}).Execute),
+		core.NewDirectivePath((&gochiURLParamExtractor{URLParam: fn}).Execute),
 	)
 }
 
@@ -35,7 +33,7 @@ type gochiURLParamExtractor struct {
 	URLParam GochiURLParamFunc
 }
 
-func (chi *gochiURLParamExtractor) Execute(rtm *httpin.DirectiveRuntime) error {
+func (chi *gochiURLParamExtractor) Execute(rtm *core.DirectiveRuntime) error {
 	req := rtm.GetRequest()
 	kvs := make(map[string][]string)
 
@@ -46,11 +44,11 @@ func (chi *gochiURLParamExtractor) Execute(rtm *httpin.DirectiveRuntime) error {
 		}
 	}
 
-	Extractor := &internal.Extractor{
+	extractor := &core.FormExtractor{
 		Runtime: rtm,
 		Form: multipart.Form{
 			Value: kvs,
 		},
 	}
-	return Extractor.Extract()
+	return extractor.Extract()
 }

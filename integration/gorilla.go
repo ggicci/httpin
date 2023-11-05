@@ -6,9 +6,7 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	"github.com/ggicci/httpin"
-	"github.com/ggicci/httpin/directive"
-	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/httpin/core"
 )
 
 // GorillaMuxVarsFunc is mux.Vars
@@ -24,9 +22,9 @@ type GorillaMuxVarsFunc func(*http.Request) map[string]string
 //	    httpin.UseGorillaMux("path", mux.Vars)
 //	}
 func UseGorillaMux(name string, fnVars GorillaMuxVarsFunc) {
-	httpin.Customizer().RegisterDirective(
+	core.RegisterDirective(
 		name,
-		directive.NewDirectivePath((&gorillaMuxVarsExtractor{Vars: fnVars}).Execute),
+		core.NewDirectivePath((&gorillaMuxVarsExtractor{Vars: fnVars}).Execute),
 	)
 }
 
@@ -34,7 +32,7 @@ type gorillaMuxVarsExtractor struct {
 	Vars GorillaMuxVarsFunc
 }
 
-func (mux *gorillaMuxVarsExtractor) Execute(rtm *httpin.DirectiveRuntime) error {
+func (mux *gorillaMuxVarsExtractor) Execute(rtm *core.DirectiveRuntime) error {
 	req := rtm.GetRequest()
 	kvs := make(map[string][]string)
 
@@ -42,11 +40,11 @@ func (mux *gorillaMuxVarsExtractor) Execute(rtm *httpin.DirectiveRuntime) error 
 		kvs[key] = []string{value}
 	}
 
-	Extractor := &internal.Extractor{
+	extractor := &core.FormExtractor{
 		Runtime: rtm,
 		Form: multipart.Form{
 			Value: kvs,
 		},
 	}
-	return Extractor.Extract()
+	return extractor.Extract()
 }
