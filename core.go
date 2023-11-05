@@ -22,10 +22,10 @@ type RequestBuilder = internal.RequestBuilder
 
 var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 
-// Core is the core of httpin. It holds the resolver of a specific struct type.
+// core is the core of httpin. It holds the resolver of a specific struct type.
 // Who is responsible for decoding an HTTP request to an instance of such struct
 // type.
-type Core struct {
+type core struct {
 	resolver *owl.Resolver
 
 	errorHandler errorHandler
@@ -36,19 +36,19 @@ type Core struct {
 //   - Use Core.Decode() to decode an HTTP request to an instance of the inputStruct.
 //   - Use Core.NewRequest() to encode an instance of the inputStruct to an HTTP request.
 //   - Use NewInput() to create an HTTP middleware.
-func New(inputStruct any, opts ...Option) (*Core, error) {
+func New(inputStruct any, opts ...coreOption) (*core, error) {
 	resolver, err := buildResolver(inputStruct)
 	if err != nil {
 		return nil, err
 	}
 
-	core := &Core{
+	core := &core{
 		resolver: resolver,
 	}
 
 	// Apply default options and user custom options to the core.
-	var allOptions []Option
-	defaultOptions := []Option{
+	var allOptions []coreOption
+	defaultOptions := []coreOption{
 		WithMaxMemory(defaultMaxMemory),
 	}
 	allOptions = append(allOptions, defaultOptions...)
@@ -69,7 +69,7 @@ func New(inputStruct any, opts ...Option) (*Core, error) {
 //
 //	New(&Input{}).Decode(req) -> *Input
 //	New(Input{}).Decode(req) -> *Input
-func (c *Core) Decode(req *http.Request) (any, error) {
+func (c *core) Decode(req *http.Request) (any, error) {
 	var err error
 	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
 	if ct == "multipart/form-data" {
@@ -92,7 +92,7 @@ func (c *Core) Decode(req *http.Request) (any, error) {
 }
 
 // NewRequest wraps NewRequestWithContext using context.Background.
-func (c *Core) NewRequest(method string, url string, input any) (*http.Request, error) {
+func (c *core) NewRequest(method string, url string, input any) (*http.Request, error) {
 	return c.NewRequestWithContext(context.Background(), method, url, input)
 }
 
@@ -104,7 +104,7 @@ func (c *Core) NewRequest(method string, url string, input any) (*http.Request, 
 // instead. Which will create a Core instance for you when needed. There's no
 // performance penalty for doing so. Because there's a cache layer for all the
 // Core instances.
-func (c *Core) NewRequestWithContext(ctx context.Context, method string, url string, input any) (*http.Request, error) {
+func (c *core) NewRequestWithContext(ctx context.Context, method string, url string, input any) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, err
@@ -246,7 +246,7 @@ func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 
 // getErrorHandler returns the error handler of the core if set, or the global
 // custom error handler.
-func (c *Core) getErrorHandler() errorHandler {
+func (c *core) getErrorHandler() errorHandler {
 	if c.errorHandler != nil {
 		return c.errorHandler
 	}

@@ -14,13 +14,13 @@ import (
 
 type InvalidFieldError = internal.InvalidFieldError
 
-type ContextKey int
+type contextKey int
 
 const (
 	// Input is the key to get the input object from Request.Context() injected by httpin. e.g.
 	//
 	//     input := r.Context().Value(httpin.Input).(*InputStruct)
-	Input ContextKey = iota
+	Input contextKey = iota
 )
 
 // Decode decodes an HTTP request to the given input struct. The input must be a
@@ -83,7 +83,7 @@ func NewRequestWithContext(ctx context.Context, method, url string, input any) (
 // We recommend using https://github.com/justinas/alice to chain your
 // middlewares. If you're using some popular web frameworks, they may have
 // already provided a middleware chaining mechanism.
-func NewInput(inputStruct any, opts ...Option) func(http.Handler) http.Handler {
+func NewInput(inputStruct any, opts ...coreOption) func(http.Handler) http.Handler {
 	core, err := New(inputStruct, opts...)
 	internal.PanicOnError(err)
 

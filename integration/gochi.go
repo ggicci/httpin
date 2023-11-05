@@ -25,7 +25,7 @@ type GochiURLParamFunc func(r *http.Request, key string) string
 //	    httpin.UseGochiURLParam("path", chi.URLParam)
 //	}
 func UseGochiURLParam(name string, fn GochiURLParamFunc) {
-	httpin.RegisterDirective(
+	httpin.Customizer().RegisterDirective(
 		name,
 		directive.NewDirectivePath((&gochiURLParamExtractor{URLParam: fn}).Execute),
 	)

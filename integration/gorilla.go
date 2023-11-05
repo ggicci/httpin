@@ -24,7 +24,7 @@ type GorillaMuxVarsFunc func(*http.Request) map[string]string
 //	    httpin.UseGorillaMux("path", mux.Vars)
 //	}
 func UseGorillaMux(name string, fnVars GorillaMuxVarsFunc) {
-	httpin.RegisterDirective(
+	httpin.Customizer().RegisterDirective(
 		name,
 		directive.NewDirectivePath((&gorillaMuxVarsExtractor{Vars: fnVars}).Execute),
 	)

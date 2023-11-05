@@ -31,12 +31,12 @@ type DirectiveExecutor interface {
 
 func init() {
 	// Register bulit-in directives.
-	RegisterDirective("form", &directive.DirectvieForm{})
-	RegisterDirective("query", &directive.DirectiveQuery{})
-	RegisterDirective("header", &directive.DirectiveHeader{})
-	RegisterDirective("body", &directive.DirectiveBody{})
-	RegisterDirective("required", &directive.DirectiveRequired{})
-	RegisterDirective("default", &directive.DirectiveDefault{})
+	Customizer().RegisterDirective("form", &directive.DirectvieForm{})
+	Customizer().RegisterDirective("query", &directive.DirectiveQuery{})
+	Customizer().RegisterDirective("header", &directive.DirectiveHeader{})
+	Customizer().RegisterDirective("body", &directive.DirectiveBody{})
+	Customizer().RegisterDirective("required", &directive.DirectiveRequired{})
+	Customizer().RegisterDirective("default", &directive.DirectiveDefault{})
 
 	// decoder is a special executor which does nothing, but is an indicator of
 	// overriding the decoder for a specific field.
@@ -44,28 +44,15 @@ func init() {
 	encoderNamespace.RegisterDirectiveExecutor("encoder", asOwlDirectiveExecutor(noopDirective.Encode))
 }
 
-// RegisterDirective registers a DirectiveExecutor with the given directive name. The
-// directive should be able to both extract the value from the HTTP request and build
-// the HTTP request from the value. The Decode API is used to decode data from the HTTP
-// request to a field of the input struct, and Encode API is used to encode the field of
-// the input struct to the HTTP request.
-//
-// Will panic if the name were taken or given executor is nil. Pass parameter replace
-// (true) to ignore the name conflict.
-func RegisterDirective(name string, executor DirectiveExecutor, replace ...bool) {
-	registerDirectiveExecutorToNamespace(decoderNamespace, name, executor, replace...)
-	registerDirectiveExecutorToNamespace(encoderNamespace, name, executor, replace...)
-}
-
-func registerDirectiveExecutorToNamespace(ns *owl.Namespace, name string, exe DirectiveExecutor, replace ...bool) {
+func registerDirectiveExecutorToNamespace(ns *owl.Namespace, name string, exe DirectiveExecutor, force ...bool) {
 	panicOnReservedExecutorName(name)
 	if exe == nil {
 		internal.PanicOnError(errors.New("nil directive executor"))
 	}
 	if ns == decoderNamespace {
-		ns.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(exe.Decode), replace...)
+		ns.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(exe.Decode), force...)
 	} else {
-		ns.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(exe.Encode), replace...)
+		ns.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(exe.Encode), force...)
 	}
 }
 

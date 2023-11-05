@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-
-	"github.com/ggicci/httpin/internal"
 )
 
 var globalCustomErrorHandler errorHandler = defaultErrorHandler
@@ -14,14 +12,6 @@ var globalCustomErrorHandler errorHandler = defaultErrorHandler
 // by the http.Handler that created by NewInput() to handle errors during
 // decoding the HTTP request.
 type errorHandler = func(w http.ResponseWriter, r *http.Request, err error)
-
-// RegisterErrorHandler replaces the default error handler with the given
-// custom error handler. The default error handler will be used in the http.Handler
-// that decoreated by the middleware created by NewInput().
-func RegisterErrorHandler(handler errorHandler) {
-	internal.PanicOnError(validateErrorHandler(handler))
-	globalCustomErrorHandler = handler
-}
 
 func defaultErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
 	var invalidFieldError *InvalidFieldError

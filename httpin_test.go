@@ -135,7 +135,7 @@ func TestNewInput_Error_byCustomErrorHandler(t *testing.T) {
 func TestReplaceDefaultErrorHandler(t *testing.T) {
 	// Nil handler should panic.
 	assert.PanicsWithError(t, "httpin: nil error handler", func() {
-		RegisterErrorHandler(nil)
+		Customizer().RegisterErrorHandler(nil)
 	})
 
 	r, err := http.NewRequest("GET", "/", nil)
@@ -147,7 +147,7 @@ func TestReplaceDefaultErrorHandler(t *testing.T) {
 	rw := httptest.NewRecorder()
 	handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
 	// NOTE: replace global error handler after NewInput should work
-	RegisterErrorHandler(CustomErrorHandler)
+	Customizer().RegisterErrorHandler(CustomErrorHandler)
 
 	handler.ServeHTTP(rw, r)
 	assert.Equal(t, 400, rw.Code)
