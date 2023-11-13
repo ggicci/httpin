@@ -131,7 +131,7 @@ func registerBodyFormat(format string, body BodySerializer, force ...bool) error
 		return errors.New("body format cannot be empty")
 	}
 	if body == nil {
-		return errors.New("body encoder/decoder cannot be nil")
+		return errors.New("body serializer cannot be nil")
 	}
 	bodyFormats[format] = body
 	return nil

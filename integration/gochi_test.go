@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ggicci/httpin"
-	"github.com/ggicci/httpin/integration"
+	httpin_integration "github.com/ggicci/httpin/integration"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ func TestUseGochiURLParam(t *testing.T) {
 	// Register the "gochi" directive, usually in init().
 	// In most cases, you register this as "path", here's just an example.
 	// Which is in order to avoid test conflicts with other tests
-	integration.UseGochiURLParam("gochi", chi.URLParam)
+	httpin_integration.UseGochiURLParam("gochi", chi.URLParam)
 
 	rw := httptest.NewRecorder()
 	r, err := http.NewRequest("GET", "/ggicci/articles/1024", nil)

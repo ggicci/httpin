@@ -70,9 +70,9 @@ func (rtm *DirectiveRuntime) GetCustomDecoder() (string, any) {
 	}
 }
 
-func (rtm *DirectiveRuntime) getCustomDecoder() *NamedDecoderInfo {
+func (rtm *DirectiveRuntime) getCustomDecoder() *namedDecoderInfo {
 	if info := rtm.Resolver.Context.Value(CtxCustomDecoder); info != nil {
-		return info.(*NamedDecoderInfo)
+		return info.(*namedDecoderInfo)
 	} else {
 		return nil
 	}
@@ -86,9 +86,9 @@ func (rtm *DirectiveRuntime) GetCustomEncoder() (string, Encoder) {
 	}
 }
 
-func (rtm *DirectiveRuntime) getCustomEncoder() *NamedEncoderInfo {
+func (rtm *DirectiveRuntime) getCustomEncoder() *namedEncoderInfo {
 	if info := rtm.Resolver.Context.Value(CtxCustomEncoder); info != nil {
-		return info.(*NamedEncoderInfo)
+		return info.(*namedEncoderInfo)
 	} else {
 		return nil
 	}

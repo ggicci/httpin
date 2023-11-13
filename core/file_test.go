@@ -366,5 +366,5 @@ func newMultipartFormWriterFromMap(m map[string]any) (body *bytes.Buffer, writer
 }
 
 func removeFileType[T any]() {
-	DefaultRegistry.RemoveFileType(internal.TypeOf[T]())
+	defaultRegistry.RemoveFileType(internal.TypeOf[T]())
 }

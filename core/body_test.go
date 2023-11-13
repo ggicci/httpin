@@ -27,17 +27,17 @@ type BodyPayload struct {
 	Languages []*LanguageLevel `json:"languages" xml:"languages"`
 }
 
-type JSONBodyPayloadWithBodyDirective struct {
+type BodyPayloadInJSON struct {
 	Page     int          `in:"form=page"`
 	PageSize int          `in:"form=page_size"`
 	Body     *BodyPayload `in:"body=json"`
 }
 
-type XMLBodyPayloadWithBodyDirective struct {
+type BodyPayloadInXML struct {
 	Body *BodyPayload `in:"body=xml"`
 }
 
-var sampleJSON_JSONBodyPayloadWithBodyDirective = `
+var sampleBodyPayloadInJSONText = `
 {
 	"name": "Elia",
 	"is_native": false,
@@ -49,7 +49,7 @@ var sampleJSON_JSONBodyPayloadWithBodyDirective = `
 	]
 }`
 
-var sampleObject_JSONBodyPayloadWithBodyDirective = &JSONBodyPayloadWithBodyDirective{
+var sampleBodyPayloadInJSONObject = &BodyPayloadInJSON{
 	Page:     4,
 	PageSize: 30,
 	Body: &BodyPayload{
@@ -64,7 +64,7 @@ var sampleObject_JSONBodyPayloadWithBodyDirective = &JSONBodyPayloadWithBodyDire
 	},
 }
 
-var sampleXML_XMLBodyPayloadWithBodyDirective = `
+var sampleBodyPayloadInXMLText = `
 <BodyPayload>
 	<name>Elia</name>
 	<age>14</age>
@@ -81,7 +81,7 @@ var sampleXML_XMLBodyPayloadWithBodyDirective = `
 	</languages>
 </BodyPayload>`
 
-var sampleObject_XMLBodyPayloadWithBodyDirective = &XMLBodyPayloadWithBodyDirective{
+var sampleBodyPayloadInXMLObject = &BodyPayloadInXML{
 	Body: &BodyPayload{
 		Name:     "Elia",
 		Age:      14,
@@ -94,49 +94,37 @@ var sampleObject_XMLBodyPayloadWithBodyDirective = &XMLBodyPayloadWithBodyDirect
 	},
 }
 
-func TestBodyDecoder_JSON(t *testing.T) {
+func TestBodyDirective_Decode_JSON(t *testing.T) {
 	assert := assert.New(t)
-	co, err := New(JSONBodyPayloadWithBodyDirective{})
+	co, err := New(BodyPayloadInJSON{})
 	assert.NoError(err)
 
 	r, _ := http.NewRequest("GET", "https://example.com", nil)
 	r.Form = make(url.Values)
 	r.Form.Set("page", "4")
 	r.Form.Set("page_size", "30")
-	r.Body = io.NopCloser(strings.NewReader(sampleJSON_JSONBodyPayloadWithBodyDirective))
+	r.Body = io.NopCloser(strings.NewReader(sampleBodyPayloadInJSONText))
 	r.Header.Set("Content-Type", "application/json")
 	gotValue, err := co.Decode(r)
 	assert.NoError(err)
-	assert.Equal(sampleObject_JSONBodyPayloadWithBodyDirective, gotValue)
+	assert.Equal(sampleBodyPayloadInJSONObject, gotValue)
 }
 
-func TestBodyDecoder_XML(t *testing.T) {
-
+func TestBodyDirective_Decode_XML(t *testing.T) {
 	assert := assert.New(t)
-	co, err := New(XMLBodyPayloadWithBodyDirective{})
+	co, err := New(BodyPayloadInXML{})
 	assert.NoError(err)
 
 	r, _ := http.NewRequest("GET", "https://example.com", nil)
-	r.Body = io.NopCloser(strings.NewReader(sampleXML_XMLBodyPayloadWithBodyDirective))
+	r.Body = io.NopCloser(strings.NewReader(sampleBodyPayloadInXMLText))
 	r.Header.Set("Content-Type", "application/xml")
 
 	gotValue, err := co.Decode(r)
 	assert.NoError(err)
-	assert.Equal(sampleObject_XMLBodyPayloadWithBodyDirective, gotValue)
+	assert.Equal(sampleBodyPayloadInXMLObject, gotValue)
 }
 
-// func TestBodyDecoder_DefaultsToJSON(t *testing.T) {
-// 	type Payload struct {
-// 		Body *BodyPayload `in:"body"`
-// 	}
-
-// 	co, err :=New(Payload{})
-// 	assert.NoError(t, err)
-// 	d := core.resolver.Lookup("Body").GetDirective("body")
-// 	assert.Equal(t, "json", d.Argv[0])
-// }
-
-func TestBodyDecoder_ErrUnknownBodyFormat(t *testing.T) {
+func TestBodyDirective_Decode_ErrUnknownBodyFormat(t *testing.T) {
 	type UnknownBodyFormatPayload struct {
 		Body *BodyPayload `in:"body=yaml"`
 	}
@@ -144,7 +132,7 @@ func TestBodyDecoder_ErrUnknownBodyFormat(t *testing.T) {
 	co, err := New(UnknownBodyFormatPayload{})
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", "https://example.com", nil)
-	req.Body = io.NopCloser(strings.NewReader(sampleJSON_JSONBodyPayloadWithBodyDirective))
+	req.Body = io.NopCloser(strings.NewReader(sampleBodyPayloadInJSONText))
 	_, err = co.Decode(req)
 	assert.ErrorContains(t, err, "unknown body format: \"yaml\"")
 }
@@ -165,7 +153,7 @@ type YamlInput struct {
 	Body map[string]any `in:"body=yaml"`
 }
 
-func TestRegisterBody(t *testing.T) {
+func TestRegisterBodyFormat(t *testing.T) {
 	assert.NotPanics(t, func() {
 		RegisterBodyFormat("yaml", &yamlBody{})
 	})
@@ -182,34 +170,36 @@ func TestRegisterBody(t *testing.T) {
 	gotValue, err := co.Decode(r)
 	assert.ErrorIs(t, err, errYamlNotImplemented)
 	assert.Nil(t, gotValue)
+	unregisterBodyFormat("yaml")
 }
 
-func TestRegisterBody_nil(t *testing.T) {
+func TestRegisterBodyFormat_ErrNilBodySerializer(t *testing.T) {
 	assert.Panics(t, func() {
 		RegisterBodyFormat("toml", nil)
 	})
 }
 
-func TestRegisterBody_forceReplace(t *testing.T) {
+func TestRegisterBodyFormat_forceRegister(t *testing.T) {
 	assert.NotPanics(t, func() {
 		RegisterBodyFormat("yaml", &yamlBody{}, true)
 	})
 	assert.NotPanics(t, func() {
 		RegisterBodyFormat("yaml", &yamlBody{}, true)
 	})
+	unregisterBodyFormat("yaml")
 }
 
-func TestRegisterBody_forceReplace_withEmptyBodyFormat(t *testing.T) {
+func TestRegisterBodyFormat_forceRegisterWithEmptyBodyFormat(t *testing.T) {
 	assert.PanicsWithError(t, "httpin: body format cannot be empty", func() {
 		RegisterBodyFormat("", &yamlBody{}, true)
 	})
 }
 
-func TestBodyEncoder_JSON(t *testing.T) {
+func TestBodyDirective_Encode_JSON(t *testing.T) {
 	assert := assert.New(t)
-	co, err := New(JSONBodyPayloadWithBodyDirective{})
+	co, err := New(BodyPayloadInJSON{})
 	assert.NoError(err)
-	req, err := co.NewRequest("POST", "/data", sampleObject_JSONBodyPayloadWithBodyDirective)
+	req, err := co.NewRequest("POST", "/data", sampleBodyPayloadInJSONObject)
 	expected, _ := http.NewRequest("POST", "/data", nil)
 	expected.Form = url.Values{
 		"page":      {"4"},
@@ -218,64 +208,53 @@ func TestBodyEncoder_JSON(t *testing.T) {
 	expected.Header.Set("Content-Type", "application/json")
 	assert.NoError(err)
 	var body bytes.Buffer
-	assert.NoError(json.NewEncoder(&body).Encode(sampleObject_JSONBodyPayloadWithBodyDirective.Body))
+	assert.NoError(json.NewEncoder(&body).Encode(sampleBodyPayloadInJSONObject.Body))
 	expected.Body = io.NopCloser(&body)
-	assert.NoError(err)
-	assertRequest(t, expected, req)
+	assert.Equal(expected, req)
 
 	// On the server side (decode).
 	gotValue, err := co.Decode(req)
 	assert.NoError(err)
-	got, ok := gotValue.(*JSONBodyPayloadWithBodyDirective)
+	got, ok := gotValue.(*BodyPayloadInJSON)
 	assert.True(ok)
-	assert.Equal(sampleObject_JSONBodyPayloadWithBodyDirective, got)
+	assert.Equal(sampleBodyPayloadInJSONObject, got)
 }
 
-func TestBodyEncoder_XML(t *testing.T) {
+func TestBodyDirective_Encode_XML(t *testing.T) {
 	assert := assert.New(t)
-	co, err := New(XMLBodyPayloadWithBodyDirective{})
+	co, err := New(BodyPayloadInXML{})
 	assert.NoError(err)
-	req, err := co.NewRequest("POST", "/data", sampleObject_XMLBodyPayloadWithBodyDirective)
+	req, err := co.NewRequest("POST", "/data", sampleBodyPayloadInXMLObject)
 	expected, _ := http.NewRequest("POST", "/data", nil)
 	expected.Header.Set("Content-Type", "application/xml")
 	assert.NoError(err)
 	var body bytes.Buffer
-	assert.NoError(xml.NewEncoder(&body).Encode(sampleObject_XMLBodyPayloadWithBodyDirective.Body))
+	assert.NoError(xml.NewEncoder(&body).Encode(sampleBodyPayloadInXMLObject.Body))
 	expected.Body = io.NopCloser(&body)
-	assert.NoError(err)
-	assertRequest(t, expected, req)
+	assert.Equal(expected, req)
 
 	// On the server side (decode).
 	gotValue, err := co.Decode(req)
 	assert.NoError(err)
-	got, ok := gotValue.(*XMLBodyPayloadWithBodyDirective)
+	got, ok := gotValue.(*BodyPayloadInXML)
 	assert.True(ok)
-	assert.Equal(sampleObject_XMLBodyPayloadWithBodyDirective, got)
+	assert.Equal(sampleBodyPayloadInXMLObject, got)
 }
 
-func assertRequest(t *testing.T, expected, actual *http.Request) {
-	assert := assert.New(t)
-	assert.Equal(expected.Method, actual.Method)
-	assert.Equal(expected.URL.Path, actual.URL.Path)
-	assert.Equal(expected.URL.RawQuery, actual.URL.RawQuery)
-	assert.Equal(expected.Header, actual.Header)
-	assert.Equal(expected.Form, actual.Form)
-	assert.Equal(expected.MultipartForm, actual.MultipartForm)
-	assert.Equal(expected.PostForm, actual.PostForm)
-	assert.Equal(expected.Cookies(), actual.Cookies())
-	assert.Equal(expected.ContentLength, actual.ContentLength)
-
-	if expected.Body == nil {
-		assert.Nil(actual.Body)
-	} else {
-		expectedContent, err := io.ReadAll(expected.Body)
-		assert.NoError(err)
-
-		// Make a copy. The actual request may be used later to send request for an integration test.
-		var bodyCopy bytes.Buffer
-		actualContent, err := io.ReadAll(io.TeeReader(actual.Body, &bodyCopy))
-		actual.Body = io.NopCloser(&bodyCopy) // replace the body that has been consumed
-		assert.NoError(err)
-		assert.Equal(expectedContent, actualContent)
+func TestBodyDirective_Encode_ErrUnknownBodyFormat(t *testing.T) {
+	type UnknownBodyFormatPayload struct {
+		Body *BodyPayload `in:"body=yaml"`
 	}
+	query := &UnknownBodyFormatPayload{
+		Body: nil,
+	}
+	co, err := New(UnknownBodyFormatPayload{})
+	assert.NoError(t, err)
+	req, err := co.NewRequest("PUT", "/apples/10", query)
+	assert.ErrorContains(t, err, "unknown body format: \"yaml\"")
+	assert.Nil(t, req)
+}
+
+func unregisterBodyFormat(format string) {
+	delete(bodyFormats, format)
 }

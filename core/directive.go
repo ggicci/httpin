@@ -19,7 +19,7 @@ func init() {
 
 func RegisterEncoder[T any](encoderFunc EncoderFunc[T], force ...bool) {
 	internal.PanicOnError(
-		DefaultRegistry.RegisterEncoder(internal.TypeOf[T](), encoderFunc, force...),
+		defaultRegistry.RegisterEncoder(internal.TypeOf[T](), encoderFunc, force...),
 	)
 }
 
@@ -35,7 +35,7 @@ func RegisterEncoder[T any](encoderFunc EncoderFunc[T], force ...bool) {
 //	}
 func RegisterNamedEncoder[T any](name string, encoderFunc EncoderFunc[T], force ...bool) {
 	internal.PanicOnError(
-		DefaultRegistry.RegisterNamedEncoder(name, encoderFunc, force...),
+		defaultRegistry.RegisterNamedEncoder(name, encoderFunc, force...),
 	)
 }
 
@@ -49,7 +49,7 @@ func RegisterNamedEncoder[T any](name string, encoderFunc EncoderFunc[T], force 
 // an error (ErrValueTypeMismatch) while decoding.
 func RegisterDecoder[T any](decoder Decoder[T], replace ...bool) {
 	internal.PanicOnError(
-		DefaultRegistry.RegisterDecoder(
+		defaultRegistry.RegisterDecoder(
 			internal.TypeOf[T](),
 			ToAnyDecoder[T](decoder),
 			replace...,
@@ -73,7 +73,7 @@ func RegisterDecoder[T any](decoder Decoder[T], replace ...bool) {
 // Visit https://ggicci.github.io/httpin/directives/decoder for more details.
 func RegisterNamedDecoder[T any](name string, decoder Decoder[T], replace ...bool) {
 	internal.PanicOnError(
-		DefaultRegistry.RegisterNamedDecoder(
+		defaultRegistry.RegisterNamedDecoder(
 			name,
 			internal.TypeOf[T](),
 			ToAnyDecoder[T](decoder),
@@ -91,7 +91,7 @@ func RegisterNamedDecoder[T any](name string, decoder Decoder[T], replace ...boo
 //	}
 func RegisterFileType[T FileEncoder](fd FileDecoder[T]) {
 	internal.PanicOnError(
-		DefaultRegistry.RegisterFileType(
+		defaultRegistry.RegisterFileType(
 			internal.TypeOf[T](),
 			toAnyFileDecoder[T](fd),
 		),

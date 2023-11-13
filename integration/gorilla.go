@@ -18,8 +18,10 @@ type GorillaMuxVarsFunc func(*http.Request) map[string]string
 //
 // Usage:
 //
+//	import httpin_integration "github.com/ggicci/httpin/integration"
+//
 //	func init() {
-//	    httpin.UseGorillaMux("path", mux.Vars)
+//	    httpin_integration.UseGorillaMux("path", mux.Vars)
 //	}
 func UseGorillaMux(name string, fnVars GorillaMuxVarsFunc) {
 	core.RegisterDirective(

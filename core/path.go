@@ -4,17 +4,17 @@
 package core
 
 type DirectivePath struct {
-	overrideDecode func(*DirectiveRuntime) error
+	decode func(*DirectiveRuntime) error
 }
 
-func NewDirectivePath(decoder func(*DirectiveRuntime) error) *DirectivePath {
+func NewDirectivePath(decodeFunc func(*DirectiveRuntime) error) *DirectivePath {
 	return &DirectivePath{
-		overrideDecode: decoder,
+		decode: decodeFunc,
 	}
 }
 
 func (dir *DirectivePath) Decode(rtm *DirectiveRuntime) error {
-	return dir.overrideDecode(rtm)
+	return dir.decode(rtm)
 }
 
 // Encode replaces the placeholders in URL path with the given value.

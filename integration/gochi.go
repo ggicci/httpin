@@ -19,8 +19,10 @@ type GochiURLParamFunc func(r *http.Request, key string) string
 //
 // Usage:
 //
+//	import httpin_integration "github.com/ggicci/httpin/integration"
+//
 //	func init() {
-//	    httpin.UseGochiURLParam("path", chi.URLParam)
+//	    httpin_integration.UseGochiURLParam("path", chi.URLParam)
 //	}
 func UseGochiURLParam(name string, fn GochiURLParamFunc) {
 	core.RegisterDirective(

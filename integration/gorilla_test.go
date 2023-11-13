@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ggicci/httpin"
-	"github.com/ggicci/httpin/integration"
+	httpin_integration "github.com/ggicci/httpin/integration"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +24,7 @@ func GetPostOfUserHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func TestGorillaMuxVars(t *testing.T) {
-	integration.UseGorillaMux("path", mux.Vars) // register the "path" directive, usually in init()
+	httpin_integration.UseGorillaMux("path", mux.Vars) // register the "path" directive, usually in init()
 
 	rw := httptest.NewRecorder()
 	r, err := http.NewRequest("GET", "/ggicci/posts/1024", nil)
@@ -38,8 +38,4 @@ func TestGorillaMuxVars(t *testing.T) {
 	assert.Equal(t, 200, rw.Code)
 	expected := `{"Username":"ggicci","PostID":1024}` + "\n"
 	assert.Equal(t, expected, rw.Body.String())
-}
-
-func TestGorilla_EncodePath(t *testing.T) {
-
 }

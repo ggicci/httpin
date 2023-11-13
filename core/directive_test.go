@@ -161,23 +161,23 @@ func TestRegisterNamedDecoder_forceReplace(t *testing.T) {
 }
 
 func removeTypeEncoder[T any]() {
-	DefaultRegistry.RemoveEncoder(internal.TypeOf[T]())
-	DefaultRegistry.RemoveEncoder(internal.TypeOf[*T]())
+	defaultRegistry.RemoveEncoder(internal.TypeOf[T]())
+	defaultRegistry.RemoveEncoder(internal.TypeOf[*T]())
 }
 
 func removeNamedEncoder(name string) {
-	DefaultRegistry.RemoveNamedEncoder(name)
+	defaultRegistry.RemoveNamedEncoder(name)
 }
 
 func removeTypeDecoder[T any]() {
-	DefaultRegistry.RemoveDecoder(internal.TypeOf[T]())
-	DefaultRegistry.RemoveDecoder(internal.TypeOf[[]T]())
-	DefaultRegistry.RemoveDecoder(internal.TypeOf[patch.Field[T]]())
-	DefaultRegistry.RemoveDecoder(internal.TypeOf[patch.Field[[]T]]())
+	defaultRegistry.RemoveDecoder(internal.TypeOf[T]())
+	defaultRegistry.RemoveDecoder(internal.TypeOf[[]T]())
+	defaultRegistry.RemoveDecoder(internal.TypeOf[patch.Field[T]]())
+	defaultRegistry.RemoveDecoder(internal.TypeOf[patch.Field[[]T]]())
 }
 
 func removeNamedDecoder(name string) {
-	DefaultRegistry.RemoveNamedDecoder(name)
+	defaultRegistry.RemoveNamedDecoder(name)
 }
 
 func TestRegisterDirectiveExecutor(t *testing.T) {

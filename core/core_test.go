@@ -386,7 +386,7 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrUnregisteredDecoder(t *testin
 func TestCore_Decode_CustomDecoder_NamedDecoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
 	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 	type FunnyFile struct{}
-	DefaultRegistry.fileTypes[internal.TypeOf[*FunnyFile]()] = nil // fake a registered file type
+	defaultRegistry.fileTypes[internal.TypeOf[*FunnyFile]()] = nil // fake a registered file type
 	type Input struct {
 		Avatar *FunnyFile `in:"form=avatar;decoder=decodeMyDate"`
 	}

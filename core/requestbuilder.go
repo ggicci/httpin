@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strings"
 )
 
 type RequestBuilder struct {
@@ -27,6 +28,10 @@ func (rb *RequestBuilder) Populate(req *http.Request) error {
 		return err
 	}
 
+	// Populate the querystring.
+	req.URL.RawQuery = rb.Query.Encode()
+
+	// Populate forms.
 	if rb.hasForm() {
 		if rb.hasAttachment() { // multipart form
 			if err := rb.populateMultipartForm(req); err != nil {
@@ -38,13 +43,21 @@ func (rb *RequestBuilder) Populate(req *http.Request) error {
 		}
 	}
 
+	// Populate body.
 	if rb.hasBody() {
 		req.Body = rb.Body
 		req.Header.Set("Content-Type", rb.bodyContentType())
 	}
 
-	// Populate the querystring.
-	req.URL.RawQuery = rb.Query.Encode()
+	// Populate path.
+	if rb.hasPath() {
+		newPath := req.URL.Path
+		for key, value := range rb.Path {
+			newPath = strings.Replace(newPath, "{"+key+"}", value, -1)
+		}
+		req.URL.Path = newPath
+		req.URL.RawPath = ""
+	}
 
 	// Populate the headers.
 	if rb.Header != nil {

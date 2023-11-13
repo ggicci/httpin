@@ -17,9 +17,10 @@ var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 // Who is responsible for decoding an HTTP request to an instance of such struct
 // type.
 type Core struct {
-	resolver     *owl.Resolver
-	errorHandler errorHandler
-	maxMemory    int64 // in bytes
+	resolver               *owl.Resolver
+	errorHandler           errorHandler
+	maxMemory              int64 // in bytes
+	enableNestedDirectives bool
 }
 
 // New creates a new Core instance given an input struct.
@@ -37,6 +38,7 @@ func New(inputStruct any, opts ...Option) (*Core, error) {
 	var allOptions []Option
 	defaultOptions := []Option{
 		WithMaxMemory(defaultMaxMemory),
+		WithNestedDirectivesEnabled(optNestedDirectivesEnabled),
 	}
 	allOptions = append(allOptions, defaultOptions...)
 	allOptions = append(allOptions, opts...)
@@ -71,6 +73,7 @@ func (c *Core) Decode(req *http.Request) (any, error) {
 	rv, err := c.resolver.Resolve(
 		owl.WithNamespace(decoderNamespace),
 		owl.WithValue(CtxRequest, req),
+		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
 	)
 	if err != nil {
 		return nil, NewInvalidFieldError(err.(*owl.ResolveError))
@@ -102,6 +105,7 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 		input,
 		owl.WithNamespace(encoderNamespace),
 		owl.WithValue(CtxRequestBuilder, rb),
+		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
 	); err != nil {
 		return nil, err
 	}
@@ -167,11 +171,11 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 	if len(d.Argv) == 0 {
 		return errors.New("missing decoder name")
 	}
-	decoder := DefaultRegistry.GetNamedDecoder(d.Argv[0])
+	decoder := defaultRegistry.GetNamedDecoder(d.Argv[0])
 	if decoder == nil {
 		return fmt.Errorf("unregistered decoder: %q", d.Argv[0])
 	}
-	if DefaultRegistry.IsFileType(r.Type) {
+	if defaultRegistry.IsFileType(r.Type) {
 		return errors.New("cannot use decoder directive on a file type field")
 	}
 	r.Context = context.WithValue(r.Context, CtxCustomDecoder, decoder)
@@ -186,11 +190,11 @@ func reserveEncoderDirective(r *owl.Resolver) error {
 	if len(d.Argv) == 0 {
 		return errors.New("missing encoder name")
 	}
-	encoder := DefaultRegistry.GetNamedEncoder(d.Argv[0])
+	encoder := defaultRegistry.GetNamedEncoder(d.Argv[0])
 	if encoder == nil {
 		return fmt.Errorf("unregistered encoder: %q", d.Argv[0])
 	}
-	if DefaultRegistry.IsFileType(r.Type) {
+	if defaultRegistry.IsFileType(r.Type) {
 		return errors.New("cannot use encoder directive on a file type field")
 	}
 	r.Context = context.WithValue(r.Context, CtxCustomEncoder, encoder)

@@ -8,41 +8,42 @@ import (
 	"github.com/ggicci/httpin/internal"
 )
 
-var DefaultRegistry = NewRegistry()
+var defaultRegistry = newRegistry()
 var fileEncoderInterface = reflect.TypeOf((*FileEncoder)(nil)).Elem()
 
-type Registry struct {
+// registry is just a place to gather all encoders and decoders together.
+type registry struct {
 	builtinTypeEncoders internal.PriorityPair // builtin encoders, always registered
 	builtinTypeDecoders internal.PriorityPair // builtin decoders, always registered
 
 	typedEncoders internal.PriorityPair        // encoders (by type)
-	namedEncoders map[string]*NamedEncoderInfo // encoders (by name)
+	namedEncoders map[string]*namedEncoderInfo // encoders (by name)
 	typedDecoders internal.PriorityPair        // decoders (by type)
-	namedDecoders map[string]*NamedDecoderInfo // decoders (by name)
+	namedDecoders map[string]*namedDecoderInfo // decoders (by name)
 
 	fileTypes map[reflect.Type]FileDecoderAdaptor
 }
 
-type NamedEncoderInfo struct {
+type namedEncoderInfo struct {
 	Name     string
 	Original Encoder
 }
 
-type NamedDecoderInfo struct {
+type namedDecoderInfo struct {
 	Name     string
 	Original any
 	Adapted  ValueDecoderAdaptor
 }
 
-func NewRegistry() *Registry {
-	r := &Registry{
+func newRegistry() *registry {
+	r := &registry{
 		builtinTypeEncoders: internal.NewPriorityPair(),
 		builtinTypeDecoders: internal.NewPriorityPair(),
 
 		typedEncoders: internal.NewPriorityPair(),
-		namedEncoders: make(map[string]*NamedEncoderInfo),
+		namedEncoders: make(map[string]*namedEncoderInfo),
 		typedDecoders: internal.NewPriorityPair(),
-		namedDecoders: make(map[string]*NamedDecoderInfo),
+		namedDecoders: make(map[string]*namedDecoderInfo),
 
 		fileTypes: make(map[reflect.Type]FileDecoderAdaptor),
 	}
@@ -53,11 +54,11 @@ func NewRegistry() *Registry {
 	return r
 }
 
-func (r *Registry) RegisterEncoder(typ reflect.Type, encoder Encoder, force ...bool) error {
+func (r *registry) RegisterEncoder(typ reflect.Type, encoder Encoder, force ...bool) error {
 	return r.registerTypedEncoderTo(r.typedEncoders, typ, encoder, len(force) > 0 && force[0])
 }
 
-func (r *Registry) RegisterNamedEncoder(name string, encoder Encoder, force ...bool) error {
+func (r *registry) RegisterNamedEncoder(name string, encoder Encoder, force ...bool) error {
 	ignoreConflict := len(force) > 0 && force[0]
 	if _, ok := r.namedEncoders[name]; ok && !ignoreConflict {
 		return fmt.Errorf("duplicate name: %q", name)
@@ -66,14 +67,14 @@ func (r *Registry) RegisterNamedEncoder(name string, encoder Encoder, force ...b
 		return err
 	}
 
-	r.namedEncoders[name] = &NamedEncoderInfo{
+	r.namedEncoders[name] = &namedEncoderInfo{
 		Name:     name,
 		Original: encoder,
 	}
 	return nil
 }
 
-func (r *Registry) GetEncoder(typ reflect.Type) Encoder {
+func (r *registry) GetEncoder(typ reflect.Type) Encoder {
 	if e := r.typedEncoders.GetOne(typ); e != nil {
 		return e.(Encoder)
 	}
@@ -83,23 +84,23 @@ func (r *Registry) GetEncoder(typ reflect.Type) Encoder {
 	return nil
 }
 
-func (r *Registry) GetNamedEncoder(name string) *NamedEncoderInfo {
+func (r *registry) GetNamedEncoder(name string) *namedEncoderInfo {
 	return r.namedEncoders[name]
 }
 
-func (r *Registry) RemoveEncoder(typ reflect.Type) {
+func (r *registry) RemoveEncoder(typ reflect.Type) {
 	delete(r.typedEncoders, typ)
 }
 
-func (r *Registry) RemoveNamedEncoder(name string) {
+func (r *registry) RemoveNamedEncoder(name string) {
 	delete(r.namedEncoders, name)
 }
 
-func (r *Registry) RegisterDecoder(typ reflect.Type, decoder Decoder[any], force ...bool) error {
+func (r *registry) RegisterDecoder(typ reflect.Type, decoder Decoder[any], force ...bool) error {
 	return r.registerTypedDecoderTo(r.typedDecoders, typ, decoder, len(force) > 0 && force[0])
 }
 
-func (r *Registry) RegisterNamedDecoder(name string, typ reflect.Type, decoder Decoder[any], force ...bool) error {
+func (r *registry) RegisterNamedDecoder(name string, typ reflect.Type, decoder Decoder[any], force ...bool) error {
 	ignoreConflict := len(force) > 0 && force[0]
 	if _, ok := r.namedDecoders[name]; ok && !ignoreConflict {
 		return fmt.Errorf("duplicate name: %q", name)
@@ -107,7 +108,7 @@ func (r *Registry) RegisterNamedDecoder(name string, typ reflect.Type, decoder D
 	if err := validateDecoder(decoder); err != nil {
 		return err
 	}
-	r.namedDecoders[name] = &NamedDecoderInfo{
+	r.namedDecoders[name] = &namedDecoderInfo{
 		Name:     name,
 		Original: decoder,
 		Adapted:  AdaptDecoder(typ, NewSmartDecoder(typ, ToAnyDecoder(decoder))).(ValueDecoderAdaptor),
@@ -115,7 +116,7 @@ func (r *Registry) RegisterNamedDecoder(name string, typ reflect.Type, decoder D
 	return nil
 }
 
-func (r *Registry) GetDecoder(typ reflect.Type) ValueDecoderAdaptor {
+func (r *registry) GetDecoder(typ reflect.Type) ValueDecoderAdaptor {
 	if d := r.typedDecoders.GetOne(typ); d != nil {
 		return d.(ValueDecoderAdaptor)
 	}
@@ -125,19 +126,19 @@ func (r *Registry) GetDecoder(typ reflect.Type) ValueDecoderAdaptor {
 	return nil
 }
 
-func (r *Registry) GetNamedDecoder(name string) *NamedDecoderInfo {
+func (r *registry) GetNamedDecoder(name string) *namedDecoderInfo {
 	return r.namedDecoders[name]
 }
 
-func (r *Registry) RemoveDecoder(typ reflect.Type) {
+func (r *registry) RemoveDecoder(typ reflect.Type) {
 	delete(r.typedDecoders, typ)
 }
 
-func (r *Registry) RemoveNamedDecoder(name string) {
+func (r *registry) RemoveNamedDecoder(name string) {
 	delete(r.namedDecoders, name)
 }
 
-func (r *Registry) RegisterFileType(typ reflect.Type, fd FileDecoder[any]) error {
+func (r *registry) RegisterFileType(typ reflect.Type, fd FileDecoder[any]) error {
 	if r.IsFileType(typ) {
 		return fmt.Errorf("duplicate file type: %v", typ)
 	}
@@ -147,36 +148,36 @@ func (r *Registry) RegisterFileType(typ reflect.Type, fd FileDecoder[any]) error
 	if fd == nil {
 		return errors.New("file decoder cannot be nil")
 	}
-	r.fileTypes[typ] = AdaptDecoder(typ, fd).(FileDecoderAdaptor) // FIXME: check fd type
+	r.fileTypes[typ] = AdaptDecoder(typ, fd).(FileDecoderAdaptor)
 	return nil
 }
 
-func (r *Registry) GetFileDecoder(typ reflect.Type) FileDecoderAdaptor {
+func (r *registry) GetFileDecoder(typ reflect.Type) FileDecoderAdaptor {
 	return r.fileTypes[typ]
 }
 
-func (r *Registry) IsFileType(typ reflect.Type) bool {
+func (r *registry) IsFileType(typ reflect.Type) bool {
 	_, ok := r.fileTypes[typ]
 	return ok
 }
 
-func (r *Registry) RemoveFileType(typ reflect.Type) {
+func (r *registry) RemoveFileType(typ reflect.Type) {
 	delete(r.fileTypes, typ)
 }
 
-func (r *Registry) registerBuiltinTypeEncoders() {
+func (r *registry) registerBuiltinTypeEncoders() {
 	for typ, encoder := range theBuiltinEncoders {
 		r.registerTypedEncoderTo(r.builtinTypeEncoders, typ, encoder.(Encoder), false)
 	}
 }
 
-func (r *Registry) registerBuiltinTypeDecoders() {
+func (r *registry) registerBuiltinTypeDecoders() {
 	for typ, decoder := range theBuiltinDecoders {
 		r.registerTypedDecoderTo(r.builtinTypeDecoders, typ, decoder, false)
 	}
 }
 
-func (r *Registry) registerTypedEncoderTo(p internal.PriorityPair, typ reflect.Type, encoder Encoder, force bool) error {
+func (r *registry) registerTypedEncoderTo(p internal.PriorityPair, typ reflect.Type, encoder Encoder, force bool) error {
 	if err := validateEncoder(encoder); err != nil {
 		return err
 	}
@@ -197,7 +198,7 @@ func (r *Registry) registerTypedEncoderTo(p internal.PriorityPair, typ reflect.T
 	return nil
 }
 
-func (r *Registry) registerTypedDecoderTo(p internal.PriorityPair, typ reflect.Type, decoder Decoder[any], force bool) error {
+func (r *registry) registerTypedDecoderTo(p internal.PriorityPair, typ reflect.Type, decoder Decoder[any], force bool) error {
 	if err := validateDecoder(decoder); err != nil {
 		return err
 	}

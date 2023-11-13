@@ -40,7 +40,7 @@ func (e *FormExtractor) extract(key string) error {
 
 	valueType := e.Runtime.Value.Type().Elem()
 	baseType, TypeKind := BaseTypeOf(valueType)
-	fileDecoder := DefaultRegistry.GetFileDecoder(baseType) // file decoder, for file uploads
+	fileDecoder := defaultRegistry.GetFileDecoder(baseType) // file decoder, for file uploads
 
 	var decodedValue any
 	var sourceValue any
@@ -69,7 +69,7 @@ func (e *FormExtractor) extract(key string) error {
 		if decoderInfo != nil {
 			decoder = decoderInfo.Adapted
 		} else {
-			decoder = DefaultRegistry.GetDecoder(baseType)
+			decoder = defaultRegistry.GetDecoder(baseType)
 		}
 
 		if decoder != nil {

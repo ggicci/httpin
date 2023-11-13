@@ -29,7 +29,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 	baseType, TypeKind := BaseTypeOf(valueType)
 
 	// When baseType is a file type, we treat it as a file upload.
-	if DefaultRegistry.IsFileType(baseType) {
+	if defaultRegistry.IsFileType(baseType) {
 		fileEncoders, err := toFileEncoders(rtm.Value, TypeKind)
 		if err != nil {
 			return err
@@ -44,7 +44,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 	// If no named encoder specified, check if there is a custom encoder for the
 	// type of this field, if so, use it.
 	if encoder == nil {
-		encoder = DefaultRegistry.GetEncoder(baseType)
+		encoder = defaultRegistry.GetEncoder(baseType)
 	}
 
 	// As the last resort, use the fallback encoder.
