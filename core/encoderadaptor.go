@@ -2,11 +2,7 @@ package core
 
 import (
 	"reflect"
-
-	"github.com/ggicci/httpin/internal"
 )
-
-var byteType = internal.TypeOf[byte]()
 
 type FormValueEncoder interface {
 	EncodeX(value reflect.Value) ([]string, error)

@@ -18,7 +18,7 @@ var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 // type.
 type Core struct {
 	resolver               *owl.Resolver
-	errorHandler           errorHandler
+	errorHandler           ErrorHandler
 	maxMemory              int64 // in bytes
 	enableNestedDirectives bool
 }
@@ -38,7 +38,7 @@ func New(inputStruct any, opts ...Option) (*Core, error) {
 	var allOptions []Option
 	defaultOptions := []Option{
 		WithMaxMemory(defaultMaxMemory),
-		WithNestedDirectivesEnabled(optNestedDirectivesEnabled),
+		WithNestedDirectivesEnabled(globalNestedDirectivesEnabled),
 	}
 	allOptions = append(allOptions, defaultOptions...)
 	allOptions = append(allOptions, opts...)
@@ -106,6 +106,9 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 		owl.WithNamespace(encoderNamespace),
 		owl.WithValue(CtxRequestBuilder, rb),
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
+		owl.WithDirectiveRunOrder(func(d1, _ *owl.Directive) bool {
+			return d1.Name == "default" // make sure "default" directive is executed first
+		}),
 	); err != nil {
 		return nil, err
 	}
@@ -171,14 +174,22 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 	if len(d.Argv) == 0 {
 		return errors.New("missing decoder name")
 	}
-	decoder := defaultRegistry.GetNamedDecoder(d.Argv[0])
-	if decoder == nil {
-		return fmt.Errorf("unregistered decoder: %q", d.Argv[0])
-	}
 	if defaultRegistry.IsFileType(r.Type) {
 		return errors.New("cannot use decoder directive on a file type field")
 	}
-	r.Context = context.WithValue(r.Context, CtxCustomDecoder, decoder)
+
+	namedAdaptor := namedStringableAdaptors[d.Argv[0]]
+	if namedAdaptor == nil {
+		return fmt.Errorf("unregistered decoder: %q", d.Argv[0])
+	}
+
+	r.Context = context.WithValue(r.Context, CtxCustomDecoder, namedAdaptor)
+	// decoder := defaultRegistry.GetNamedDecoder(d.Argv[0])
+	// if decoder == nil {
+	// 	return fmt.Errorf("unregistered decoder: %q", d.Argv[0])
+	// }
+	// r.Context = context.WithValue(r.Context, CtxCustomDecoder, decoder)
+
 	return nil
 }
 
@@ -217,7 +228,7 @@ func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 
 // GetErrorHandler returns the error handler of the core if set, or the global
 // custom error handler.
-func (c *Core) GetErrorHandler() errorHandler {
+func (c *Core) GetErrorHandler() ErrorHandler {
 	if c.errorHandler != nil {
 		return c.errorHandler
 	}

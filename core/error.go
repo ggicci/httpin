@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/ggicci/owl"
 )
@@ -71,4 +72,13 @@ func (e fieldError) Error() string {
 
 func (e fieldError) Unwrap() error {
 	return e.internalError
+}
+
+var (
+	errTypeMismatch = errors.New("type mismatch")
+)
+
+func typeMismatchedError(expected, got reflect.Type) error {
+	return fmt.Errorf("%w: value of type %q is not assignable to type %q",
+		errTypeMismatch, got, expected)
 }

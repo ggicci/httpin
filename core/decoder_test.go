@@ -12,19 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type InvalidDate struct {
-	Value string
-	Err   error
-}
-
-func (e *InvalidDate) Error() string {
-	return fmt.Sprintf("invalid date: %q (date must conform to format \"2006-01-02\"), %s", e.Value, e.Err)
-}
-
-func (e *InvalidDate) Unwrap() error {
-	return e.Err
-}
-
 func decodeMyDate(value string) (time.Time, error) {
 	t, err := time.Parse("2006-01-02", value)
 	if err != nil {
@@ -38,6 +25,19 @@ var myDateDecoder = DecoderFunc[time.Time](decodeMyDate)
 type Place struct {
 	Country string
 	City    string
+}
+
+func (p Place) ToString() (string, error) {
+	return fmt.Sprintf("%s.%s", p.Country, p.City), nil
+}
+
+func (p *Place) FromString(value string) error {
+	parts := strings.Split(value, ".")
+	if len(parts) != 2 {
+		return errors.New("invalid place")
+	}
+	*p = Place{Country: parts[0], City: parts[1]}
+	return nil
 }
 
 // decodePlace parses "country.city", e.g. "Canada.Toronto".
@@ -144,8 +144,8 @@ func TestSmartDecoder_ErrValueTypeMismatch(t *testing.T) {
 	smart := NewSmartDecoder(internal.TypeOf[int](), ToAnyDecoder[time.Time](myDateDecoder))
 	v, err := smart.Decode("2001-02-03")
 	assert.Nil(t, v)
-	assert.ErrorIs(t, err, ErrTypeMismatch)
-	assert.ErrorContains(t, err, InvalidDecodeReturnType(reflect.TypeOf(0), reflect.TypeOf(time.Time{})).Error())
+	assert.ErrorIs(t, err, errTypeMismatch)
+	assert.ErrorContains(t, err, typeMismatchedError(reflect.TypeOf(0), reflect.TypeOf(time.Time{})).Error())
 }
 
 func success[T any](t *testing.T, expected T, got any, err error) {

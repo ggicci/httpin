@@ -37,6 +37,25 @@ func TestWithMaxMemory(t *testing.T) {
 	assert.ErrorContains(t, err, "max memory too small")
 }
 
+func TestWithNestedDirectivesEnabled(t *testing.T) {
+	// Override the default nested directives flag.
+	co, _ := New(ProductQuery{}, WithNestedDirectivesEnabled(true))
+	assert.Equal(t, true, co.enableNestedDirectives)
+	co, _ = New(ProductQuery{}, WithNestedDirectivesEnabled(false))
+	assert.Equal(t, false, co.enableNestedDirectives)
+}
+
+func TestEnableNestedDirectives(t *testing.T) {
+	// Use the default nested directives flag.
+	EnableNestedDirectives(false)
+	co, _ := New(ProductQuery{})
+	assert.Equal(t, false, co.enableNestedDirectives)
+
+	EnableNestedDirectives(true)
+	co, _ = New(ProductQuery{})
+	assert.Equal(t, true, co.enableNestedDirectives)
+}
+
 func equalFuncs(expected, actual any) bool {
 	return reflect.ValueOf(expected).Pointer() == reflect.ValueOf(actual).Pointer()
 }

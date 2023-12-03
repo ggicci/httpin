@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDirectiveDefault(t *testing.T) {
+func TestDirectiveDefault_Decode(t *testing.T) {
 	type ThingWithDefaultValues struct {
 		Page      int      `in:"form=page;default=1"`
 		PerPage   int      `in:"form=per_page;default=20"`
@@ -33,7 +33,7 @@ func TestDirectiveDefault(t *testing.T) {
 	assert.Equal(t, expected, got)
 }
 
-func TestDirectiveDefault_PointerTypeFields(t *testing.T) {
+func TestDirectiveDefault_Decode_PointerTypeFields(t *testing.T) {
 	assert := assert.New(t)
 	type Input struct {
 		Page      *int     `in:"form=page;default=1"`
@@ -52,7 +52,7 @@ func TestDirectiveDefault_PointerTypeFields(t *testing.T) {
 	assert.Equal([]string{"pending", "in_progress", "failed"}, got.StateList)
 }
 
-func TestDirectiveDefault_PatchField(t *testing.T) {
+func TestDirectiveDefault_Decode_PatchField(t *testing.T) {
 	type ThingWithDefaultValues struct {
 		Page      patch.Field[int]      `in:"form=page;default=1"`
 		PerPage   patch.Field[int]      `in:"form=per_page;default=20"`

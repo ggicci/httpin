@@ -6,10 +6,11 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/ggicci/httpin/internal"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDirectiveQuery(t *testing.T) {
+func TestDirectiveQuery_Decode(t *testing.T) {
 	type SearchQuery struct {
 		Query      string `in:"query=q;required"`
 		PageNumber int    `in:"query=p"`
@@ -84,36 +85,29 @@ type Location struct {
 	Longitude float64
 }
 
-func (l Location) String() string {
-	return fmt.Sprintf("%f,%f", l.Latitude, l.Longitude)
-}
-
-type LocationFormValueMarshalerImpl Location
-
-func (l LocationFormValueMarshalerImpl) HttpinFormValue() (string, error) {
-	return "HttpinFormValue:" + (Location)(l).String(), nil
+func (l Location) ToString() (string, error) {
+	return fmt.Sprintf("%f,%f", l.Latitude, l.Longitude), nil
 }
 
 type LocationTextMarshalerImpl Location
 
 func (l LocationTextMarshalerImpl) MarshalText() ([]byte, error) {
-	return []byte("MarshalText:" + (Location)(l).String()), nil
+	if s, err := (Location)(l).ToString(); err != nil {
+		return nil, err
+	} else {
+		return []byte("MarshalText:" + s), nil
+	}
 }
 
 func TestDirectiveQuery_Encode_useMarshalerInterfaces(t *testing.T) {
 	type SearchQuery struct {
-		L0     *Location                       `in:"query=l0"`
-		L1     *LocationFormValueMarshalerImpl `in:"query=l1"`
-		L2     *LocationTextMarshalerImpl      `in:"query=l2"`
-		Radius int                             `in:"query=radius"`
+		L0     *Location                  `in:"query=l0"`
+		L2     *LocationTextMarshalerImpl `in:"query=l2"`
+		Radius int                        `in:"query=radius"`
 	}
 
 	query := &SearchQuery{
 		L0: &Location{
-			Latitude:  1.234,
-			Longitude: 5.678,
-		},
-		L1: &LocationFormValueMarshalerImpl{
 			Latitude:  1.234,
 			Longitude: 5.678,
 		},
@@ -132,7 +126,6 @@ func TestDirectiveQuery_Encode_useMarshalerInterfaces(t *testing.T) {
 	expected, _ := http.NewRequest("GET", "/pets", nil)
 	expectedQuery := make(url.Values)
 	expectedQuery.Set("l0", "1.234000,5.678000")
-	expectedQuery.Set("l1", "HttpinFormValue:1.234000,5.678000")
 	expectedQuery.Set("l2", "MarshalText:1.234000,5.678000")
 	expectedQuery.Set("radius", "1000")
 	expected.URL.RawQuery = expectedQuery.Encode()
@@ -147,5 +140,5 @@ func TestDirectiveQuery_Encode_ErrUnsupportedType(t *testing.T) {
 	co, err := New(SearchQuery{})
 	assert.NoError(t, err)
 	_, err = co.NewRequest("GET", "/pets", &SearchQuery{})
-	assert.ErrorIs(t, err, ErrUnsupportedType)
+	assert.ErrorIs(t, err, internal.ErrUnsupportedType)
 }

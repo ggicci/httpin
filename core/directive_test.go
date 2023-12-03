@@ -160,6 +160,10 @@ func TestRegisterNamedDecoder_forceReplace(t *testing.T) {
 	removeNamedDecoder("mybool") // remove the custom decoder
 }
 
+func removeType[T any]() {
+	delete(customStringableAdaptors, internal.TypeOf[T]())
+}
+
 func removeTypeEncoder[T any]() {
 	defaultRegistry.RemoveEncoder(internal.TypeOf[T]())
 	defaultRegistry.RemoveEncoder(internal.TypeOf[*T]())

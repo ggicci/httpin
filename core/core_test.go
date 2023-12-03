@@ -171,7 +171,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		co, err := New(Cursor{})
 		assert.NoError(t, err)
 		got, err := co.Decode(r)
-		assert.ErrorIs(t, err, ErrUnsupportedType)
+		assert.ErrorIs(t, err, internal.ErrUnsupportedType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -189,7 +189,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		co, err := New(Payload{})
 		assert.NoError(t, err)
 		got, err := co.Decode(r)
-		assert.ErrorIs(t, err, ErrUnsupportedType)
+		assert.ErrorIs(t, err, internal.ErrUnsupportedType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -217,9 +217,31 @@ func TestCore_Decode_UnexportedFields(t *testing.T) {
 	assert.Equal(t, expected, got.(*ThingWithUnexportedFields))
 }
 
+type MyBool bool
+
+func (b MyBool) ToString() (string, error) {
+	if b == true {
+		return "yes", nil
+	}
+	return "no", nil
+}
+
+func (b *MyBool) FromString(s string) error {
+	if s == "yes" {
+		*b = true
+	} else {
+		*b = false
+	}
+	return nil
+}
+
 func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
-	RegisterDecoder[bool](myBoolDecoder) // usually done in init()
-	RegisterDecoder[Place](myPlaceDecoder)
+	// RegisterDecoder[bool](myBoolDecoder) // usually done in init()
+	// RegisterDecoder[Place](myPlaceDecoder)
+
+	RegisterType[bool](func(b *bool) (internal.Stringable, error) {
+		return (*MyBool)(b), nil
+	})
 
 	type Input struct {
 		IsMember           bool   `in:"form=is_member"`
@@ -243,8 +265,10 @@ func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got)
 
-	removeTypeDecoder[bool]() // remove the custom decoder
-	removeTypeDecoder[Place]()
+	// removeTypeDecoder[bool]() // remove the custom decoder
+	// removeTypeDecoder[Place]()
+
+	removeType[bool]()
 }
 
 func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
@@ -333,7 +357,10 @@ type CustomNamedDecoderInput struct {
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder(t *testing.T) {
-	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+	// RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+	RegisterNamedType[time.Time]("decodeMyDate", func(t *time.Time) (Stringable, error) {
+		return (*MyDate)(t), nil
+	})
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
@@ -395,26 +422,30 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrCannotSpecifyOnFileTypeFields
 	assert.Nil(t, co)
 }
 
-func TestCore_Decode_CustomDecoder_NamedDecoder_ErrValueTypeMismatch(t *testing.T) {
-	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+func TestCore_Decode_CustomDecoder_NamedDecoder_ErrTypeMismatch(t *testing.T) {
+	RegisterNamedType[time.Time]("decodeMyDate", func(t *time.Time) (Stringable, error) {
+		return (*MyDate)(t), nil
+	}) // usually done in init()
 
 	type Input struct {
-		Birthday string `in:"form=birthday;decoder=decodeMyDate"` // cause ErrValueTypeMismatch
+		Birthday string `in:"form=birthday;decoder=decodeMyDate"` // decodeMyDate is for time.Time, not string
 	}
 
 	co, err := New(Input{})
 	assert.NoError(t, err)
 	r, _ := http.NewRequest("GET", "/", nil)
-	r.Form = url.Values{"birthday": {"1991-11-10"}} // birthday is string, not time.Time
+	r.Form = url.Values{"birthday": {"1991-11-10"}}
 	_, err = co.Decode(r)
-	assert.ErrorIs(t, err, ErrTypeMismatch)
-	assert.ErrorContains(t, err, "birthday")
+	assert.ErrorIs(t, err, internal.ErrTypeMismatch)
+	assert.ErrorContains(t, err, "Birthday")
 	assert.ErrorContains(t, err, "string")
 	assert.ErrorContains(t, err, "time.Time")
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_DecodeError(t *testing.T) {
-	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
+	RegisterNamedType[time.Time]("decodeMyDate", func(t *time.Time) (Stringable, error) {
+		return (*MyDate)(t), nil
+	}) // usually done in init()
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{

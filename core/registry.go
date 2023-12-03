@@ -33,6 +33,7 @@ type namedDecoderInfo struct {
 	Name     string
 	Original any
 	Adapted  ValueDecoderAdaptor
+	Adapt    AnyStringableAdaptor
 }
 
 func newRegistry() *registry {

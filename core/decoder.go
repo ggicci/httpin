@@ -106,7 +106,7 @@ func (sd *SmartDecoder) Decode(value string) (any, error) {
 	}
 
 	// Can't convert, return error.
-	return nil, InvalidDecodeReturnType(sd.WantType, gotType)
+	return nil, typeMismatchedError(sd.WantType, gotType)
 }
 
 func validateDecoder(decoder any) error {

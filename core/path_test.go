@@ -10,18 +10,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func customPathDecode(rtm *DirectiveRuntime) error {
+func myCustomPathDecode(rtm *DirectiveRuntime) error {
 	return assert.AnError
 }
 
-func TestDirectivePath(t *testing.T) {
-	pathDirective := NewDirectivePath(customPathDecode)
+func TestDirectivePath_Decode(t *testing.T) {
+	pathDirective := NewDirectivePath(myCustomPathDecode)
 	assert.ErrorIs(t, pathDirective.Decode(nil), assert.AnError)
 }
 
 func TestDirectivePath_Encode(t *testing.T) {
 	assert := assert.New(t)
-	RegisterDirective("path", NewDirectivePath(customPathDecode))
+	RegisterDirective("path", NewDirectivePath(myCustomPathDecode))
 	type Repository struct {
 		Name       string `json:"name"`
 		Visibility string `json:"visibility"` // public, private, internal

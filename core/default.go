@@ -29,5 +29,6 @@ func (*DirectiveDefault) Decode(rtm *DirectiveRuntime) error {
 }
 
 func (*DirectiveDefault) Encode(rtm *DirectiveRuntime) error {
-	return nil // noop
+
+	return nil
 }

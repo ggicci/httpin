@@ -14,7 +14,7 @@ type RequiredQuery struct {
 	Color     string    `in:"form=colour,color"`
 }
 
-func TestDirectiveRequired_RequiredFieldMissing(t *testing.T) {
+func TestDirectiveRequired_Decode_RequiredFieldMissing(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
 		"color": {"red"},
@@ -30,7 +30,7 @@ func TestDirectiveRequired_RequiredFieldMissing(t *testing.T) {
 	assert.Nil(t, invalidField.Value)
 }
 
-func TestDirectiveRequired_NonRequiredFieldAbsent(t *testing.T) {
+func TestDirectiveRequired_Decode_NonRequiredFieldAbsent(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
 		"created_at": {"1991-11-10T08:00:00+08:00"},

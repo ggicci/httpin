@@ -9,16 +9,16 @@ const defaultMaxMemory = int64(32 << 20) // 32 MB
 
 type Option func(*Core) error
 
-var optNestedDirectivesEnabled bool = false
+var globalNestedDirectivesEnabled bool = false
 
 // EnableNestedDirectives sets the global flag to enable nested directives.
 // Nested directives are disabled by default.
 func EnableNestedDirectives(on bool) {
-	optNestedDirectivesEnabled = on
+	globalNestedDirectivesEnabled = on
 }
 
 // WithErrorHandler overrides the default error handler.
-func WithErrorHandler(custom errorHandler) Option {
+func WithErrorHandler(custom ErrorHandler) Option {
 	return func(c *Core) error {
 		if err := validateErrorHandler(custom); err != nil {
 			return err

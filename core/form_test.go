@@ -108,7 +108,7 @@ var (
 	}
 )
 
-func TestDirectiveForm(t *testing.T) {
+func TestDirectiveForm_Decode(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
 		"bool":       {"true"},

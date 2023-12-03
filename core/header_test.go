@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDirectiveHeader(t *testing.T) {
+func TestDirectiveHeader_Decode(t *testing.T) {
 	type SearchQuery struct {
 		ApiUid   int    `in:"header=x-api-uid"`
 		ApiToken string `in:"header=x-api-token"`

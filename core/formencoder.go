@@ -1,20 +1,5 @@
 package core
 
-import (
-	"encoding"
-	"errors"
-	"fmt"
-	"reflect"
-)
-
-type FormValueMarshaler interface {
-	HttpinFormValue() (string, error)
-}
-
-var (
-	fallbackEncoder = interfaceEncoder{}
-)
-
 type FormEncoder struct {
 	Setter func(key string, value []string) // form value setter
 }
@@ -40,53 +25,24 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 		return fileUploadBuilder(rtm, fileEncoders)
 	}
 
-	_, encoder := rtm.GetCustomEncoder() // custom encoder, specified by "encoder" directive
-	// If no named encoder specified, check if there is a custom encoder for the
-	// type of this field, if so, use it.
-	if encoder == nil {
-		encoder = defaultRegistry.GetEncoder(baseType)
+	var adapt AnyStringableAdaptor
+	encoderInfo := rtm.getCustomEncoderV2()
+	if encoderInfo != nil {
+		adapt = encoderInfo.Adapt
 	}
-
-	// As the last resort, use the fallback encoder.
-	if encoder == nil {
-		encoder = fallbackEncoder
-	}
-
-	values, err := AdaptEncoder(baseType, encoder).EncoderByKind(TypeKind).EncodeX(rtm.Value)
+	var encoder StringSlicable
+	encoder, err := NewStringSlicable(rtm.Value, adapt)
 	if err != nil {
 		return err
 	}
-	e.Setter(key, values)
-	rtm.MarkFieldSet(true)
-	return nil
-}
 
-// interfaceEncoder utilizes the following interfaces to encode a value in order:
-//   - httpin.FormValueMarshaler
-//   - encoding.TextMarshaler
-//   - fmt.Stringer
-type interfaceEncoder struct{}
-
-func (ie interfaceEncoder) Encode(value reflect.Value) (string, error) {
-	ivalue := value.Interface()
-
-	if marshaler, ok := ivalue.(FormValueMarshaler); ok {
-		return marshaler.HttpinFormValue()
+	if values, err := encoder.ToStringSlice(); err != nil {
+		return err
+	} else {
+		e.Setter(key, values)
+		rtm.MarkFieldSet(true)
+		return nil
 	}
-
-	if marshaler, ok := ivalue.(encoding.TextMarshaler); ok {
-		bs, err := marshaler.MarshalText()
-		if err != nil {
-			return "", err
-		}
-		return string(bs), nil
-	}
-
-	if marshaler, ok := ivalue.(fmt.Stringer); ok {
-		return marshaler.String(), nil
-	}
-
-	return "", UnsupportedTypeError(value.Type())
 }
 
 func fileUploadBuilder(rtm *DirectiveRuntime, files []FileEncoder) error {
@@ -95,18 +51,4 @@ func fileUploadBuilder(rtm *DirectiveRuntime, files []FileEncoder) error {
 	rb.SetAttachment(key, files)
 	rtm.MarkFieldSet(true)
 	return nil
-}
-
-var (
-	ErrUnsupportedType = errors.New("unsupported type")
-	ErrTypeMismatch    = errors.New("type mismatch")
-)
-
-func InvalidDecodeReturnType(expected, got reflect.Type) error {
-	return fmt.Errorf("%w: value of type %q returned by decoder is not assignable to type %q",
-		ErrTypeMismatch, got, expected)
-}
-
-func UnsupportedTypeError(typ reflect.Type) error {
-	return fmt.Errorf("%w: %q", ErrUnsupportedType, typ)
 }
