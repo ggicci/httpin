@@ -62,23 +62,7 @@ func (rtm *DirectiveRuntime) GetRequestBuilder() *RequestBuilder {
 	return nil
 }
 
-func (rtm *DirectiveRuntime) GetCustomDecoder() (string, any) {
-	if info := rtm.getCustomDecoder(); info != nil {
-		return info.Name, info.Original
-	} else {
-		return "", nil
-	}
-}
-
-func (rtm *DirectiveRuntime) getCustomDecoder() *namedDecoderInfo {
-	if info := rtm.Resolver.Context.Value(CtxCustomDecoder); info != nil {
-		return info.(*namedDecoderInfo)
-	} else {
-		return nil
-	}
-}
-
-func (rtm *DirectiveRuntime) getCustomDecoderV2() *NamedAnyStringableAdaptor {
+func (rtm *DirectiveRuntime) GetCustomDecoder() *NamedAnyStringableAdaptor {
 	if info := rtm.Resolver.Context.Value(CtxCustomDecoder); info != nil {
 		return info.(*NamedAnyStringableAdaptor)
 	} else {
@@ -86,7 +70,7 @@ func (rtm *DirectiveRuntime) getCustomDecoderV2() *NamedAnyStringableAdaptor {
 	}
 }
 
-func (rtm *DirectiveRuntime) getCustomEncoderV2() *NamedAnyStringableAdaptor {
+func (rtm *DirectiveRuntime) GetCustomEncoder() *NamedAnyStringableAdaptor {
 	if info := rtm.Resolver.Context.Value(CtxCustomEncoder); info != nil {
 		return info.(*NamedAnyStringableAdaptor)
 	} else {

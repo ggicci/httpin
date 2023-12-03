@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -317,8 +319,47 @@ func (tv *Time) FromString(s string) error {
 	}
 }
 
-func UnsupportedType(rt reflect.Type) error {
-	return fmt.Errorf("%w: %v", ErrUnsupportedType, rt)
+var reUnixtime = regexp.MustCompile(`^\d+(\.\d{1,9})?$`)
+
+// DecodeTime parses data bytes as time.Time in UTC timezone.
+// Supported formats of the data bytes are:
+// 1. RFC3339Nano string, e.g. "2006-01-02T15:04:05-07:00".
+// 2. Date string, e.g. "2006-01-02".
+// 3. Unix timestamp, e.g. "1136239445", "1136239445.8", "1136239445.812738".
+func DecodeTime(value string) (time.Time, error) {
+	// Try parsing value as RFC3339 format.
+	if t, err := time.ParseInLocation(time.RFC3339Nano, value, time.UTC); err == nil {
+		return t.UTC(), nil
+	}
+
+	// Try parsing value as date format.
+	if t, err := time.ParseInLocation("2006-01-02", value, time.UTC); err == nil {
+		return t.UTC(), nil
+	}
+
+	// Try parsing value as timestamp, both integer and float formats supported.
+	// e.g. "1618974933", "1618974933.284368".
+	if reUnixtime.MatchString(value) {
+		return DecodeUnixtime(value)
+	}
+
+	return time.Time{}, errors.New("invalid time value")
+}
+
+// value must be valid unix timestamp, matches reUnixtime.
+func DecodeUnixtime(value string) (time.Time, error) {
+	parts := strings.Split(value, ".")
+	// Note: errors are ignored, since we already validated the value.
+	sec, _ := strconv.ParseInt(parts[0], 10, 64)
+	var nsec int64
+	if len(parts) == 2 {
+		nsec, _ = strconv.ParseInt(nanoSecondPrecision(parts[1]), 10, 64)
+	}
+	return time.Unix(sec, nsec).UTC(), nil
+}
+
+func nanoSecondPrecision(value string) string {
+	return value + strings.Repeat("0", 9-len(value))
 }
 
 // ByteSlice is a wrapper of []byte to implement Stringable.
@@ -336,4 +377,8 @@ func (bs *ByteSlice) FromString(s string) error {
 	}
 	*bs = ByteSlice(v)
 	return nil
+}
+
+func UnsupportedType(rt reflect.Type) error {
+	return fmt.Errorf("%w: %v", ErrUnsupportedType, rt)
 }

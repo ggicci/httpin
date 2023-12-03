@@ -26,7 +26,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 	}
 
 	var adapt AnyStringableAdaptor
-	encoderInfo := rtm.getCustomEncoderV2()
+	encoderInfo := rtm.GetCustomEncoder()
 	if encoderInfo != nil {
 		adapt = encoderInfo.Adapt
 	}

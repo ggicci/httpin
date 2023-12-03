@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -63,13 +64,18 @@ func decodePlacePointer(value string) (*Place, error) {
 var myPlaceDecoder = DecoderFunc[Place](decodePlace)
 var myPlacePointerDecoder = DecoderFunc[*Place](decodePlacePointer)
 
+func decodeInt(value string) (int, error) {
+	v, err := strconv.ParseInt(value, 10, 64)
+	return int(v), err
+}
+
 func TestSmartDecoder_BasicTypes(t *testing.T) {
 	// returns int
-	intDecoder := DecoderFunc[int](internal.DecodeInt)
+	intDecoder := DecoderFunc[int](decodeInt)
 
 	// returns *int
 	intPointerDecoder := DecoderFunc[*int](func(value string) (*int, error) {
-		if v, err := internal.DecodeInt(value); err != nil {
+		if v, err := decodeInt(value); err != nil {
 			return nil, err
 		} else {
 			var x = v
