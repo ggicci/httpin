@@ -264,15 +264,10 @@ func TestCore_Decode_CustomDecoder_TypeDecoder(t *testing.T) {
 	got, err := co.Decode(r)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got)
-
-	// removeTypeDecoder[bool]() // remove the custom decoder
-	// removeTypeDecoder[Place]()
-
 	removeType[bool]()
 }
 
 func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
-	RegisterDecoder[*Place](myPlacePointerDecoder) // usually done in init()
 	type Input struct {
 		BornPlace *Place `in:"form=born_place"`
 		LivePlace Place  `in:"form=live_place"`
@@ -292,15 +287,11 @@ func TestCore_Decode_CustomDecoder_RegisterThePointerType(t *testing.T) {
 	gotValue, err := co.Decode(r)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, gotValue)
-
-	removeTypeDecoder[*Place]() // remove the custom decoder
-	removeTypeDecoder[Place]()
 }
 
 func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert := assert.New(t)
 
-	RegisterDecoder[Place](myPlaceDecoder) // usually done in init()
 	type Input struct {
 		IsMember       *bool  `in:"form=is_member"`
 		Limit          *int   `in:"form=limit"`
@@ -345,8 +336,6 @@ func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert.Equal([]string{"Canada"}, ife.Value)
 	assert.Equal("form", ife.Source)
 	assert.ErrorContains(err, "invalid place")
-
-	removeTypeDecoder[Place]()
 }
 
 type CustomNamedDecoderInput struct {
@@ -411,7 +400,6 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrUnregisteredDecoder(t *testin
 }
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
-	RegisterNamedDecoder[time.Time]("decodeMyDate", myDateDecoder, true) // usually done in init()
 	type FunnyFile struct{}
 	defaultRegistry.fileTypes[internal.TypeOf[*FunnyFile]()] = nil // fake a registered file type
 	type Input struct {

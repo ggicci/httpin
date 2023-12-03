@@ -86,22 +86,6 @@ func (rtm *DirectiveRuntime) getCustomDecoderV2() *NamedAnyStringableAdaptor {
 	}
 }
 
-func (rtm *DirectiveRuntime) GetCustomEncoder() (string, Encoder) {
-	if info := rtm.getCustomEncoder(); info != nil {
-		return info.Name, info.Original
-	} else {
-		return "", nil
-	}
-}
-
-func (rtm *DirectiveRuntime) getCustomEncoder() *namedEncoderInfo {
-	if info := rtm.Resolver.Context.Value(CtxCustomEncoder); info != nil {
-		return info.(*namedEncoderInfo)
-	} else {
-		return nil
-	}
-}
-
 func (rtm *DirectiveRuntime) getCustomEncoderV2() *NamedAnyStringableAdaptor {
 	if info := rtm.Resolver.Context.Value(CtxCustomEncoder); info != nil {
 		return info.(*NamedAnyStringableAdaptor)

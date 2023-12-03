@@ -184,12 +184,6 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 	}
 
 	r.Context = context.WithValue(r.Context, CtxCustomDecoder, namedAdaptor)
-	// decoder := defaultRegistry.GetNamedDecoder(d.Argv[0])
-	// if decoder == nil {
-	// 	return fmt.Errorf("unregistered decoder: %q", d.Argv[0])
-	// }
-	// r.Context = context.WithValue(r.Context, CtxCustomDecoder, decoder)
-
 	return nil
 }
 
@@ -201,14 +195,16 @@ func reserveEncoderDirective(r *owl.Resolver) error {
 	if len(d.Argv) == 0 {
 		return errors.New("missing encoder name")
 	}
-	encoder := defaultRegistry.GetNamedEncoder(d.Argv[0])
-	if encoder == nil {
+
+	namedAdaptor := namedStringableAdaptors[d.Argv[0]]
+	if namedAdaptor == nil {
 		return fmt.Errorf("unregistered encoder: %q", d.Argv[0])
 	}
 	if defaultRegistry.IsFileType(r.Type) {
 		return errors.New("cannot use encoder directive on a file type field")
 	}
-	r.Context = context.WithValue(r.Context, CtxCustomEncoder, encoder)
+
+	r.Context = context.WithValue(r.Context, CtxCustomEncoder, namedAdaptor)
 	return nil
 }
 
