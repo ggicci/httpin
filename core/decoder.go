@@ -1,11 +1,8 @@
 package core
 
 import (
-	"errors"
 	"mime/multipart"
 	"reflect"
-
-	"github.com/ggicci/httpin/internal"
 )
 
 type (
@@ -86,11 +83,4 @@ func (sd *SmartDecoder) Decode(value string) (any, error) {
 
 	// Can't convert, return error.
 	return nil, typeMismatchedError(sd.WantType, gotType)
-}
-
-func validateDecoder(decoder any) error {
-	if decoder == nil || internal.IsNil(reflect.ValueOf(decoder)) {
-		return errors.New("nil decoder")
-	}
-	return nil
 }
