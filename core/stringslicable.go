@@ -40,19 +40,19 @@ type StringSlicablePatchFieldWrapper struct {
 
 // NewStringSlicablePatchFieldWrapper creates a StringSlicablePatchFieldWrapper from rv.
 // Returns error when patch.Field.Value is not a StringSlicable.
-func NewStringSlicablePatchFieldWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (StringSlicablePatchFieldWrapper, error) {
+func NewStringSlicablePatchFieldWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringSlicablePatchFieldWrapper, error) {
 	stringSlicable, err := NewStringSlicable(rv.FieldByName("Value"), adapt)
 	if err != nil {
-		return StringSlicablePatchFieldWrapper{}, fmt.Errorf("cannot create StringSlicable for PatchField: %w", err)
+		return nil, fmt.Errorf("cannot create StringSlicable for PatchField: %w", err)
 	} else {
-		return StringSlicablePatchFieldWrapper{
+		return &StringSlicablePatchFieldWrapper{
 			Value:                   rv,
 			internalStringSliceable: stringSlicable,
 		}, nil
 	}
 }
 
-func (w StringSlicablePatchFieldWrapper) ToStringSlice() ([]string, error) {
+func (w *StringSlicablePatchFieldWrapper) ToStringSlice() ([]string, error) {
 	if w.Value.FieldByName("Valid").Bool() {
 		return w.internalStringSliceable.ToStringSlice()
 	} else {
@@ -60,7 +60,7 @@ func (w StringSlicablePatchFieldWrapper) ToStringSlice() ([]string, error) {
 	}
 }
 
-func (w StringSlicablePatchFieldWrapper) FromStringSlice(values []string) error {
+func (w *StringSlicablePatchFieldWrapper) FromStringSlice(values []string) error {
 	if err := w.internalStringSliceable.FromStringSlice(values); err != nil {
 		return err
 	} else {
@@ -101,14 +101,14 @@ type StringableSliceWrapper struct {
 
 // NewStringableSliceWrapper creates a StringableSliceWrapper from rv.
 // Returns error when rv is not a slice of Stringable or cannot get address of rv.
-func NewStringableSliceWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (StringableSliceWrapper, error) {
+func NewStringableSliceWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringableSliceWrapper, error) {
 	if !rv.CanAddr() {
-		return StringableSliceWrapper{}, fmt.Errorf("cannot get address of value %q", rv)
+		return nil, fmt.Errorf("cannot get address of value %q", rv)
 	}
-	return StringableSliceWrapper{Value: rv, Adapt: adapt}, nil
+	return &StringableSliceWrapper{Value: rv, Adapt: adapt}, nil
 }
 
-func (w StringableSliceWrapper) ToStringSlice() ([]string, error) {
+func (w *StringableSliceWrapper) ToStringSlice() ([]string, error) {
 	var stringables = make(StringableSlice, w.Value.Len())
 	for i := 0; i < w.Value.Len(); i++ {
 		if stringable, err := NewStringable(w.Value.Index(i), w.Adapt); err != nil {
@@ -120,7 +120,7 @@ func (w StringableSliceWrapper) ToStringSlice() ([]string, error) {
 	return stringables.ToStringSlice()
 }
 
-func (w StringableSliceWrapper) FromStringSlice(ss []string) error {
+func (w *StringableSliceWrapper) FromStringSlice(ss []string) error {
 	var stringables = make(StringableSlice, len(ss))
 	w.Value.Set(reflect.MakeSlice(w.Value.Type(), len(ss), len(ss)))
 	for i := range ss {
@@ -137,15 +137,15 @@ func (w StringableSliceWrapper) FromStringSlice(ss []string) error {
 // StringSlicable. The wrapped reflect.Value must be a Stringable.
 type StringSlicableSingleStringableWrapper struct{ Stringable }
 
-func NewStringSlicableSingleStringableWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (StringSlicable, error) {
+func NewStringSlicableSingleStringableWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringSlicableSingleStringableWrapper, error) {
 	if stringable, err := NewStringable(rv, adapt); err != nil {
 		return nil, err
 	} else {
-		return StringSlicableSingleStringableWrapper{stringable}, nil
+		return &StringSlicableSingleStringableWrapper{stringable}, nil
 	}
 }
 
-func (w StringSlicableSingleStringableWrapper) ToStringSlice() ([]string, error) {
+func (w *StringSlicableSingleStringableWrapper) ToStringSlice() ([]string, error) {
 	if value, err := w.ToString(); err != nil {
 		return nil, err
 	} else {
@@ -153,7 +153,7 @@ func (w StringSlicableSingleStringableWrapper) ToStringSlice() ([]string, error)
 	}
 }
 
-func (w StringSlicableSingleStringableWrapper) FromStringSlice(values []string) error {
+func (w *StringSlicableSingleStringableWrapper) FromStringSlice(values []string) error {
 	if len(values) > 0 {
 		return w.FromString(values[0])
 	}
