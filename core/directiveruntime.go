@@ -2,9 +2,11 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 
+	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/owl"
 )
 
@@ -89,14 +91,17 @@ func (rtm *DirectiveRuntime) MarkFieldSet(value bool) {
 func (rtm *DirectiveRuntime) SetValue(value any) error {
 	if value == nil {
 		// NOTE: should we wipe the value here? i.e. set the value to nil if necessary.
-		// No case found yet, at lease for now.
+		// No case found yet, at least for now.
 		return nil
 	}
 	newValue := reflect.ValueOf(value)
 	targetType := rtm.Value.Type().Elem()
-	if newValue.Type().AssignableTo(targetType) {
-		rtm.Value.Elem().Set(newValue)
-		return nil
+
+	if !newValue.Type().AssignableTo(targetType) {
+		return fmt.Errorf("%w: value of type %q is not assignable to type %q",
+			internal.ErrTypeMismatch, reflect.TypeOf(value), targetType)
 	}
-	return typeMismatchedError(targetType, reflect.TypeOf(value))
+
+	rtm.Value.Elem().Set(newValue)
+	return nil
 }
