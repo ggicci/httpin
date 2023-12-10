@@ -67,13 +67,13 @@ func TestFileable_MarshalFile(t *testing.T) {
 
 	rv := reflect.ValueOf(s).Elem()
 
-	assert.Equal(t, fileAvatar.Content, testGetFile(t, rv.FieldByName("Avatar")))
-	assert.Equal(t, fileAvatarPointer.Content, testGetFile(t, rv.FieldByName("AvatarPointer")))
+	validateRvFile(t, fileAvatar, rv.FieldByName("Avatar"))
+	validateRvFile(t, fileAvatarPointer, rv.FieldByName("AvatarPointer"))
 	testNewFileableErrUnsupported(t, rv.FieldByName("Avatars"))
 	testNewFileableErrUnsupported(t, rv.FieldByName("AvatarPointers"))
 
-	assert.Equal(t, filePatchAvatar.Content, testGetFile(t, rv.FieldByName("PatchAvatar")))
-	assert.Equal(t, filePatchAvatarPointer.Content, testGetFile(t, rv.FieldByName("PatchAvatarPointer")))
+	validateRvFile(t, filePatchAvatar, rv.FieldByName("PatchAvatar"))
+	validateRvFile(t, filePatchAvatarPointer, rv.FieldByName("PatchAvatarPointer"))
 	testNewFileableErrUnsupported(t, rv.FieldByName("PatchAvatars"))
 	testNewFileableErrUnsupported(t, rv.FieldByName("PatchAvatarPointers"))
 }
@@ -93,22 +93,24 @@ func validateFile(t *testing.T, expected *tempFile, actual FileMarshaler) {
 	assert.Equal(t, expected.Content, content)
 }
 
+func validateRvFile(t *testing.T, expected *tempFile, actual reflect.Value) {
+	file, err := NewFileable(actual)
+	assert.NoError(t, err)
+	reader, err := file.MarshalFile()
+	assert.NoError(t, err)
+	content, err := io.ReadAll(reader)
+	assert.NoError(t, err)
+
+	assert.Equal(t, expected.Filename, file.Filename())
+	assert.Equal(t, expected.Content, content)
+}
+
 func testAssignFile(t *testing.T, rv reflect.Value) *tempFile {
 	fileable, err := NewFileable(rv)
 	assert.NoError(t, err)
 	file := createTempFileV2(t)
 	assert.NoError(t, fileable.UnmarshalFile(mockFileHeader(t, file.Filename)))
 	return file
-}
-
-func testGetFile(t *testing.T, rv reflect.Value) []byte {
-	file, err := NewFileable(rv)
-	assert.NoError(t, err)
-	reader, err := file.MarshalFile()
-	assert.NoError(t, err)
-	content, err := io.ReadAll(reader)
-	assert.NoError(t, err)
-	return content
 }
 
 type dummyFileHeader struct {
