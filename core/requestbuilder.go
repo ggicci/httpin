@@ -15,7 +15,7 @@ import (
 type RequestBuilder struct {
 	Query      url.Values
 	Form       url.Values
-	Attachment map[string][]FileEncoder
+	Attachment map[string][]FileMarshaler
 	Header     http.Header
 	Cookie     []*http.Cookie
 	Path       map[string]string // placeholder: value
@@ -107,9 +107,9 @@ func (rb *RequestBuilder) SetBody(bodyType string, bodyReader io.ReadCloser) {
 	rb.Body = bodyReader
 }
 
-func (rb *RequestBuilder) SetAttachment(key string, files []FileEncoder) {
+func (rb *RequestBuilder) SetAttachment(key string, files []FileMarshaler) {
 	if rb.Attachment == nil {
-		rb.Attachment = make(map[string][]FileEncoder)
+		rb.Attachment = make(map[string][]FileMarshaler)
 	}
 	rb.Attachment[key] = files
 }
@@ -162,7 +162,8 @@ func (rb *RequestBuilder) populateMultipartForm(req *http.Request) error {
 	// Populate the attachments.
 	for key, files := range rb.Attachment {
 		for i, file := range files {
-			filename, contentReader, err := file.Encode()
+			filename := file.Filename()
+			contentReader, err := file.MarshalFile()
 			filename = normalizeUploadFilename(key, filename, i)
 
 			if err != nil {

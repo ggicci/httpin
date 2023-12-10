@@ -38,15 +38,10 @@ func (e *FormExtractor) extract(key string) error {
 		return nil
 	}
 
-	valueType := e.Runtime.Value.Type().Elem()
-	baseType, TypeKind := BaseTypeOf(valueType)
-	fileDecoder := defaultRegistry.GetFileDecoder(baseType) // file decoder, for file uploads
-
-	var decodedValue any
 	var sourceValue any
 	var err error
-
-	if fileDecoder != nil {
+	valueType := e.Runtime.Value.Type().Elem()
+	if isFileType(valueType) {
 		// When fileDecoder is not nil, it means that the field is a file upload.
 		// We should decode files instead of values.
 		if len(files) == 0 {
@@ -54,11 +49,10 @@ func (e *FormExtractor) extract(key string) error {
 		}
 		sourceValue = files
 
-		// Adapt the fileDecoder which is for the baseType, to a fileDecoder
-		// which is for the valueType.
-		decodedValue, err = fileDecoder.DecoderByKind(TypeKind, valueType).DecodeX(files)
+		var decoder FileSlicable
+		decoder, err = NewFileSlicable(e.Runtime.Value.Elem())
 		if err == nil {
-			err = e.Runtime.SetValue(decodedValue)
+			err = decoder.FromFileSlice(toFileHeaderList(files))
 		}
 	} else {
 		if len(values) == 0 {

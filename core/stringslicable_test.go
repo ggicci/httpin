@@ -8,12 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testAssignStringSlice(t *testing.T, rv reflect.Value, values []string) {
-	ss, err := NewStringSlicable(rv, nil)
-	assert.NoError(t, err)
-	assert.NoError(t, ss.FromStringSlice(values))
-}
-
 func TestStringSlicable_FromStringSlice(t *testing.T) {
 	rv := reflect.New(reflect.TypeOf(MyStruct{})).Elem()
 	s := rv.Addr().Interface().(*MyStruct)
@@ -35,14 +29,6 @@ func TestStringSlicable_FromStringSlice(t *testing.T) {
 	assert.Equal(t, []int{18, 20}, s.Ages)
 }
 
-func testGetStringSlice(t *testing.T, rv reflect.Value) []string {
-	ss, err := NewStringSlicable(rv, nil)
-	assert.NoError(t, err)
-	values, err := ss.ToStringSlice()
-	assert.NoError(t, err)
-	return values
-}
-
 func TestStringSlicable_ToStringSlice(t *testing.T) {
 	var s = &MyStruct{
 		Name:        "Alice",
@@ -62,4 +48,18 @@ func TestStringSlicable_ToStringSlice(t *testing.T) {
 	assert.Equal(t, []string{"18"}, testGetStringSlice(t, rv.FieldByName("Age")))
 	assert.Equal(t, []string{"20"}, testGetStringSlice(t, rv.FieldByName("AgePointer")))
 	assert.Equal(t, []string{"18", "20"}, testGetStringSlice(t, rv.FieldByName("Ages")))
+}
+
+func testAssignStringSlice(t *testing.T, rv reflect.Value, values []string) {
+	ss, err := NewStringSlicable(rv, nil)
+	assert.NoError(t, err)
+	assert.NoError(t, ss.FromStringSlice(values))
+}
+
+func testGetStringSlice(t *testing.T, rv reflect.Value) []string {
+	ss, err := NewStringSlicable(rv, nil)
+	assert.NoError(t, err)
+	values, err := ss.ToStringSlice()
+	assert.NoError(t, err)
+	return values
 }

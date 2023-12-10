@@ -174,7 +174,8 @@ func reserveDecoderDirective(r *owl.Resolver) error {
 	if len(d.Argv) == 0 {
 		return errors.New("missing decoder name")
 	}
-	if defaultRegistry.IsFileType(r.Type) {
+
+	if isFileType(r.Type) {
 		return errors.New("cannot use decoder directive on a file type field")
 	}
 
@@ -200,7 +201,7 @@ func reserveEncoderDirective(r *owl.Resolver) error {
 	if namedAdaptor == nil {
 		return fmt.Errorf("unregistered encoder: %q", d.Argv[0])
 	}
-	if defaultRegistry.IsFileType(r.Type) {
+	if isFileType(r.Type) {
 		return errors.New("cannot use encoder directive on a file type field")
 	}
 

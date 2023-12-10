@@ -18,42 +18,41 @@ func NewStringSlicable(rv reflect.Value, adapt AnyStringableAdaptor) (StringSlic
 	}
 
 	if IsPatchField(rv.Type()) {
-		return newPatchFieldStringSlicableWrapper(rv, adapt)
+		return NewStringSlicablePatchFieldWrapper(rv, adapt)
 	}
 
 	if isSliceType(rv.Type()) && !isByteSliceType(rv.Type()) {
-		return NewStringableArrayBuilder(rv, adapt)
+		return NewStringableSliceWrapper(rv, adapt)
 	} else {
-		return newStringSlicableFromStringable(rv, adapt)
+		return NewStringSlicableSingleStringableWrapper(rv, adapt)
 	}
 }
 
-func newStringSlicableFromStringable(rv reflect.Value, adapt AnyStringableAdaptor) (StringSlicable, error) {
-	if stringable, err := NewStringable(rv, adapt); err != nil {
-		return nil, err
-	} else {
-		return SingleStringableSlicableWrapper{stringable}, nil
-	}
-}
-
-type patchFieldStringSlicableWrapper struct {
+// StringSlicablePatchFieldWrapper wraps a patch.Field[T] to implement
+// StringSlicable. The wrapped reflect.Value must be a patch.Field[T].
+//
+// It works like a proxy. It delegates the ToStringSlice and FromStringSlice
+// calls to the internal StringSlicable.
+type StringSlicablePatchFieldWrapper struct {
 	Value                   reflect.Value // of patch.Field[T]
 	internalStringSliceable StringSlicable
 }
 
-func newPatchFieldStringSlicableWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (patchFieldStringSlicableWrapper, error) {
+// NewStringSlicablePatchFieldWrapper creates a StringSlicablePatchFieldWrapper from rv.
+// Returns error when patch.Field.Value is not a StringSlicable.
+func NewStringSlicablePatchFieldWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (StringSlicablePatchFieldWrapper, error) {
 	stringSlicable, err := NewStringSlicable(rv.FieldByName("Value"), adapt)
 	if err != nil {
-		return patchFieldStringSlicableWrapper{}, fmt.Errorf("cannot create StringSlicable for PatchField: %w", err)
+		return StringSlicablePatchFieldWrapper{}, fmt.Errorf("cannot create StringSlicable for PatchField: %w", err)
 	} else {
-		return patchFieldStringSlicableWrapper{
+		return StringSlicablePatchFieldWrapper{
 			Value:                   rv,
 			internalStringSliceable: stringSlicable,
 		}, nil
 	}
 }
 
-func (w patchFieldStringSlicableWrapper) ToStringSlice() ([]string, error) {
+func (w StringSlicablePatchFieldWrapper) ToStringSlice() ([]string, error) {
 	if w.Value.FieldByName("Valid").Bool() {
 		return w.internalStringSliceable.ToStringSlice()
 	} else {
@@ -61,7 +60,7 @@ func (w patchFieldStringSlicableWrapper) ToStringSlice() ([]string, error) {
 	}
 }
 
-func (w patchFieldStringSlicableWrapper) FromStringSlice(values []string) error {
+func (w StringSlicablePatchFieldWrapper) FromStringSlice(values []string) error {
 	if err := w.internalStringSliceable.FromStringSlice(values); err != nil {
 		return err
 	} else {
@@ -70,46 +69,9 @@ func (w patchFieldStringSlicableWrapper) FromStringSlice(values []string) error 
 	}
 }
 
-type StringableArrayBuilder struct {
-	Value reflect.Value
-	Adapt AnyStringableAdaptor
-}
+type StringableSlice []Stringable
 
-func NewStringableArrayBuilder(rv reflect.Value, adapt AnyStringableAdaptor) (StringableArrayBuilder, error) {
-	if !rv.CanAddr() {
-		return StringableArrayBuilder{}, fmt.Errorf("cannot get address of value %q", rv)
-	}
-	return StringableArrayBuilder{Value: rv, Adapt: adapt}, nil
-}
-
-func (b StringableArrayBuilder) ToStringSlice() ([]string, error) {
-	var stringables = make(StringableArray, b.Value.Len())
-	for i := 0; i < b.Value.Len(); i++ {
-		if stringable, err := NewStringable(b.Value.Index(i), b.Adapt); err != nil {
-			return nil, fmt.Errorf("cannot create Stringable from %q at index %d: %w", b.Value.Index(i), i, err)
-		} else {
-			stringables[i] = stringable
-		}
-	}
-	return stringables.ToStringSlice()
-}
-
-func (b StringableArrayBuilder) FromStringSlice(ss []string) error {
-	var stringables = make(StringableArray, len(ss))
-	b.Value.Set(reflect.MakeSlice(b.Value.Type(), len(ss), len(ss)))
-	for i := range ss {
-		if stringable, err := NewStringable(b.Value.Index(i), b.Adapt); err != nil {
-			return fmt.Errorf("cannot create Stringable from %q at index %d: %w", b.Value.Index(i), i, err)
-		} else {
-			stringables[i] = stringable
-		}
-	}
-	return stringables.FromStringSlice(ss)
-}
-
-type StringableArray []Stringable
-
-func (sa StringableArray) ToStringSlice() ([]string, error) {
+func (sa StringableSlice) ToStringSlice() ([]string, error) {
 	values := make([]string, len(sa))
 	for i, s := range sa {
 		if value, err := s.ToString(); err != nil {
@@ -121,7 +83,7 @@ func (sa StringableArray) ToStringSlice() ([]string, error) {
 	return values, nil
 }
 
-func (sa StringableArray) FromStringSlice(values []string) error {
+func (sa StringableSlice) FromStringSlice(values []string) error {
 	for i, s := range values {
 		if err := sa[i].FromString(s); err != nil {
 			return fmt.Errorf("cannot decode %q at index %d: %w", values[i], i, err)
@@ -130,9 +92,60 @@ func (sa StringableArray) FromStringSlice(values []string) error {
 	return nil
 }
 
-type SingleStringableSlicableWrapper struct{ Stringable }
+// StringableSliceWrapper wraps a reflect.Value to implement StringSlicable. The
+// wrapped reflect.Value must be a slice of Stringable.
+type StringableSliceWrapper struct {
+	Value reflect.Value
+	Adapt AnyStringableAdaptor
+}
 
-func (w SingleStringableSlicableWrapper) ToStringSlice() ([]string, error) {
+// NewStringableSliceWrapper creates a StringableSliceWrapper from rv.
+// Returns error when rv is not a slice of Stringable or cannot get address of rv.
+func NewStringableSliceWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (StringableSliceWrapper, error) {
+	if !rv.CanAddr() {
+		return StringableSliceWrapper{}, fmt.Errorf("cannot get address of value %q", rv)
+	}
+	return StringableSliceWrapper{Value: rv, Adapt: adapt}, nil
+}
+
+func (w StringableSliceWrapper) ToStringSlice() ([]string, error) {
+	var stringables = make(StringableSlice, w.Value.Len())
+	for i := 0; i < w.Value.Len(); i++ {
+		if stringable, err := NewStringable(w.Value.Index(i), w.Adapt); err != nil {
+			return nil, fmt.Errorf("cannot create Stringable from %q at index %d: %w", w.Value.Index(i), i, err)
+		} else {
+			stringables[i] = stringable
+		}
+	}
+	return stringables.ToStringSlice()
+}
+
+func (w StringableSliceWrapper) FromStringSlice(ss []string) error {
+	var stringables = make(StringableSlice, len(ss))
+	w.Value.Set(reflect.MakeSlice(w.Value.Type(), len(ss), len(ss)))
+	for i := range ss {
+		if stringable, err := NewStringable(w.Value.Index(i), w.Adapt); err != nil {
+			return fmt.Errorf("cannot create Stringable from %q at index %d: %w", w.Value.Index(i), i, err)
+		} else {
+			stringables[i] = stringable
+		}
+	}
+	return stringables.FromStringSlice(ss)
+}
+
+// StringSlicableSingleStringableWrapper wraps a reflect.Value to implement
+// StringSlicable. The wrapped reflect.Value must be a Stringable.
+type StringSlicableSingleStringableWrapper struct{ Stringable }
+
+func NewStringSlicableSingleStringableWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (StringSlicable, error) {
+	if stringable, err := NewStringable(rv, adapt); err != nil {
+		return nil, err
+	} else {
+		return StringSlicableSingleStringableWrapper{stringable}, nil
+	}
+}
+
+func (w StringSlicableSingleStringableWrapper) ToStringSlice() ([]string, error) {
 	if value, err := w.ToString(); err != nil {
 		return nil, err
 	} else {
@@ -140,8 +153,8 @@ func (w SingleStringableSlicableWrapper) ToStringSlice() ([]string, error) {
 	}
 }
 
-func (w SingleStringableSlicableWrapper) FromStringSlice(values []string) error {
-	if len(values) >= 1 {
+func (w StringSlicableSingleStringableWrapper) FromStringSlice(values []string) error {
+	if len(values) > 0 {
 		return w.FromString(values[0])
 	}
 	return nil

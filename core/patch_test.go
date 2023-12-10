@@ -179,15 +179,15 @@ func TestPatchField_Encode_withFiles(t *testing.T) {
 	payload := &AccountPatch{
 		Email:  patch.Field[string]{Value: "abc@example.com", Valid: true},
 		Age:    patch.Field[int]{Value: 18, Valid: true},
-		Avatar: patch.Field[*File]{Value: UploadWithFilename(avatarFile), Valid: true},
+		Avatar: patch.Field[*File]{Value: UploadFile(avatarFile), Valid: true},
 		Hobbies: patch.Field[[]string]{
 			Value: []string{"reading", "swimming"},
 			Valid: true,
 		},
 		Pictures: patch.Field[[]*File]{
 			Value: []*File{
-				UploadWithFilename(pic1Filename),
-				UploadWithFilename(pic2Filename),
+				UploadFile(pic1Filename),
+				UploadFile(pic2Filename),
 			},
 			Valid: true,
 		},

@@ -11,11 +11,9 @@ import (
 
 type Stringable = internal.Stringable
 
-var timeType = internal.TypeOf[time.Time]()
-
 func NewStringable(rv reflect.Value, adapt AnyStringableAdaptor) (stringable Stringable, err error) {
 	if IsPatchField(rv.Type()) {
-		stringable, err = newPatchFieldStringableWrapper(rv, adapt)
+		stringable, err = NewStringablePatchFieldWrapper(rv, adapt)
 	} else {
 		stringable, err = newStringable(rv, adapt)
 	}
@@ -60,24 +58,24 @@ func newStringable(rv reflect.Value, adapt AnyStringableAdaptor) (Stringable, er
 	return internal.NewStringable(rv)
 }
 
-type patchFieldStringableWrapper struct {
+type StringablePatchFieldWrapper struct {
 	Value              reflect.Value // of patch.Field[T]
 	internalStringable Stringable
 }
 
-func newPatchFieldStringableWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (patchFieldStringableWrapper, error) {
-	stringable, err := newStringable(rv.FieldByName("Value"), adapt)
+func NewStringablePatchFieldWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringablePatchFieldWrapper, error) {
+	stringable, err := NewStringable(rv.FieldByName("Value"), adapt)
 	if err != nil {
-		return patchFieldStringableWrapper{}, fmt.Errorf("cannot create Stringable for PatchField: %w", err)
+		return &StringablePatchFieldWrapper{}, fmt.Errorf("cannot create Stringable for PatchField: %w", err)
 	} else {
-		return patchFieldStringableWrapper{
+		return &StringablePatchFieldWrapper{
 			Value:              rv,
 			internalStringable: stringable,
 		}, nil
 	}
 }
 
-func (w patchFieldStringableWrapper) ToString() (string, error) {
+func (w *StringablePatchFieldWrapper) ToString() (string, error) {
 	if w.Value.FieldByName("Valid").Bool() {
 		return w.internalStringable.ToString()
 	} else {
@@ -89,7 +87,7 @@ func (w patchFieldStringableWrapper) ToString() (string, error) {
 // string. It returns an error if the given string is not valid. And leaves the
 // original value of both Value and Valid unchanged. On the other hand, if no
 // error occurs, it sets Valid to true.
-func (w patchFieldStringableWrapper) FromString(s string) error {
+func (w *StringablePatchFieldWrapper) FromString(s string) error {
 	if err := w.internalStringable.FromString(s); err != nil {
 		return err
 	} else {
@@ -97,6 +95,8 @@ func (w patchFieldStringableWrapper) FromString(s string) error {
 		return nil
 	}
 }
+
+var timeType = internal.TypeOf[time.Time]()
 
 func getPointer(rv reflect.Value) (reflect.Value, error) {
 	if rv.Kind() == reflect.Pointer {
@@ -115,7 +115,7 @@ func createInstanceIfNil(rv reflect.Value) reflect.Value {
 
 func addressOf(rv reflect.Value) (reflect.Value, error) {
 	if !rv.CanAddr() {
-		return rv, fmt.Errorf("cannot get address of value %q", rv)
+		return rv, fmt.Errorf("cannot get address of value %v", rv)
 	}
 	rv = rv.Addr()
 	return rv, nil

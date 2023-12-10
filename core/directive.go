@@ -17,22 +17,6 @@ func init() {
 	RegisterDirective("default", &DirectiveDefault{})
 }
 
-// RegisterFileType registers a FileEncodeDecoder for type T. Which marks the type T as
-// a file type. When httpin encounters a field of type T, it will treat it as a file
-// upload.
-//
-//	func init() {
-//	    RegisterFileType[MyFile](&myFileEncodeDecoder{})
-//	}
-func RegisterFileType[T FileEncoder](fd FileDecoder[T]) {
-	internal.PanicOnError(
-		defaultRegistry.RegisterFileType(
-			internal.TypeOf[T](),
-			toAnyFileDecoder[T](fd),
-		),
-	)
-}
-
 var (
 	// decoderNamespace is the namespace for registering directive executors that are
 	// used to decode the http request to input struct.

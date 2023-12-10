@@ -2,9 +2,11 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -401,7 +403,7 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_ErrUnregisteredDecoder(t *testin
 
 func TestCore_Decode_CustomDecoder_NamedDecoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
 	type FunnyFile struct{}
-	defaultRegistry.fileTypes[internal.TypeOf[*FunnyFile]()] = nil // fake a registered file type
+	fileTypes[internal.TypeOf[*FunnyFile]()] = struct{}{} // fake a registered file type
 	type Input struct {
 		Avatar *FunnyFile `in:"form=avatar;decoder=decodeMyDate"`
 	}
@@ -449,4 +451,22 @@ func TestCore_Decode_CustomDecoder_NamedDecoder_DecodeError(t *testing.T) {
 	assert.ErrorAs(t, err, &invalidDate)
 	assert.ErrorContains(t, err, "invalid date: \"1991-11-10 08:00:00\"")
 	assert.Nil(t, got)
+}
+
+type Place struct {
+	Country string
+	City    string
+}
+
+func (p Place) ToString() (string, error) {
+	return fmt.Sprintf("%s.%s", p.Country, p.City), nil
+}
+
+func (p *Place) FromString(value string) error {
+	parts := strings.Split(value, ".")
+	if len(parts) != 2 {
+		return errors.New("invalid place")
+	}
+	*p = Place{Country: parts[0], City: parts[1]}
+	return nil
 }

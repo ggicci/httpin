@@ -146,11 +146,11 @@ func TestStringable_String(t *testing.T) {
 	testNewStringableErrUnsupported(t, rv.FieldByName("PatchDots"))
 }
 
-func TestPatchFieldStringableWrapper_String(t *testing.T) {
+func TestStringablePatchFieldWrapper_String(t *testing.T) {
 	var patchString = patch.Field[string]{Value: "Alice", Valid: true}
 	rv := reflect.ValueOf(&patchString).Elem()
 	assert.True(t, IsPatchField(rv.Type()))
-	stringable, err := newPatchFieldStringableWrapper(rv, nil)
+	stringable, err := NewStringablePatchFieldWrapper(rv, nil)
 	assert.NoError(t, err)
 
 	sv, err := stringable.ToString()
@@ -163,7 +163,7 @@ func TestPatchFieldStringableWrapper_String(t *testing.T) {
 	assert.Empty(t, sv, "invalid patch field should return empty string")
 }
 
-func TestPatchFieldStringableWrapper_FromString(t *testing.T) {
+func TestStringablePatchFieldWrapper_FromString(t *testing.T) {
 	// string
 	var patchString = patch.Field[string]{}
 
@@ -172,7 +172,7 @@ func TestPatchFieldStringableWrapper_FromString(t *testing.T) {
 
 	rv := reflect.ValueOf(&patchString).Elem()
 	assert.True(t, IsPatchField(rv.Type()))
-	stringable, err := newPatchFieldStringableWrapper(rv, nil)
+	stringable, err := NewStringablePatchFieldWrapper(rv, nil)
 	assert.NoError(t, err)
 	assert.NoError(t, stringable.FromString("Alice"))
 	assert.Equal(t, "Alice", patchString.Value)
@@ -182,7 +182,7 @@ func TestPatchFieldStringableWrapper_FromString(t *testing.T) {
 	var patchInt = patch.Field[int]{}
 	rv = reflect.ValueOf(&patchInt).Elem()
 	assert.True(t, IsPatchField(rv.Type()))
-	stringable, err = newPatchFieldStringableWrapper(rv, nil)
+	stringable, err = NewStringablePatchFieldWrapper(rv, nil)
 	assert.NoError(t, err)
 	assert.Error(t, stringable.FromString("Alice")) // cannot convert "Alice" to int
 	assert.Zero(t, patchInt.Value, "Value should not be changed after a failed FromString")

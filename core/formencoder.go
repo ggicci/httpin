@@ -1,5 +1,7 @@
 package core
 
+import "github.com/ggicci/httpin/internal"
+
 type FormEncoder struct {
 	Setter func(key string, value []string) // form value setter
 }
@@ -11,18 +13,24 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 
 	key := rtm.Directive.Argv[0]
 	valueType := rtm.Value.Type()
-	baseType, TypeKind := BaseTypeOf(valueType)
-
 	// When baseType is a file type, we treat it as a file upload.
-	if defaultRegistry.IsFileType(baseType) {
-		fileEncoders, err := toFileEncoders(rtm.Value, TypeKind)
+	if isFileType(valueType) {
+		if internal.IsNil(rtm.Value) {
+			return nil // skip when nil, which means no file uploaded
+		}
+
+		encoder, err := NewFileSlicable(rtm.Value)
 		if err != nil {
 			return err
 		}
-		if len(fileEncoders) == 0 {
-			return nil // skip when no file upload
+		files, err := encoder.ToFileSlice()
+		if err != nil {
+			return err
 		}
-		return fileUploadBuilder(rtm, fileEncoders)
+		if len(files) == 0 {
+			return nil // skip when no file uploaded
+		}
+		return fileUploadBuilder(rtm, files)
 	}
 
 	var adapt AnyStringableAdaptor
@@ -45,7 +53,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 	}
 }
 
-func fileUploadBuilder(rtm *DirectiveRuntime, files []FileEncoder) error {
+func fileUploadBuilder(rtm *DirectiveRuntime, files []FileMarshaler) error {
 	rb := rtm.GetRequestBuilder()
 	key := rtm.Directive.Argv[0]
 	rb.SetAttachment(key, files)

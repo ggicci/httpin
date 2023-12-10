@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -17,18 +18,18 @@ import (
 
 type BadFile struct{}
 
-func (bf *BadFile) Encode() (string, io.ReadCloser, error) {
-	return "", nil, nil
+func (bf *BadFile) Filename() string {
+	return ""
 }
 
-// decodeBadFile always returns an error, to simulate the case that we cannot
-// decode the file properly.
-type badFileDecoder struct{}
+func (bf *BadFile) MarshalFile() (io.ReadCloser, error) {
+	return nil, nil
+}
 
 var errBadFile = errors.New("bad file")
 
-func (badFileDecoder) Decode(*multipart.FileHeader) (*BadFile, error) {
-	return nil, errBadFile
+func (bf *BadFile) UnmarshalFile(fh FileHeader) error {
+	return errBadFile
 }
 
 type UpdateUserProfileInput struct {
@@ -43,12 +44,8 @@ type UpdateGitHubIssueInput struct {
 }
 
 func TestRegisterFileType(t *testing.T) {
-	assert.PanicsWithError(t, "httpin: duplicate file type: *core.File", func() {
-		RegisterFileType[*File](nil)
-	})
-	assert.PanicsWithError(t, "httpin: file decoder cannot be nil", func() {
-		RegisterFileType[*BadFile](nil)
-	})
+	RegisterFileType[*File]()
+	RegisterFileType[*File]() // register twice is ok
 }
 
 func TestFile_OpenUploadStream_FailOnInvalidUpload(t *testing.T) {
@@ -58,24 +55,10 @@ func TestFile_OpenUploadStream_FailOnInvalidUpload(t *testing.T) {
 }
 
 func TestFile_ReceiveStream_FailOnInvalidUpload(t *testing.T) {
-	// invalid upload, on the server side, the file should be decoded with an
-	// FileDecoder
 	file := &File{}
 	_, err := file.OpenReceiveStream()
 	assert.ErrorContains(t, err, "invalid upload (server)")
 }
-
-func TestFile_EncodeError(t *testing.T) {
-	file := &File{}
-	_, _, err := file.Encode()
-	assert.Error(t, err)
-}
-
-// func TestMultipartForm_DecodeFile_FailOnNilFileHeader(t *testing.T) {
-// 	file, err := decodeFile(nil)
-// 	assert.ErrorContains(t, err, "nil file header")
-// 	assert.Nil(t, file)
-// }
 
 func TestMultipartForm_UploadSingleFile(t *testing.T) {
 	assert := assert.New(t)
@@ -136,7 +119,7 @@ func TestMultipartForm_UploadSingleFile_FailOnBrokenBoundaries(t *testing.T) {
 }
 
 func TestMultipartForm_UploadSingleFile_FailOnDecodeError(t *testing.T) {
-	RegisterFileType[*BadFile](badFileDecoder{})
+	RegisterFileType[*BadFile]()
 
 	type AccountUpdate struct {
 		Username string   `in:"form=username"`
@@ -198,10 +181,10 @@ func TestMultipartFormEncode_UploadFilename(t *testing.T) {
 
 	payload := &Post{
 		Username: "ggicci",
-		Main:     UploadWithFilename(mainFilename),
+		Main:     UploadFile(mainFilename),
 		Pictures: []*File{
-			UploadWithFilename(pic1Filename),
-			UploadWithFilename(pic2Filename),
+			UploadFile(pic1Filename),
+			UploadFile(pic2Filename),
 		},
 	}
 	co, err := New(Post{})
@@ -235,10 +218,10 @@ func TestMultipartFormEncode_UploadReader(t *testing.T) {
 
 	payload := &Post{
 		Username: "ggicci",
-		Main:     UploadWithReader(io.NopCloser(mainReader)),
+		Main:     UploadStream(io.NopCloser(mainReader)),
 		Pictures: []*File{
-			UploadWithReader(io.NopCloser(pic1Reader)),
-			UploadWithReader(io.NopCloser(pic2Reader)),
+			UploadStream(io.NopCloser(pic1Reader)),
+			UploadStream(io.NopCloser(pic2Reader)),
 		},
 	}
 	co, err := New(Post{})
@@ -300,6 +283,35 @@ func createTempFile(t *testing.T, content []byte) string {
 	return f.Name()
 }
 
+type tempFile struct {
+	Filename string
+	Content  []byte
+}
+
+func createTempFileV2(t *testing.T) *tempFile {
+	t.Helper()
+	f, err := os.CreateTemp("", "httpin_test_*.txt")
+	assert.NoError(t, err)
+	randomContent := randomString(32)
+	_, err = f.Write([]byte(randomContent))
+	assert.NoError(t, err)
+	f.Close()
+
+	return &tempFile{
+		Filename: f.Name(),
+		Content:  []byte(randomContent),
+	}
+}
+
+func randomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	var result = make([]byte, length)
+	for i := range result {
+		result[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(result)
+}
+
 func breakMultipartFormBoundary(body *bytes.Buffer) *bytes.Buffer {
 	raw := body.Bytes()
 	var brokenBody = bytes.NewBuffer(raw[:len(raw)-10])
@@ -312,9 +324,9 @@ func breakMultipartFormBoundary(body *bytes.Buffer) *bytes.Buffer {
 func assertDecodedFile(t *testing.T, gotFile *File, filename string, content []byte) {
 	assert.NotNil(t, gotFile)
 	assert.False(t, gotFile.IsUpload())
-	assert.Equal(t, gotFile.Header.Filename, gotFile.Filename())
-	assert.Equal(t, filename, gotFile.Header.Filename)
-	assert.Equal(t, int64(len(content)), gotFile.Header.Size)
+	assert.Equal(t, gotFile.Filename(), gotFile.Filename())
+	assert.Equal(t, filename, gotFile.Filename())
+	assert.Equal(t, int64(len(content)), gotFile.Size())
 
 	file, err := gotFile.OpenReceiveStream()
 	assert.NoError(t, err)
@@ -366,5 +378,5 @@ func newMultipartFormWriterFromMap(m map[string]any) (body *bytes.Buffer, writer
 }
 
 func removeFileType[T any]() {
-	defaultRegistry.RemoveFileType(internal.TypeOf[T]())
+	delete(fileTypes, internal.TypeOf[T]())
 }
