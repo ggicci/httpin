@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -43,7 +44,7 @@ type StringSlicablePatchFieldWrapper struct {
 func NewStringSlicablePatchFieldWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringSlicablePatchFieldWrapper, error) {
 	stringSlicable, err := NewStringSlicable(rv.FieldByName("Value"), adapt)
 	if err != nil {
-		return nil, fmt.Errorf("cannot create StringSlicable for PatchField: %w", err)
+		return nil, err
 	} else {
 		return &StringSlicablePatchFieldWrapper{
 			Value:                   rv,
@@ -75,7 +76,7 @@ func (sa StringableSlice) ToStringSlice() ([]string, error) {
 	values := make([]string, len(sa))
 	for i, s := range sa {
 		if value, err := s.ToString(); err != nil {
-			return nil, fmt.Errorf("cannot encode %q at index %d: %w", sa[i], i, err)
+			return nil, fmt.Errorf("cannot stringify %v at index %d: %w", s, i, err)
 		} else {
 			values[i] = value
 		}
@@ -86,7 +87,7 @@ func (sa StringableSlice) ToStringSlice() ([]string, error) {
 func (sa StringableSlice) FromStringSlice(values []string) error {
 	for i, s := range values {
 		if err := sa[i].FromString(s); err != nil {
-			return fmt.Errorf("cannot decode %q at index %d: %w", values[i], i, err)
+			return fmt.Errorf("cannot convert from string %q at index %d: %w", s, i, err)
 		}
 	}
 	return nil
@@ -103,7 +104,7 @@ type StringableSliceWrapper struct {
 // Returns error when rv is not a slice of Stringable or cannot get address of rv.
 func NewStringableSliceWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringableSliceWrapper, error) {
 	if !rv.CanAddr() {
-		return nil, fmt.Errorf("cannot get address of value %q", rv)
+		return nil, errors.New("unaddressable value")
 	}
 	return &StringableSliceWrapper{Value: rv, Adapt: adapt}, nil
 }
@@ -125,7 +126,7 @@ func (w *StringableSliceWrapper) FromStringSlice(ss []string) error {
 	w.Value.Set(reflect.MakeSlice(w.Value.Type(), len(ss), len(ss)))
 	for i := range ss {
 		if stringable, err := NewStringable(w.Value.Index(i), w.Adapt); err != nil {
-			return fmt.Errorf("cannot create Stringable from %q at index %d: %w", w.Value.Index(i), i, err)
+			return fmt.Errorf("cannot create Stringable at index %d: %w", i, err)
 		} else {
 			stringables[i] = stringable
 		}

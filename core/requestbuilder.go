@@ -167,12 +167,12 @@ func (rb *RequestBuilder) populateMultipartForm(req *http.Request) error {
 			filename = normalizeUploadFilename(key, filename, i)
 
 			if err != nil {
-				return fmt.Errorf("upload %s %q: %w", key, filename, err)
+				return fmt.Errorf("upload %s %q failed: %w", key, filename, err)
 			}
 
 			fileWriter, _ := writer.CreateFormFile(key, filename)
 			if _, err = io.Copy(fileWriter, contentReader); err != nil {
-				return fmt.Errorf("upload %s %q: %w", key, filename, err)
+				return fmt.Errorf("upload %s %q failed: %w", key, filename, err)
 			}
 		}
 	}

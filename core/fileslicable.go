@@ -57,25 +57,6 @@ func (w *FileSlicablePatchFieldWrapper) FromFileSlice(fhs []FileHeader) error {
 	}
 }
 
-type FileableSlice []Fileable
-
-func (s FileableSlice) ToFileSlice() ([]FileMarshaler, error) {
-	var files []FileMarshaler
-	for _, v := range s {
-		files = append(files, v)
-	}
-	return files, nil
-}
-
-func (s FileableSlice) FromFileSlice(fhs []FileHeader) error {
-	for i, fh := range fhs {
-		if err := s[i].UnmarshalFile(fh); err != nil {
-			return fmt.Errorf("cannot unmarshal file %q at index %d: %w", fh.Filename(), i, err)
-		}
-	}
-	return nil
-}
-
 type FileableSliceWrapper struct {
 	Value reflect.Value
 }
@@ -100,16 +81,17 @@ func (w *FileableSliceWrapper) ToFileSlice() ([]FileMarshaler, error) {
 }
 
 func (w *FileableSliceWrapper) FromFileSlice(fhs []FileHeader) error {
-	var fileables = make(FileableSlice, len(fhs))
 	w.Value.Set(reflect.MakeSlice(w.Value.Type(), len(fhs), len(fhs)))
-	for i := range fhs {
-		if fileable, err := NewFileable(w.Value.Index(i)); err != nil {
+	for i, fh := range fhs {
+		fileable, err := NewFileable(w.Value.Index(i))
+		if err != nil {
 			return fmt.Errorf("cannot create Fileable at index %d: %w", i, err)
-		} else {
-			fileables[i] = fileable
+		}
+		if err := fileable.UnmarshalFile(fh); err != nil {
+			return fmt.Errorf("cannot unmarshal file %q at index %d: %w", fh.Filename(), i, err)
 		}
 	}
-	return fileables.FromFileSlice(fhs)
+	return nil
 }
 
 type FileSlicableSingleFileableWrapper struct{ Fileable }

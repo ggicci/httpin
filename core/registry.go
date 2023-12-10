@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/ggicci/httpin/internal"
@@ -28,11 +27,7 @@ func RegisterNamedType[T any](name string, adapt func(*T) (Stringable, error)) {
 }
 
 func RegisterFileType[T Fileable]() error {
-	typ := internal.TypeOf[T]()
-	if !typ.Implements(fileableType) {
-		return fmt.Errorf("file type must implement Fileable interface")
-	}
-	fileTypes[typ] = struct{}{}
+	fileTypes[internal.TypeOf[T]()] = struct{}{}
 	return nil
 }
 
