@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	RegisterFileType[*File]()
+	RegisterFileCoder[*File]()
 }
 
 // File is the builtin type of httpin to manupulate file uploads. On the server

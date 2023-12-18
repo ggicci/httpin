@@ -43,9 +43,9 @@ type UpdateGitHubIssueInput struct {
 	Attachments []*File `in:"form=attachment"`
 }
 
-func TestRegisterFileType(t *testing.T) {
-	RegisterFileType[*File]()
-	RegisterFileType[*File]() // register twice is ok
+func TestRegisterFileCoder(t *testing.T) {
+	RegisterFileCoder[*File]()
+	RegisterFileCoder[*File]() // register twice is ok
 }
 
 func TestFile_OpenUploadStream_FailOnInvalidUpload(t *testing.T) {
@@ -119,7 +119,7 @@ func TestMultipartForm_UploadSingleFile_FailOnBrokenBoundaries(t *testing.T) {
 }
 
 func TestMultipartForm_UploadSingleFile_FailOnDecodeError(t *testing.T) {
-	RegisterFileType[*BadFile]()
+	RegisterFileCoder[*BadFile]()
 
 	type AccountUpdate struct {
 		Username string   `in:"form=username"`

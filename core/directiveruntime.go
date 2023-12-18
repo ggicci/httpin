@@ -21,7 +21,7 @@ const (
 
 	CtxRequestBuilder
 
-	// CtxCustomDecoder is the key to get the custom decoder for a field from
+	// CtxCustomCoder is the key to get the custom decoder for a field from
 	// Resolver.Context. Which is specified by the "decoder" directive.
 	// During resolver building phase, the "decoder" directive will be removed
 	// from the resolver, and the targeted decoder by name will be put into
@@ -32,10 +32,7 @@ const (
 	//    }
 	// For the above example, the decoder named "custom" will be put into the
 	// resolver of Message field with this key.
-	CtxCustomDecoder
-
-	// CtxCustomEncoder works like ctxCustomDecoder, but for encoder.
-	CtxCustomEncoder
+	CtxCustomCoder
 
 	// CtxFieldSet is used by executors to tell whether a field has been set. When
 	// multiple executors were applied to a field, if the field value were set
@@ -64,16 +61,8 @@ func (rtm *DirectiveRuntime) GetRequestBuilder() *RequestBuilder {
 	return nil
 }
 
-func (rtm *DirectiveRuntime) GetCustomDecoder() *NamedAnyStringableAdaptor {
-	if info := rtm.Resolver.Context.Value(CtxCustomDecoder); info != nil {
-		return info.(*NamedAnyStringableAdaptor)
-	} else {
-		return nil
-	}
-}
-
-func (rtm *DirectiveRuntime) GetCustomEncoder() *NamedAnyStringableAdaptor {
-	if info := rtm.Resolver.Context.Value(CtxCustomEncoder); info != nil {
+func (rtm *DirectiveRuntime) GetCustomCoder() *NamedAnyStringableAdaptor {
+	if info := rtm.Resolver.Context.Value(CtxCustomCoder); info != nil {
 		return info.(*NamedAnyStringableAdaptor)
 	} else {
 		return nil

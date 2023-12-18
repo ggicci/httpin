@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"mime"
 	"net/http"
@@ -159,8 +158,8 @@ func buildResolver(inputStruct any) (*owl.Resolver, error) {
 func normalizeResolver(r *owl.Resolver) error {
 	normalize := func(r *owl.Resolver) error {
 		for _, fn := range []func(*owl.Resolver) error{
-			reserveDecoderDirective,
-			reserveEncoderDirective,
+			removeDecoderDirective,             // backward compatibility, use "coder" instead
+			removeCoderDirective,               // "coder" takes precedence over "decoder"
 			ensureDirectiveExecutorsRegistered, // always the last one
 		} {
 			if err := fn(r); err != nil {
@@ -173,49 +172,36 @@ func normalizeResolver(r *owl.Resolver) error {
 	return r.Iterate(normalize)
 }
 
-// reserveDecoderDirective removes the "decoder" directive from the resolver.
-// The "decoder" is a special directive which does nothing, but an indicator of
-// overriding the decoder for a specific field.
-func reserveDecoderDirective(r *owl.Resolver) error {
-	d := r.RemoveDirective("decoder")
-	if d == nil {
-		return nil
-	}
-	if len(d.Argv) == 0 {
-		return errors.New("missing decoder name")
-	}
-
-	if isFileType(r.Type) {
-		return errors.New("cannot use decoder directive on a file type field")
-	}
-
-	namedAdaptor := namedStringableAdaptors[d.Argv[0]]
-	if namedAdaptor == nil {
-		return fmt.Errorf("unregistered decoder: %q", d.Argv[0])
-	}
-
-	r.Context = context.WithValue(r.Context, CtxCustomDecoder, namedAdaptor)
-	return nil
+func removeDecoderDirective(r *owl.Resolver) error {
+	return reserveCoderDirective(r, "decoder")
 }
 
-func reserveEncoderDirective(r *owl.Resolver) error {
-	d := r.RemoveDirective("encoder")
+func removeCoderDirective(r *owl.Resolver) error {
+	return reserveCoderDirective(r, "coder")
+}
+
+// reserveCoderDirective removes the directive from the resolver. name is "coder" or "decoder".
+// The "decoder"/"coder"are two special directives which do nothing, but an indicator of
+// overriding the decoder and encoder for a specific field.
+func reserveCoderDirective(r *owl.Resolver, name string) error {
+	d := r.RemoveDirective(name)
 	if d == nil {
 		return nil
 	}
 	if len(d.Argv) == 0 {
-		return errors.New("missing encoder name")
+		return fmt.Errorf("missing %s name", name)
+	}
+
+	if isFileType(r.Type) {
+		return fmt.Errorf("cannot use %s directive on a file type field", name)
 	}
 
 	namedAdaptor := namedStringableAdaptors[d.Argv[0]]
 	if namedAdaptor == nil {
-		return fmt.Errorf("unregistered encoder: %q", d.Argv[0])
-	}
-	if isFileType(r.Type) {
-		return errors.New("cannot use encoder directive on a file type field")
+		return fmt.Errorf("unregistered coder: %q", d.Argv[0])
 	}
 
-	r.Context = context.WithValue(r.Context, CtxCustomEncoder, namedAdaptor)
+	r.Context = context.WithValue(r.Context, CtxCustomCoder, namedAdaptor)
 	return nil
 }
 

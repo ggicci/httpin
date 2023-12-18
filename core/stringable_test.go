@@ -198,7 +198,6 @@ func TestStringablePatchFieldWrapper_FromString(t *testing.T) {
 }
 
 func TestStringable_WithAdaptor(t *testing.T) {
-	// RegisterStringableAdaptor[time.Time](func(t *time.Time) (Stringable, error) { return (*MyDate)(t), nil })
 	adapt := func(t *time.Time) (Stringable, error) { return (*MyDate)(t), nil }
 	var now = time.Now()
 	rvTimePointer := reflect.ValueOf(&now)

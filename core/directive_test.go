@@ -3,13 +3,8 @@ package core
 import (
 	"testing"
 
-	"github.com/ggicci/httpin/internal"
 	"github.com/stretchr/testify/assert"
 )
-
-func removeType[T any]() {
-	delete(customStringableAdaptors, internal.TypeOf[T]())
-}
 
 func TestRegisterDirectiveExecutor(t *testing.T) {
 	assert.NotPanics(t, func() {

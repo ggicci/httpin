@@ -34,7 +34,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 	}
 
 	var adapt AnyStringableAdaptor
-	encoderInfo := rtm.GetCustomEncoder()
+	encoderInfo := rtm.GetCustomCoder()
 	if encoderInfo != nil {
 		adapt = encoderInfo.Adapt
 	}

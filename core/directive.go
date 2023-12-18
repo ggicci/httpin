@@ -26,8 +26,10 @@ var (
 	// used to encode the input struct to http request.
 	encoderNamespace = owl.NewNamespace()
 
-	reservedExecutorNames = []string{"decoder", "encoder"}
-	noopDirective         = &directiveNoop{}
+	// reservedExecutorNames are the names that cannot be used to register user defined directives
+	reservedExecutorNames = []string{"decoder", "coder"}
+
+	noopDirective = &directiveNoop{}
 )
 
 type DirectiveExecutor interface {
@@ -41,8 +43,8 @@ type DirectiveExecutor interface {
 func init() {
 	// decoder is a special executor which does nothing, but is an indicator of
 	// overriding the decoder for a specific field.
-	decoderNamespace.RegisterDirectiveExecutor("decoder", asOwlDirectiveExecutor(noopDirective.Decode))
-	encoderNamespace.RegisterDirectiveExecutor("encoder", asOwlDirectiveExecutor(noopDirective.Encode))
+	registerDirective("decoder", noopDirective)
+	registerDirective("coder", noopDirective)
 }
 
 // RegisterDirective registers a DirectiveExecutor with the given directive name. The
@@ -54,12 +56,16 @@ func init() {
 // Will panic if the name were taken or given executor is nil. Pass parameter force
 // (true) to ignore the name conflict.
 func RegisterDirective(name string, executor DirectiveExecutor, force ...bool) {
+	panicOnReservedExecutorName(name)
+	registerDirective(name, executor, force...)
+}
+
+func registerDirective(name string, executor DirectiveExecutor, force ...bool) {
 	registerDirectiveExecutorToNamespace(decoderNamespace, name, executor, force...)
 	registerDirectiveExecutorToNamespace(encoderNamespace, name, executor, force...)
 }
 
 func registerDirectiveExecutorToNamespace(ns *owl.Namespace, name string, exe DirectiveExecutor, force ...bool) {
-	panicOnReservedExecutorName(name)
 	if exe == nil {
 		internal.PanicOnError(errors.New("nil directive executor"))
 	}

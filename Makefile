@@ -17,7 +17,7 @@ test/report:
 	if [[ "$$HOSTNAME" =~ "codespaces-"* ]]; then \
 		mkdir -p /tmp/httpin_test; \
 		$(GOCOVER) -html=main.cover.out -o /tmp/httpin_test/coverage.html; \
-		python -m http.server -d /tmp/httpin_test; \
+		sudo python -m http.server -d /tmp/httpin_test -b localhost 80; \
 	else \
 		$(GOCOVER) -html=main.cover.out; \
 	fi

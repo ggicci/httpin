@@ -15,12 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func init() {
-	RegisterNamedType[time.Time]("mydate", func(t *time.Time) (Stringable, error) {
-		return (*MyDate)(t), nil
-	})
-}
-
 type Pagination struct {
 	Page    int `in:"form=page,page_index,index"`
 	PerPage int `in:"form=per_page,page_size"`
@@ -86,16 +80,17 @@ func TestNew_WithCustomDecoder_ErrMissingDecoderName(t *testing.T) {
 	assert.Nil(t, co)
 }
 
-func TestNew_WithCustomDecoder_ErrUnregisteredDecoder(t *testing.T) {
+func TestNew_WithCustomDecoder_ErrUnregisteredCoder(t *testing.T) {
 	type Input struct {
 		Gender string `in:"form=gender;decoder=gender"`
 	}
 	co, err := New(Input{})
-	assert.ErrorContains(t, err, "unregistered decoder: \"gender\"")
+	assert.ErrorContains(t, err, "unregistered coder: \"gender\"")
 	assert.Nil(t, co)
 }
 
 func TestNew_WithCustomDecoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
+	registerMyDate()
 	type FunnyFile struct{}
 	fileTypes[internal.TypeOf[*FunnyFile]()] = struct{}{} // fake a registered file type
 	type Input struct {
@@ -105,37 +100,7 @@ func TestNew_WithCustomDecoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
 	assert.ErrorContains(t, err, "cannot use decoder directive on a file type field")
 	assert.Nil(t, co)
 	removeFileType[*FunnyFile]()
-}
-
-func TestNew_WithCustomEncoder_ErrMissingEncoderName(t *testing.T) {
-	type Input struct {
-		Gender string `in:"form=gender;encoder"`
-	}
-
-	co, err := New(Input{})
-	assert.ErrorContains(t, err, "missing encoder name")
-	assert.Nil(t, co)
-}
-
-func TestNew_WithCustomEncoder_ErrUnregisteredEncoder(t *testing.T) {
-	type Input struct {
-		Gender string `in:"form=gender;encoder=gender"`
-	}
-	co, err := New(Input{})
-	assert.ErrorContains(t, err, "unregistered encoder: \"gender\"")
-	assert.Nil(t, co)
-}
-
-func TestNew_WithCustomEncoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
-	type FunnyFile struct{}
-	fileTypes[internal.TypeOf[*FunnyFile]()] = struct{}{} // fake a registered file type
-	type Input struct {
-		Avatar *FunnyFile `in:"form=avatar;encoder=mydate"`
-	}
-	co, err := New(Input{})
-	assert.ErrorContains(t, err, "cannot use encoder directive on a file type field")
-	assert.Nil(t, co)
-	removeFileType[*FunnyFile]()
+	unregisterMyDate()
 }
 
 func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
@@ -356,22 +321,22 @@ func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert.ErrorContains(err, "invalid place")
 }
 
-type CustomNamedDecoderInput struct {
+// Test: register named coders and use them in "coder" / "encoder" / "decoder" directives,
+// i.e. customizing the encoding/decoding for a specific struct field.
+
+type NamedCoderInput struct {
 	Name             string      `in:"form=name"`
-	Birthday         time.Time   `in:"form=birthday;decoder=mydate"` // use named decoder "mydate"
-	EffectiveBetween []time.Time `in:"form=effective_between;decoder=mydate"`
+	Birthday         time.Time   `in:"form=birthday;coder=mydate"` // use named coder "mydate"
+	EffectiveBetween []time.Time `in:"form=effective_between;coder=mydate"`
 	CreatedBetween   []time.Time `in:"form=created_between"`
 }
 
-func TestCore_Decode_UsingCustomDecoder(t *testing.T) {
-	r, _ := http.NewRequest("GET", "/", nil)
-	r.Form = url.Values{
-		"name":              {"Ggicci"},
-		"birthday":          {"1991-11-10"},
-		"effective_between": {"2021-04-12", "2025-04-12"},
-		"created_between":   {"2021-01-01T08:00:00+08:00", "2022-01-01T08:00:00+08:00"},
-	}
-	expected := &CustomNamedDecoderInput{
+func TestCore_NamedCoder(t *testing.T) {
+	registerMyDate()
+	co, err := New(NamedCoderInput{})
+	assert.NoError(t, err)
+
+	sampleInput := &NamedCoderInput{
 		Name:     "Ggicci",
 		Birthday: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
 		EffectiveBetween: []time.Time{
@@ -384,14 +349,42 @@ func TestCore_Decode_UsingCustomDecoder(t *testing.T) {
 		},
 	}
 
-	co, err := New(CustomNamedDecoderInput{})
-	assert.NoError(t, err)
-	got, err := co.Decode(r)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, got.(*CustomNamedDecoderInput))
+	// Decode
+	func() {
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{
+			"name":              {"Ggicci"},
+			"birthday":          {"1991-11-10"},
+			"effective_between": {"2021-04-12", "2025-04-12"},
+			"created_between":   {"2021-01-01T08:00:00+08:00", "2022-01-01T08:00:00+08:00"},
+		}
+
+		got, err := co.Decode(r)
+		assert.NoError(t, err)
+		assert.Equal(t, sampleInput, got.(*NamedCoderInput))
+	}()
+
+	// Encode / NewRequest
+	func() {
+		req, err := co.NewRequest("PUT", "/users/ggicci", sampleInput)
+		assert.NoError(t, err)
+
+		expected, _ := http.NewRequest("PUT", "/users/ggicci", nil)
+		expected.Form = url.Values{
+			"name":              {"Ggicci"},
+			"birthday":          {"1991-11-10"},
+			"effective_between": {"2021-04-12", "2025-04-12"},
+			"created_between":   {"2021-01-01T00:00:00Z", "2022-01-01T00:00:00Z"},
+		}
+		expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		assert.Equal(t, expected, req)
+	}()
+
+	unregisterMyDate()
 }
 
-func TestCore_Decode_CustomNamedType_ErrTypeMismatch(t *testing.T) {
+func TestCore_Decode_NamedCoder_ErrTypeMismatch(t *testing.T) {
+	registerMyDate()
 	type Input struct {
 		Birthday string `in:"form=birthday;decoder=mydate"` // mydate is for time.Time, not string
 	}
@@ -405,16 +398,18 @@ func TestCore_Decode_CustomNamedType_ErrTypeMismatch(t *testing.T) {
 	assert.ErrorContains(t, err, "Birthday")
 	assert.ErrorContains(t, err, "string")
 	assert.ErrorContains(t, err, "time.Time")
+	unregisterMyDate()
 }
 
-func TestCore_Decode_CustomNamedType_DecoderError(t *testing.T) {
+func TestCore_Decode_NamedCoder_DecoderError(t *testing.T) {
+	registerMyDate()
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
 		"name":     {"Ggicci"},
 		"birthday": {"1991-11-10 08:00:00"}, // invalid date format
 	}
 
-	co, err := New(CustomNamedDecoderInput{})
+	co, err := New(NamedCoderInput{})
 	assert.NoError(t, err)
 
 	got, err := co.Decode(r)
@@ -422,7 +417,16 @@ func TestCore_Decode_CustomNamedType_DecoderError(t *testing.T) {
 	assert.ErrorAs(t, err, &invalidDate)
 	assert.ErrorContains(t, err, "invalid date: \"1991-11-10 08:00:00\"")
 	assert.Nil(t, got)
+	unregisterMyDate()
 }
+
+func TestCore_Encode_NamedCoder(t *testing.T) {
+	registerMyDate()
+
+	unregisterMyDate()
+}
+
+// Test: custom type: override the default types
 
 type YesNo bool
 
@@ -445,8 +449,8 @@ func (yn *YesNo) FromString(s string) error {
 	return nil
 }
 
-func TestRegisterType_CustomTypeOverride(t *testing.T) {
-	RegisterType[bool](func(b *bool) (internal.Stringable, error) {
+func TestRegisterCoder_CustomType_OverrideDefaultTypeCoder(t *testing.T) {
+	RegisterCoder[bool](func(b *bool) (internal.Stringable, error) {
 		return (*YesNo)(b), nil
 	})
 
@@ -493,3 +497,19 @@ func TestRegisterType_CustomTypeOverride(t *testing.T) {
 
 	removeType[bool]()
 }
+
+func removeType[T any]() {
+	delete(customStringableAdaptors, internal.TypeOf[T]())
+}
+
+func removeNamedType(name string) {
+	delete(namedStringableAdaptors, name)
+}
+
+func registerMyDate() {
+	RegisterNamedCoder[time.Time]("mydate", func(t *time.Time) (Stringable, error) {
+		return (*MyDate)(t), nil
+	})
+}
+
+func unregisterMyDate() { removeNamedType("mydate") }
