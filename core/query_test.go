@@ -89,21 +89,32 @@ func (l Location) ToString() (string, error) {
 	return fmt.Sprintf("%f,%f", l.Latitude, l.Longitude), nil
 }
 
-type LocationTextMarshalerImpl Location
+type LocationImplementedTextMarshaler Location
 
-func (l LocationTextMarshalerImpl) MarshalText() ([]byte, error) {
+func (l LocationImplementedTextMarshaler) MarshalText() ([]byte, error) {
 	if s, err := (Location)(l).ToString(); err != nil {
 		return nil, err
 	} else {
 		return []byte("MarshalText:" + s), nil
 	}
 }
-
-func TestDirectiveQuery_Encode_useMarshalerInterfaces(t *testing.T) {
+func TestDirectiveQuery_Encode_ErrUnsupportedType(t *testing.T) {
 	type SearchQuery struct {
-		L0     *Location                  `in:"query=l0"`
-		L2     *LocationTextMarshalerImpl `in:"query=l2"`
-		Radius int                        `in:"query=radius"`
+		Map map[string]string `in:"query=map"` // unsupported type: map
+	}
+
+	co, err := New(SearchQuery{})
+	assert.NoError(t, err)
+	_, err = co.NewRequest("GET", "/pets", &SearchQuery{})
+	assert.ErrorIs(t, err, internal.ErrUnsupportedType)
+}
+
+// See hybridcoder_test.go for more details.
+func TestDirectiveQuery_Encode_WithTextMarshaler(t *testing.T) {
+	type SearchQuery struct {
+		L0     *Location                         `in:"query=l0"`
+		L2     *LocationImplementedTextMarshaler `in:"query=l2"`
+		Radius int                               `in:"query=radius"`
 	}
 
 	query := &SearchQuery{
@@ -111,7 +122,7 @@ func TestDirectiveQuery_Encode_useMarshalerInterfaces(t *testing.T) {
 			Latitude:  1.234,
 			Longitude: 5.678,
 		},
-		L2: &LocationTextMarshalerImpl{
+		L2: &LocationImplementedTextMarshaler{
 			Latitude:  1.234,
 			Longitude: 5.678,
 		},
@@ -130,15 +141,4 @@ func TestDirectiveQuery_Encode_useMarshalerInterfaces(t *testing.T) {
 	expectedQuery.Set("radius", "1000")
 	expected.URL.RawQuery = expectedQuery.Encode()
 	assert.Equal(t, expected, req)
-}
-
-func TestDirectiveQuery_Encode_ErrUnsupportedType(t *testing.T) {
-	type SearchQuery struct {
-		Map map[string]string `in:"query=map"` // unsupported type: map
-	}
-
-	co, err := New(SearchQuery{})
-	assert.NoError(t, err)
-	_, err = co.NewRequest("GET", "/pets", &SearchQuery{})
-	assert.ErrorIs(t, err, internal.ErrUnsupportedType)
 }

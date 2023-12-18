@@ -121,6 +121,16 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 	return req, nil
 }
 
+// GetErrorHandler returns the error handler of the core if set, or the global
+// custom error handler.
+func (c *Core) GetErrorHandler() ErrorHandler {
+	if c.errorHandler != nil {
+		return c.errorHandler
+	}
+
+	return globalCustomErrorHandler
+}
+
 // buildResolver builds a resolver for the inputStruct. It will run normalizations
 // on the resolver and cache it.
 func buildResolver(inputStruct any) (*owl.Resolver, error) {
@@ -214,21 +224,10 @@ func reserveEncoderDirective(r *owl.Resolver) error {
 func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 	for _, d := range r.Directives {
 		if decoderNamespace.LookupExecutor(d.Name) == nil {
-			return fmt.Errorf("unregistered directive: %q (decoder)", d.Name)
+			return fmt.Errorf("unregistered directive: %q", d.Name)
 		}
-		if encoderNamespace.LookupExecutor(d.Name) == nil {
-			return fmt.Errorf("unregistered directive: %q (encoder)", d.Name)
-		}
+		// NOTE: don't need to check encoderNamespace because a directive
+		// will always be registered in both namespaces. See RegisterDirective().
 	}
 	return nil
-}
-
-// GetErrorHandler returns the error handler of the core if set, or the global
-// custom error handler.
-func (c *Core) GetErrorHandler() ErrorHandler {
-	if c.errorHandler != nil {
-		return c.errorHandler
-	}
-
-	return globalCustomErrorHandler
 }

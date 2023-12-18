@@ -64,8 +64,8 @@ func NewStringable(rv reflect.Value) (Stringable, error) {
 	}
 }
 
-func builtinStringable[T any](builder StringableAdaptor[T]) {
-	builtinStringableAdaptors[TypeOf[T]()] = ToAnyStringableAdaptor[T](builder)
+func builtinStringable[T any](adaptor StringableAdaptor[T]) {
+	builtinStringableAdaptors[TypeOf[T]()] = NewAnyStringableAdaptor[T](adaptor)
 }
 
 type String string

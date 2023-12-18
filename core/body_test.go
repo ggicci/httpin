@@ -179,7 +179,7 @@ func TestRegisterBodyFormat_ErrNilBodySerializer(t *testing.T) {
 	})
 }
 
-func TestRegisterBodyFormat_forceRegister(t *testing.T) {
+func TestRegisterBodyFormat_ForceRegister(t *testing.T) {
 	assert.NotPanics(t, func() {
 		RegisterBodyFormat("yaml", &yamlBody{}, true)
 	})
@@ -189,7 +189,7 @@ func TestRegisterBodyFormat_forceRegister(t *testing.T) {
 	unregisterBodyFormat("yaml")
 }
 
-func TestRegisterBodyFormat_forceRegisterWithEmptyBodyFormat(t *testing.T) {
+func TestRegisterBodyFormat_ForceRegisterWithEmptyBodyFormat(t *testing.T) {
 	assert.PanicsWithError(t, "httpin: body format cannot be empty", func() {
 		RegisterBodyFormat("", &yamlBody{}, true)
 	})

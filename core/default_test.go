@@ -76,7 +76,7 @@ func TestDirectiveDefault_Decode_PatchField(t *testing.T) {
 
 // FIX: https://github.com/ggicci/httpin/issues/77
 // Decode parameter struct with default values only works the first time
-func TestDirectiveDeafult_Decode_twice(t *testing.T) {
+func TestDirectiveDeafult_Decode_DecodeTwice(t *testing.T) {
 	type ThingWithDefaultValues struct {
 		Id      uint `in:"query=id;required"`
 		Page    int  `in:"query=page;default=1"`

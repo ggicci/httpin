@@ -197,13 +197,13 @@ func TestStringablePatchFieldWrapper_FromString(t *testing.T) {
 	assert.True(t, patchInt.Valid, "Valid should not be changed after a failed FromString")
 }
 
-func TestStringable_withAdaptor(t *testing.T) {
+func TestStringable_WithAdaptor(t *testing.T) {
 	// RegisterStringableAdaptor[time.Time](func(t *time.Time) (Stringable, error) { return (*MyDate)(t), nil })
 	adapt := func(t *time.Time) (Stringable, error) { return (*MyDate)(t), nil }
 	var now = time.Now()
 	rvTimePointer := reflect.ValueOf(&now)
 
-	coder, err := NewStringable(rvTimePointer, internal.ToAnyStringableAdaptor[time.Time](adapt))
+	coder, err := NewStringable(rvTimePointer, internal.NewAnyStringableAdaptor[time.Time](adapt))
 	assert.NoError(t, err)
 	assert.NoError(t, coder.FromString("1991-11-10"))
 

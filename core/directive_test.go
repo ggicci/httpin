@@ -29,7 +29,7 @@ func TestRegisterDirectiveExecutor(t *testing.T) {
 	}, "should panic on reserved name")
 }
 
-func TestRegisterDirectiveExecutor_forceReplace(t *testing.T) {
+func TestRegisterDirectiveExecutor_ForceReplace(t *testing.T) {
 	assert.NotPanics(t, func() {
 		RegisterDirective("noop_TestRegisterDirectiveExecutor_forceReplace", noopDirective, true)
 	})

@@ -91,7 +91,7 @@ func TestNewInput_Success(t *testing.T) {
 	assert.Equal(t, expected, rw.Body.String())
 }
 
-func TestNewInput_Error_byDefaultErrorHandler(t *testing.T) {
+func TestNewInput_ErrorHandledByDefaultErrorHandler(t *testing.T) {
 	r, err := http.NewRequest("GET", "/", nil)
 	assert.NoError(t, err)
 
@@ -121,7 +121,7 @@ func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
 	http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError) // status: 500
 }
 
-func TestNewInput_Error_byCustomErrorHandler(t *testing.T) {
+func TestNewInput_ErrorHandledByCustomErrorHandler(t *testing.T) {
 	r, err := http.NewRequest("GET", "/", nil)
 	assert.NoError(t, err)
 

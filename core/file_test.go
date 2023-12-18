@@ -241,7 +241,7 @@ func TestMultipartFormEncode_UploadReader(t *testing.T) {
 	assertDecodedFile(t, got.Pictures[1], "pictures_1", []byte("pic2 content"))
 }
 
-func TestUpload_withNilFile(t *testing.T) {
+func TestUpload_WithNilFile(t *testing.T) {
 	payload := &UpdateUserProfileInput{
 		Avatar: nil,
 	}
@@ -258,7 +258,7 @@ func TestUpload_withNilFile(t *testing.T) {
 	assert.Equal(t, expected, req)
 }
 
-func TestUpload_withNilMultiFile(t *testing.T) {
+func TestUpload_WithNilMultiFile(t *testing.T) {
 	payload := &UpdateGitHubIssueInput{
 		Attachments: nil,
 	}

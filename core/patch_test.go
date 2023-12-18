@@ -142,7 +142,7 @@ func TestPatchField_Encode(t *testing.T) {
 	}
 }
 
-func TestPatchField_Encode_noFiles(t *testing.T) {
+func TestPatchField_Encode_NoFiles(t *testing.T) {
 	assert := assert.New(t)
 	payload := &AccountPatch{
 		Email:  patch.Field[string]{Value: "abc@example.com", Valid: true},
@@ -170,7 +170,7 @@ func TestPatchField_Encode_noFiles(t *testing.T) {
 	assert.Equal(expected, req)
 }
 
-func TestPatchField_Encode_withFiles(t *testing.T) {
+func TestPatchField_Encode_WithFiles(t *testing.T) {
 	assert := assert.New(t)
 	avatarFile := createTempFile(t, []byte("handsome avatar image"))
 	pic1Filename := createTempFile(t, []byte("pic1 content"))

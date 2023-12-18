@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHybridCoder_MarshalText_only(t *testing.T) {
+func TestHybridCoder_MarshalTextOnly(t *testing.T) {
 	apple := &textMarshalerApple{}
 	rv := reflect.ValueOf(apple)
 	stringable := hybridizeCoder(rv)
@@ -21,7 +21,7 @@ func TestHybridCoder_MarshalText_only(t *testing.T) {
 	assert.ErrorContains(t, stringable.FromString("red apple"), "StringUnmarshaler not implemented")
 }
 
-func TestHybridCoder_UnmarshalText_only(t *testing.T) {
+func TestHybridCoder_UnmarshalTextOnly(t *testing.T) {
 	banana := &textUnmarshalerBanana{}
 	rv := reflect.ValueOf(banana)
 	stringable := hybridizeCoder(rv)
@@ -51,7 +51,7 @@ func TestHybridCoder_MarshalText_and_UnmarshalText(t *testing.T) {
 	assert.Equal(t, "red orange", orange.Content)
 }
 
-func TestHybridCoder_StringMarshaler_takePrecedence(t *testing.T) {
+func TestHybridCoder_StringMarshaler_TakesPrecedence(t *testing.T) {
 	peach := &stringMarshalerAndTextMarshalerPeach{Content: "peach"}
 	rv := reflect.ValueOf(peach)
 	stringable := hybridizeCoder(rv)
@@ -65,7 +65,7 @@ func TestHybridCoder_StringMarshaler_takePrecedence(t *testing.T) {
 	assert.ErrorContains(t, err, "StringUnmarshaler not implemented")
 }
 
-func TestHybridCoder_StringUnmarshaler_takePrecedence(t *testing.T) {
+func TestHybridCoder_StringUnmarshaler_TakesPrecedence(t *testing.T) {
 	peach := &stringUnmarshalerAndTextUnmarshalerPeach{Content: "peach"}
 	rv := reflect.ValueOf(peach)
 	stringable := hybridizeCoder(rv)
@@ -106,7 +106,7 @@ func TestHybridCoder_MarshalText_Error(t *testing.T) {
 	assert.Empty(t, text)
 }
 
-func TestHybridCoder_cannotInterfaceError(t *testing.T) {
+func TestHybridCoder_ErrCannotInterface(t *testing.T) {
 	type mystruct struct {
 		unexportedName string
 	}
@@ -117,7 +117,7 @@ func TestHybridCoder_cannotInterfaceError(t *testing.T) {
 	assert.Nil(t, stringable)
 }
 
-func TestHybridCoder_nilOnNoInterfacesDetected(t *testing.T) {
+func TestHybridCoder_NilOnNoInterfacesDetected(t *testing.T) {
 	var zero zeroInterface
 	rv := reflect.ValueOf(zero)
 
