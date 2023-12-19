@@ -29,6 +29,17 @@ func (*DirectiveDefault) Decode(rtm *DirectiveRuntime) error {
 }
 
 func (*DirectiveDefault) Encode(rtm *DirectiveRuntime) error {
-
-	return nil
+	if !rtm.Value.IsZero() {
+		return nil // skip if the field is not empty
+	}
+	var adapt AnyStringableAdaptor
+	coder := rtm.GetCustomCoder()
+	if coder != nil {
+		adapt = coder.Adapt
+	}
+	if stringSlicable, err := NewStringSlicable(rtm.Value, adapt); err != nil {
+		return err
+	} else {
+		return stringSlicable.FromStringSlice(rtm.Directive.Argv)
+	}
 }

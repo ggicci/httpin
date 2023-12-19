@@ -189,16 +189,16 @@ func reserveCoderDirective(r *owl.Resolver, name string) error {
 		return nil
 	}
 	if len(d.Argv) == 0 {
-		return fmt.Errorf("missing %s name", name)
+		return fmt.Errorf("directive %s: missing coder name", name)
 	}
 
 	if isFileType(r.Type) {
-		return fmt.Errorf("cannot use %s directive on a file type field", name)
+		return fmt.Errorf("directive %s: cannot be used on a file type field", name)
 	}
 
 	namedAdaptor := namedStringableAdaptors[d.Argv[0]]
 	if namedAdaptor == nil {
-		return fmt.Errorf("unregistered coder: %q", d.Argv[0])
+		return fmt.Errorf("directive %s: unregistered coder: %q", name, d.Argv[0])
 	}
 
 	r.Context = context.WithValue(r.Context, CtxCustomCoder, namedAdaptor)

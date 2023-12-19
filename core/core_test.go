@@ -70,34 +70,34 @@ func TestNew_ErrUnregisteredDirective(t *testing.T) {
 	assert.ErrorContains(t, err, "base58_to_integer")
 }
 
-func TestNew_WithCustomDecoder_ErrMissingDecoderName(t *testing.T) {
+func TestNew_WithNamedCoder_ErrMissingCoderName(t *testing.T) {
 	type Input struct {
 		Gender string `in:"form=gender;decoder"`
 	}
 
 	co, err := New(Input{})
-	assert.ErrorContains(t, err, "missing decoder name")
+	assert.ErrorContains(t, err, "directive decoder: missing coder name")
 	assert.Nil(t, co)
 }
 
-func TestNew_WithCustomDecoder_ErrUnregisteredCoder(t *testing.T) {
+func TestNew_WithNamedCoder_ErrUnregisteredCoder(t *testing.T) {
 	type Input struct {
-		Gender string `in:"form=gender;decoder=gender"`
+		Gender string `in:"form=gender;coder=gender"`
 	}
 	co, err := New(Input{})
-	assert.ErrorContains(t, err, "unregistered coder: \"gender\"")
+	assert.ErrorContains(t, err, "directive coder: unregistered coder: \"gender\"")
 	assert.Nil(t, co)
 }
 
-func TestNew_WithCustomDecoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
+func TestNew_WithNamedCoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
 	registerMyDate()
 	type FunnyFile struct{}
 	fileTypes[internal.TypeOf[*FunnyFile]()] = struct{}{} // fake a registered file type
 	type Input struct {
-		Avatar *FunnyFile `in:"form=avatar;decoder=mydate"`
+		Avatar *FunnyFile `in:"form=avatar;coder=mydate"`
 	}
 	co, err := New(Input{})
-	assert.ErrorContains(t, err, "cannot use decoder directive on a file type field")
+	assert.ErrorContains(t, err, "directive coder: cannot be used on a file type field")
 	assert.Nil(t, co)
 	removeFileType[*FunnyFile]()
 	unregisterMyDate()
@@ -321,7 +321,7 @@ func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert.ErrorContains(err, "invalid place")
 }
 
-// Test: register named coders and use them in "coder" / "encoder" / "decoder" directives,
+// Test: register named coders and use them in the "coder" directive,
 // i.e. customizing the encoding/decoding for a specific struct field.
 
 type NamedCoderInput struct {
@@ -383,25 +383,40 @@ func TestCore_NamedCoder(t *testing.T) {
 	unregisterMyDate()
 }
 
-func TestCore_Decode_NamedCoder_ErrTypeMismatch(t *testing.T) {
+func TestCore_NamedCoder_ErrTypeMismatch(t *testing.T) {
 	registerMyDate()
 	type Input struct {
-		Birthday string `in:"form=birthday;decoder=mydate"` // mydate is for time.Time, not string
+		Birthday string `in:"form=birthday;coder=mydate"` // mydate is for time.Time, not string
 	}
 
 	co, err := New(Input{})
 	assert.NoError(t, err)
-	r, _ := http.NewRequest("GET", "/", nil)
-	r.Form = url.Values{"birthday": {"1991-11-10"}}
-	_, err = co.Decode(r)
-	assert.ErrorIs(t, err, internal.ErrTypeMismatch)
-	assert.ErrorContains(t, err, "Birthday")
-	assert.ErrorContains(t, err, "string")
-	assert.ErrorContains(t, err, "time.Time")
+
+	// Decode
+	func() {
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.Form = url.Values{"birthday": {"1991-11-10"}}
+		_, err = co.Decode(r)
+		assert.ErrorIs(t, err, internal.ErrTypeMismatch)
+		assert.ErrorContains(t, err, "Birthday")
+		assert.ErrorContains(t, err, "string")
+		assert.ErrorContains(t, err, "time.Time")
+	}()
+
+	// Encode / NewRequest
+	func() {
+		payload := &Input{Birthday: "1991-11-10"}
+		_, err := co.NewRequest("GET", "/", payload)
+		assert.ErrorIs(t, err, internal.ErrTypeMismatch)
+		assert.ErrorContains(t, err, "Birthday")
+		assert.ErrorContains(t, err, "string")
+		assert.ErrorContains(t, err, "time.Time")
+	}()
+
 	unregisterMyDate()
 }
 
-func TestCore_Decode_NamedCoder_DecoderError(t *testing.T) {
+func TestCore_NamedCoder_DecoderError(t *testing.T) {
 	registerMyDate()
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{

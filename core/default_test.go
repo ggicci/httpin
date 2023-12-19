@@ -5,67 +5,36 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/httpin/patch"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDirectiveDefault_Decode(t *testing.T) {
 	type ThingWithDefaultValues struct {
-		Page      int      `in:"form=page;default=1"`
-		PerPage   int      `in:"form=per_page;default=20"`
-		StateList []string `in:"form=state;default=pending,in_progress,failed"`
+		Page           int                   `in:"form=page;default=1"`
+		PointerPage    *int                  `in:"form=pointer_page;default=1"`
+		PatchPage      patch.Field[int]      `in:"form=patch_page;default=1"`
+		PerPage        int                   `in:"form=per_page;default=20"`
+		StateList      []string              `in:"form=state;default=pending,in_progress,failed"`
+		PatchStateList patch.Field[[]string] `in:"form=patch_state;default=a,b,c"`
 	}
 
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
-		"page":  {"7"},
-		"state": {},
+		"page":         {"7"},
+		"pointer_page": {"9"},
+		"patch_page":   {"11"},
+		"state":        {},
+		"patch_state":  {},
 	}
 	expected := &ThingWithDefaultValues{
-		Page:      7,
-		PerPage:   20,
-		StateList: []string{"pending", "in_progress", "failed"},
-	}
-	co, err := New(ThingWithDefaultValues{})
-	assert.NoError(t, err)
-	got, err := co.Decode(r)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, got)
-}
-
-func TestDirectiveDefault_Decode_PointerTypeFields(t *testing.T) {
-	assert := assert.New(t)
-	type Input struct {
-		Page      *int     `in:"form=page;default=1"`
-		PerPage   *int     `in:"form=per_page;default=20"`
-		StateList []string `in:"form=state;default=pending,in_progress,failed"`
-	}
-	co, err := New(Input{})
-	assert.NoError(err)
-
-	r := newMultipartFormRequestFromMap(map[string]any{})
-	gotValue, err := co.Decode(r)
-	assert.NoError(err)
-	got := gotValue.(*Input)
-	assert.Equal(1, *got.Page)
-	assert.Equal(20, *got.PerPage)
-	assert.Equal([]string{"pending", "in_progress", "failed"}, got.StateList)
-}
-
-func TestDirectiveDefault_Decode_PatchField(t *testing.T) {
-	type ThingWithDefaultValues struct {
-		Page      patch.Field[int]      `in:"form=page;default=1"`
-		PerPage   patch.Field[int]      `in:"form=per_page;default=20"`
-		StateList patch.Field[[]string] `in:"form=state;default=pending,in_progress,failed"`
-	}
-
-	r := newMultipartFormRequestFromMap(map[string]any{
-		"page": "7",
-	})
-	expected := &ThingWithDefaultValues{
-		Page:      patch.Field[int]{Value: 7, Valid: true},
-		PerPage:   patch.Field[int]{Value: 20, Valid: true},
-		StateList: patch.Field[[]string]{Value: []string{"pending", "in_progress", "failed"}, Valid: true},
+		Page:           7,
+		PointerPage:    internal.Pointerize[int](9),
+		PatchPage:      patch.Field[int]{Value: 11, Valid: true},
+		PerPage:        20,
+		StateList:      []string{"pending", "in_progress", "failed"},
+		PatchStateList: patch.Field[[]string]{Value: []string{"a", "b", "c"}, Valid: true},
 	}
 	co, err := New(ThingWithDefaultValues{})
 	assert.NoError(t, err)
@@ -98,8 +67,32 @@ func TestDirectiveDeafult_Decode_DecodeTwice(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, xxx)
 
-	// Second decode generates eror
+	// Second decode generates error
 	xxx, err = co.Decode(r)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, xxx)
+}
+
+func TestDirectiveDefault_Encode(t *testing.T) {
+	type ListTicketRequest struct {
+		Page    int      `in:"query=page;default=1"`
+		PerPage int      `in:"query=per_page;default=20"`
+		States  []string `in:"query=state;default=assigned,in_progress"`
+	}
+
+	co, err := New(ListTicketRequest{})
+	assert.NoError(t, err)
+
+	payload := &ListTicketRequest{
+		Page: 2,
+	}
+	expected, _ := http.NewRequest("GET", "/tickets", nil)
+	expected.URL.RawQuery = url.Values{
+		"page":     {"2"},
+		"per_page": {"20"},
+		"state":    {"assigned", "in_progress"},
+	}.Encode()
+	req, err := co.NewRequest("GET", "/tickets", payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, req)
 }
