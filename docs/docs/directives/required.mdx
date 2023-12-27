@@ -7,7 +7,7 @@ import data from "./data/required"
 
 # required
 
-**required** is a [directive executor](/advanced/concepts#directive-executor) who tags a field as required.
+**required** is a [directive executor](/advanced/concepts#directive-executor) who tags a field as required. Worth to mention, **it was designed to ensure the key to be present in the input data, but doesn't check the value, it can be zero values, like `0`, `""`, etc.** If you want to ensure the value not to be zero/empty, use [nonzero](/directives/nonzero) instead.
 
 ## Definition
 
@@ -16,12 +16,14 @@ Name: "required"
 Args: (no args)
 ```
 
-**required** always works as an accompany with some other directives, it checks if the field were set by the former directives. When the field were not set by the former directives, an error [ErrMissingField](https://pkg.go.dev/github.com/ggicci/httpin#pkg-variables) will occur.
+**required** always works as an accompany with some other directives, **it checks whether the field had been set by the former directives**. When the field were not set by the former directives, an error "missing required field" will occur.
 
 ## Usage
 
 ```go
 type TokenInput struct {
+	// Make sure the access_token is present in the query string, we don't care about the value.
+	// The value can be empty, e.g. `?access_token=`.
 	Token string `in:"query=access_token;required"`
 }
 ```

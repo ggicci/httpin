@@ -1,26 +1,26 @@
 ---
-sidebar_position: 8
+sidebar_position: 99
 ---
 
 import GoPlay from "../../src/components/GoPlay"
 import InputOutputTable from "../../src/components/InputOutputTable"
 import data from "./data/default"
 
-# decoder
+# coder
 
-Introduced in v0.10.0.
+Introduced in v0.15.0. For backward compatibility, `decoder` (introduced in v0.10.0) now is an alias of `coder`.
 
-**decoder** is a **SPECIAL** [directive executor](/advanced/concepts#directive-executor)
-who overrides the decoder used to decode the value of the corresponding field.
+**coder** is a **SPECIAL** [directive executor](/advanced/concepts#directive-executor)
+who overrides the coder that used to encode/decode the value of the corresponding field.
 
 ## Definition
 
 ```yaml
-Name: "decoder"
-Args: DECODER_NAME
+Name: "coder" | "decoder"
+Args: CODER_NAME
 ```
 
-When there's a _decoder_ directive defined for a field, the specified named decoder will be used rather than
+When there's a _coder_ directive defined for a field, the specified named decoder will be used rather than
 the default one which is auto-selected by the type of the field.
 
 ## Usage

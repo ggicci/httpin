@@ -28,12 +28,22 @@ const GoPlay = (props: GoPlayProps) => {
   const codeContainer = React.useRef<HTMLDivElement>(null)
   const outputContainer = React.useRef<HTMLDivElement>(null)
 
-  const preEl =
-    children && children.props && children.props.mdxType === "pre" && children
-  const codeEl = preEl && preEl.props && preEl.props.children
+  const preEl = children
+  const codeEl = preEl && preEl.props.children
 
-  if (!codeEl || codeEl.props.mdxType !== "code") {
-    return <div>GoPlay: the wrapped data is not a codeblock.</div>
+  if (!codeEl) {
+    return (
+      <div
+        style={{
+          color: "#FFF",
+          fontWeight: "bold",
+          backgroundColor: "#d20a0a",
+          padding: "0.5rem 1rem ",
+        }}
+      >
+        Error: GoPlay: the wrapped data is not a codeblock.
+      </div>
+    )
   }
 
   if (!/\blanguage-go\b/.test(codeEl && codeEl.props.className)) {

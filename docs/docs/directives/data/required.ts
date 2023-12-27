@@ -20,8 +20,9 @@ GET /users?page=1
         output: `
 // error occurred
 &InvalidFieldError{
+    Directive: "required",
     Field: "access_token",
-    Source: "required",
+    Key: "",
     Value: nil,
     ErrorMessage: "missing required field",
 }
