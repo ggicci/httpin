@@ -17,7 +17,7 @@ type InvalidFieldError struct {
 
 	// Source is the directive which causes the error.
 	// e.g. form, header, required, etc.
-	Source string `json:"source"`
+	Directive string `json:"directive"`
 
 	// Key is the key to get the input data from the source.
 	Key string `json:"key"`
@@ -71,7 +71,7 @@ func NewInvalidFieldError(err error) *InvalidFieldError {
 	return &InvalidFieldError{
 		err:          err,
 		Field:        r.Field.Name,
-		Source:       de.Name, // e.g. form, header, required, etc.
+		Directive:    de.Name, // e.g. form, header, required, etc.
 		Key:          inputKey,
 		Value:        inputValue,
 		ErrorMessage: err.Error(),

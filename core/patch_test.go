@@ -72,7 +72,7 @@ func TestPatchField_DecodeValueFailed(t *testing.T) {
 	assert.ErrorAs(t, err, &ferr)
 	assert.Equal(t, "Age", ferr.Field)
 	assert.Equal(t, []string{"eighteen"}, ferr.Value)
-	assert.Equal(t, "form", ferr.Source)
+	assert.Equal(t, "form", ferr.Directive)
 	assert.Nil(t, gotValue)
 }
 

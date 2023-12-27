@@ -26,7 +26,7 @@ func TestDirectiveRequired_Decode_RequiredFieldMissing(t *testing.T) {
 	var invalidField *InvalidFieldError
 	assert.ErrorAs(t, err, &invalidField)
 	assert.Equal(t, "CreatedAt", invalidField.Field)
-	assert.Equal(t, "required", invalidField.Source)
+	assert.Equal(t, "required", invalidField.Directive)
 	assert.Empty(t, invalidField.Key)
 	assert.Nil(t, invalidField.Value)
 }

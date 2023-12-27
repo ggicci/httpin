@@ -107,7 +107,7 @@ func TestNewInput_ErrorHandledByDefaultErrorHandler(t *testing.T) {
 
 	assert.Equal(t, 422, rw.Code)
 	assert.Equal(t, "Token", out["field"])
-	assert.Equal(t, "required", out["source"])
+	assert.Equal(t, "required", out["directive"])
 	assert.Contains(t, out["error"], "missing required field")
 }
 

@@ -45,7 +45,7 @@ func TestDirectiveNonzero_Decode_ErrZeroValue(t *testing.T) {
 	var invalidField *InvalidFieldError
 	assert.ErrorAs(t, err, &invalidField)
 	assert.Equal(t, "AgeRange", invalidField.Field)
-	assert.Equal(t, "nonzero", invalidField.Source)
+	assert.Equal(t, "nonzero", invalidField.Directive)
 	assert.Empty(t, invalidField.Key)
 	assert.Nil(t, invalidField.Value)
 }
@@ -70,7 +70,7 @@ func TestDirectiveNonzero_Decode_InNestedJSONBody_Issue49(t *testing.T) {
 	var invalidField *InvalidFieldError
 	assert.ErrorAs(t, err, &invalidField)
 	assert.Equal(t, "Payload", invalidField.Field)
-	assert.Equal(t, "nonzero", invalidField.Source)
+	assert.Equal(t, "nonzero", invalidField.Directive)
 }
 
 func TestDirectiveNonzero_NewRequest(t *testing.T) {

@@ -173,7 +173,7 @@ func TestCore_Decode_ErrInvalidSingleValue(t *testing.T) {
 	var invalidField *InvalidFieldError
 	assert.ErrorAs(err, &invalidField)
 	assert.Equal("IsSoldout", invalidField.Field)
-	assert.Equal("form", invalidField.Source)
+	assert.Equal("form", invalidField.Directive)
 	assert.Equal("is_soldout", invalidField.Key)
 	assert.Equal([]string{"zero"}, invalidField.Value)
 }
@@ -191,7 +191,7 @@ func TestCore_Decode_ErrInvalidValueInSlice(t *testing.T) {
 	var invalidField *InvalidFieldError
 	assert.ErrorAs(err, &invalidField)
 	assert.Equal("SortDesc", invalidField.Field)
-	assert.Equal("form", invalidField.Source)
+	assert.Equal("form", invalidField.Directive)
 	assert.Equal("sort_desc", invalidField.Key)
 	assert.Equal([]string{"true", "zero", "0"}, invalidField.Value)
 	assert.ErrorContains(err, "at index 1")
@@ -317,7 +317,7 @@ func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert.ErrorAs(err, &ife)
 	assert.Equal("_laf", ife.Key)
 	assert.Equal([]string{"Canada"}, ife.Value)
-	assert.Equal("form", ife.Source)
+	assert.Equal("form", ife.Directive)
 	assert.ErrorContains(err, "invalid place")
 }
 
