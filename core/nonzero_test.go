@@ -50,6 +50,29 @@ func TestDirectiveNonzero_Decode_ErrZeroValue(t *testing.T) {
 	assert.Nil(t, invalidField.Value)
 }
 
+func TestDirectiveNonzero_Decode_InNestedJSONBody_Issue49(t *testing.T) {
+	type UpdateUserInput struct {
+		Payload struct {
+			Display string `json:"display" in:"nonzero"`
+		} `in:"body=json"`
+	}
+
+	// NOTE: WithNestedDirectivesEnabled(true) is required to enable nested directives.
+	co, err := New(&UpdateUserInput{}, WithNestedDirectivesEnabled(true))
+	assert.NoError(t, err)
+
+	r, _ := http.NewRequest("POST", "/users/1", nil)
+	r.Header.Set("Content-Type", "application/json")
+	r.Body = makeBodyReader(`{"display": ""}`)
+	got, err := co.Decode(r)
+	assert.Nil(t, got)
+	assert.ErrorContains(t, err, "nonzero")
+	var invalidField *InvalidFieldError
+	assert.ErrorAs(t, err, &invalidField)
+	assert.Equal(t, "Payload", invalidField.Field)
+	assert.Equal(t, "nonzero", invalidField.Source)
+}
+
 func TestDirectiveNonzero_NewRequest(t *testing.T) {
 	co, err := New(&NonzeroQuery{})
 	assert.NoError(t, err)

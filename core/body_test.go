@@ -103,7 +103,7 @@ func TestBodyDirective_Decode_JSON(t *testing.T) {
 	r.Form = make(url.Values)
 	r.Form.Set("page", "4")
 	r.Form.Set("page_size", "30")
-	r.Body = io.NopCloser(strings.NewReader(sampleBodyPayloadInJSONText))
+	r.Body = makeBodyReader(sampleBodyPayloadInJSONText)
 	r.Header.Set("Content-Type", "application/json")
 	gotValue, err := co.Decode(r)
 	assert.NoError(err)
@@ -116,7 +116,7 @@ func TestBodyDirective_Decode_XML(t *testing.T) {
 	assert.NoError(err)
 
 	r, _ := http.NewRequest("GET", "https://example.com", nil)
-	r.Body = io.NopCloser(strings.NewReader(sampleBodyPayloadInXMLText))
+	r.Body = makeBodyReader(sampleBodyPayloadInXMLText)
 	r.Header.Set("Content-Type", "application/xml")
 
 	gotValue, err := co.Decode(r)
@@ -132,7 +132,7 @@ func TestBodyDirective_Decode_ErrUnknownBodyFormat(t *testing.T) {
 	co, err := New(UnknownBodyFormatPayload{})
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", "https://example.com", nil)
-	req.Body = io.NopCloser(strings.NewReader(sampleBodyPayloadInJSONText))
+	req.Body = makeBodyReader(sampleBodyPayloadInJSONText)
 	_, err = co.Decode(req)
 	assert.ErrorContains(t, err, "unknown body format: \"yaml\"")
 }
@@ -165,7 +165,7 @@ func TestRegisterBodyFormat(t *testing.T) {
 	assert.NoError(t, err)
 
 	r, _ := http.NewRequest("GET", "https://example.com", nil)
-	r.Body = io.NopCloser(strings.NewReader(`version: "3"`))
+	r.Body = makeBodyReader(`version: "3"`)
 
 	gotValue, err := co.Decode(r)
 	assert.ErrorIs(t, err, errYamlNotImplemented)
@@ -257,4 +257,8 @@ func TestBodyDirective_NewRequest_ErrUnknownBodyFormat(t *testing.T) {
 
 func unregisterBodyFormat(format string) {
 	delete(bodyFormats, format)
+}
+
+func makeBodyReader(text string) io.ReadCloser {
+	return io.NopCloser(strings.NewReader(text))
 }
