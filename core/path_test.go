@@ -19,7 +19,7 @@ func TestDirectivePath_Decode(t *testing.T) {
 	assert.ErrorIs(t, pathDirective.Decode(nil), assert.AnError)
 }
 
-func TestDirectivePath_Encode(t *testing.T) {
+func TestDirectivePath_NewRequest(t *testing.T) {
 	assert := assert.New(t)
 	RegisterDirective("path", NewDirectivePath(myCustomPathDecode))
 	type Repository struct {

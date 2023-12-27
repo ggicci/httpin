@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/httpin/patch"
@@ -73,7 +74,7 @@ func TestDirectiveDeafult_Decode_DecodeTwice(t *testing.T) {
 	assert.Equal(t, expected, xxx)
 }
 
-func TestDirectiveDefault_Encode(t *testing.T) {
+func TestDirectiveDefault_NewRequest(t *testing.T) {
 	type ListTicketRequest struct {
 		Page    int      `in:"query=page;default=1"`
 		PerPage int      `in:"query=per_page;default=20"`
@@ -96,3 +97,52 @@ func TestDirectiveDefault_Encode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, req)
 }
+
+func TestDirectiveDefault_NewRequest_WithNamedCoder(t *testing.T) {
+	registerMyDate()
+	type ListUsersRequest struct {
+		Page             int       `in:"query=page;default=1"`
+		PerPage          int       `in:"query=per_page;default=20"`
+		RegistrationDate time.Time `in:"query=registration_date;default=2020-01-01;coder=mydate"`
+	}
+
+	co, err := New(ListUsersRequest{})
+	assert.NoError(t, err)
+
+	payload := &ListUsersRequest{
+		Page:    2,
+		PerPage: 10,
+	}
+	expected, _ := http.NewRequest("GET", "/users", nil)
+	expected.URL.RawQuery = url.Values{
+		"page":              {"2"},
+		"per_page":          {"10"},
+		"registration_date": {"2020-01-01"},
+	}.Encode()
+	req, err := co.NewRequest("GET", "/users", payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, req)
+	unregisterMyDate()
+}
+
+// func TestDirectiveDefault_NewRequest_WithNamedCoder_EncodeError(t *testing.T) {
+// 	registerMyDate()
+// 	type ListUsersRequest struct {
+// 		Page             int       `in:"query=page;default=1"`
+// 		PerPage          int       `in:"query=per_page;default=20"`
+// 		RegistrationDate time.Time `in:"query=registration_date;default=2020-13-01;coder=mydate"` // invalid month
+// 	}
+
+// 	co, err := New(ListUsersRequest{})
+// 	assert.NoError(t, err)
+
+// 	payload := &ListUsersRequest{Page: 4}
+// 	req, err := co.NewRequest("GET", "/users", payload)
+// 	assert.Nil(t, req)
+
+// 	var invalidDate *InvalidDate
+// 	assert.ErrorAs(t, err, &invalidDate)
+// 	assert.ErrorContains(t, err, "invalid date: \"2020-13-01\"")
+
+// 	unregisterMyDate()
+// }

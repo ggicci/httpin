@@ -25,6 +25,7 @@ func TestDirectiveRequired_Decode_RequiredFieldMissing(t *testing.T) {
 	assert.ErrorContains(t, err, "missing required field")
 	var invalidField *InvalidFieldError
 	assert.ErrorAs(t, err, &invalidField)
+	assert.Equal(t, "CreatedAt", invalidField.Field)
 	assert.Equal(t, "required", invalidField.Source)
 	assert.Empty(t, invalidField.Key)
 	assert.Nil(t, invalidField.Value)
@@ -47,4 +48,23 @@ func TestDirectiveRequired_Decode_NonRequiredFieldAbsent(t *testing.T) {
 	got, err := co.Decode(r)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got.(*RequiredQuery))
+}
+
+func TestDirectiveRequired_NewRequest_RequiredFieldPresent(t *testing.T) {
+	co, err := New(&RequiredQuery{})
+	assert.NoError(t, err)
+
+	payload := &RequiredQuery{
+		CreatedAt: time.Date(1991, 11, 10, 0, 0, 0, 0, time.UTC),
+		Color:     "red",
+	}
+	expected, _ := http.NewRequest("GET", "/hello", nil)
+	expected.Form = url.Values{
+		"created_at": {"1991-11-10T00:00:00Z"},
+		"colour":     {"red"}, // NOTE: will use the first name in the tag
+	}
+	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, err := co.NewRequest("GET", "/hello", payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, req)
 }

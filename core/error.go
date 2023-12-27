@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ggicci/owl"
 )
@@ -36,9 +37,27 @@ func (e *InvalidFieldError) Unwrap() error {
 	return e.err
 }
 
-func NewInvalidFieldError(err *owl.ResolveError) *InvalidFieldError {
-	r := err.Resolver
-	de := err.AsDirectiveExecutionError()
+func NewInvalidFieldError(err error) *InvalidFieldError {
+	var (
+		r  *owl.Resolver
+		de *owl.DirectiveExecutionError
+	)
+
+	switch err := err.(type) {
+	case *InvalidFieldError:
+		return err
+	case *owl.ResolveError:
+		r = err.Resolver
+		de = err.AsDirectiveExecutionError()
+	case *owl.ScanError:
+		r = err.Resolver
+		de = err.AsDirectiveExecutionError()
+	default:
+		return &InvalidFieldError{
+			err:          err,
+			ErrorMessage: err.Error(),
+		}
+	}
 
 	var fe *fieldError
 	var inputKey string
@@ -57,6 +76,31 @@ func NewInvalidFieldError(err *owl.ResolveError) *InvalidFieldError {
 		Value:        inputValue,
 		ErrorMessage: err.Error(),
 	}
+}
+
+type MultiInvalidFieldError []*InvalidFieldError
+
+func (me MultiInvalidFieldError) Error() string {
+	if len(me) == 1 {
+		return me[0].Error()
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("%d invalid fields: ", len(me)))
+	for i, e := range me {
+		if i > 0 {
+			sb.WriteString("; ")
+		}
+		sb.WriteString(e.Error())
+	}
+	return sb.String()
+}
+
+func (me MultiInvalidFieldError) Unwrap() []error {
+	var errs []error
+	for _, e := range me {
+		errs = append(errs, e)
+	}
+	return errs
 }
 
 type fieldError struct {

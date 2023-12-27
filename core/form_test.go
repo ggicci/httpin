@@ -161,7 +161,7 @@ func TestDirectiveForm_Decode(t *testing.T) {
 	assert.Equal(t, expected, got.(*ChaosQuery))
 }
 
-func TestDirectiveForm_Encode(t *testing.T) {
+func TestDirectiveForm_NewRequest(t *testing.T) {
 	co, err := New(ChaosQuery{})
 	assert.NoError(t, err)
 	req, err := co.NewRequest("POST", "/signup", sampleChaosQuery)
@@ -215,7 +215,7 @@ func TestDirectiveForm_Encode(t *testing.T) {
 	assert.Equal(t, expected, req)
 }
 
-func TestDirectiveForm_Encode_ByteSlice(t *testing.T) {
+func TestDirectiveForm_NewRequest_ByteSlice(t *testing.T) {
 	type ByteSlice struct {
 		Bytes      []byte   `in:"form=bytes"`
 		MultiBytes [][]byte `in:"form=multi_bytes"`

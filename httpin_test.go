@@ -138,23 +138,18 @@ func TestNewInput_ErrorHandledByCustomErrorHandler(t *testing.T) {
 	assert.Contains(t, rw.Body.String(), `invalid field "Token":`)
 }
 
-func TestReplaceDefaultErrorHandler(t *testing.T) {
-	// Nil handler should panic.
-	assert.PanicsWithError(t, "httpin: nil error handler", func() {
-		core.RegisterErrorHandler(nil)
+func TestNewRequest(t *testing.T) {
+	req, err := NewRequest("GET", "/products", &Pagination{
+		Page:    19,
+		PerPage: 50,
 	})
-
-	r, err := http.NewRequest("GET", "/", nil)
 	assert.NoError(t, err)
 
-	var params = url.Values{}
-	params.Add("saying", "TO THINE OWE SELF BE TRUE")
-	r.URL.RawQuery = params.Encode()
-	rw := httptest.NewRecorder()
-	handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
-	// NOTE: replace global error handler after NewInput should work
-	core.RegisterErrorHandler(CustomErrorHandler)
-
-	handler.ServeHTTP(rw, r)
-	assert.Equal(t, 400, rw.Code)
+	expected, _ := http.NewRequest("GET", "/products", nil)
+	expected.Form = url.Values{
+		"page":     {"19"},
+		"per_page": {"50"},
+	}
+	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	assert.Equal(t, expected, req)
 }

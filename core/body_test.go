@@ -195,7 +195,7 @@ func TestRegisterBodyFormat_ForceRegisterWithEmptyBodyFormat(t *testing.T) {
 	})
 }
 
-func TestBodyDirective_Encode_JSON(t *testing.T) {
+func TestBodyDirective_NewRequest_JSON(t *testing.T) {
 	assert := assert.New(t)
 	co, err := New(BodyPayloadInJSON{})
 	assert.NoError(err)
@@ -220,7 +220,7 @@ func TestBodyDirective_Encode_JSON(t *testing.T) {
 	assert.Equal(sampleBodyPayloadInJSONObject, got)
 }
 
-func TestBodyDirective_Encode_XML(t *testing.T) {
+func TestBodyDirective_NewRequest_XML(t *testing.T) {
 	assert := assert.New(t)
 	co, err := New(BodyPayloadInXML{})
 	assert.NoError(err)
@@ -241,7 +241,7 @@ func TestBodyDirective_Encode_XML(t *testing.T) {
 	assert.Equal(sampleBodyPayloadInXMLObject, got)
 }
 
-func TestBodyDirective_Encode_ErrUnknownBodyFormat(t *testing.T) {
+func TestBodyDirective_NewRequest_ErrUnknownBodyFormat(t *testing.T) {
 	type UnknownBodyFormatPayload struct {
 		Body *BodyPayload `in:"body=yaml"`
 	}

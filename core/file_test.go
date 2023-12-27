@@ -327,10 +327,7 @@ func assertDecodedFile(t *testing.T, gotFile *File, filename string, content []b
 	assert.Equal(t, gotFile.Filename(), gotFile.Filename())
 	assert.Equal(t, filename, gotFile.Filename())
 	assert.Equal(t, int64(len(content)), gotFile.Size())
-
-	file, err := gotFile.OpenReceiveStream()
-	assert.NoError(t, err)
-	uploadedContent, err := io.ReadAll(file)
+	uploadedContent, err := gotFile.ReadAll()
 	assert.NoError(t, err)
 	assert.Equal(t, content, uploadedContent)
 }

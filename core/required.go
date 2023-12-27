@@ -22,5 +22,8 @@ func (*DirectiveRequired) Decode(rtm *DirectiveRuntime) error {
 }
 
 func (*DirectiveRequired) Encode(rtm *DirectiveRuntime) error {
-	return nil // noop
+	if rtm.IsFieldSet() {
+		return nil
+	}
+	return errors.New("missing required field")
 }

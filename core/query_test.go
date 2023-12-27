@@ -31,7 +31,7 @@ func TestDirectiveQuery_Decode(t *testing.T) {
 	assert.Equal(t, expected, got.(*SearchQuery))
 }
 
-func TestDirectiveQuery_Encode(t *testing.T) {
+func TestDirectiveQuery_NewRequest(t *testing.T) {
 	type SearchQuery struct {
 		Name    string  `in:"query=name"`
 		Age     int     `in:"query=age"`
@@ -98,7 +98,7 @@ func (l LocationImplementedTextMarshaler) MarshalText() ([]byte, error) {
 		return []byte("MarshalText:" + s), nil
 	}
 }
-func TestDirectiveQuery_Encode_ErrUnsupportedType(t *testing.T) {
+func TestDirectiveQuery_NewRequest_ErrUnsupportedType(t *testing.T) {
 	type SearchQuery struct {
 		Map map[string]string `in:"query=map"` // unsupported type: map
 	}
@@ -110,7 +110,7 @@ func TestDirectiveQuery_Encode_ErrUnsupportedType(t *testing.T) {
 }
 
 // See hybridcoder_test.go for more details.
-func TestDirectiveQuery_Encode_WithTextMarshaler(t *testing.T) {
+func TestDirectiveQuery_NewRequest_WithTextMarshaler(t *testing.T) {
 	type SearchQuery struct {
 		L0     *Location                         `in:"query=l0"`
 		L2     *LocationImplementedTextMarshaler `in:"query=l2"`

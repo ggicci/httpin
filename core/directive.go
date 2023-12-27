@@ -15,6 +15,7 @@ func init() {
 	RegisterDirective("body", &DirectiveBody{})
 	RegisterDirective("required", &DirectiveRequired{})
 	RegisterDirective("default", &DirectiveDefault{})
+	registerDirective("nonzero", &DirectiveNonzero{})
 }
 
 var (

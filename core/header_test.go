@@ -27,7 +27,7 @@ func TestDirectiveHeader_Decode(t *testing.T) {
 	assert.Equal(t, expected, got.(*SearchQuery))
 }
 
-func TestDirectiveHeader_Encode(t *testing.T) {
+func TestDirectiveHeader_NewRequest(t *testing.T) {
 	type ApiQuery struct {
 		ApiUid   int    `in:"header=x-api-uid"`
 		ApiToken string `in:"header=X-Api-Token"`

@@ -94,7 +94,7 @@ func TestPatchField_DecodeFileFailed(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestPatchField_Encode(t *testing.T) {
+func TestPatchField_NewRequest(t *testing.T) {
 	type ListQuery struct {
 		Username patch.Field[string]   `in:"query=username"`
 		Age      patch.Field[int]      `in:"query=age"`
@@ -142,7 +142,7 @@ func TestPatchField_Encode(t *testing.T) {
 	}
 }
 
-func TestPatchField_Encode_NoFiles(t *testing.T) {
+func TestPatchField_NewRequest_NoFiles(t *testing.T) {
 	assert := assert.New(t)
 	payload := &AccountPatch{
 		Email:  patch.Field[string]{Value: "abc@example.com", Valid: true},
@@ -170,7 +170,7 @@ func TestPatchField_Encode_NoFiles(t *testing.T) {
 	assert.Equal(expected, req)
 }
 
-func TestPatchField_Encode_WithFiles(t *testing.T) {
+func TestPatchField_NewRequest_WithFiles(t *testing.T) {
 	assert := assert.New(t)
 	avatarFile := createTempFile(t, []byte("handsome avatar image"))
 	pic1Filename := createTempFile(t, []byte("pic1 content"))

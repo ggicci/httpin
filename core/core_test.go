@@ -435,7 +435,7 @@ func TestCore_NamedCoder_DecoderError(t *testing.T) {
 	unregisterMyDate()
 }
 
-func TestCore_Encode_NamedCoder(t *testing.T) {
+func TestCore_NewRequest_NamedCoder(t *testing.T) {
 	registerMyDate()
 
 	unregisterMyDate()

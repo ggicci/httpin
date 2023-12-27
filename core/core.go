@@ -22,7 +22,12 @@ type Core struct {
 	enableNestedDirectives bool
 }
 
-// New creates a new Core instance given an input struct.
+// New creates a new Core instance for the given intpuStruct. It will build a resolver
+// for the inputStruct and apply the given options to the Core instance. The Core instance
+// is responsible for both:
+//
+//   - decoding an HTTP request to an instance of the inputStruct;
+//   - and encoding an instance of the inputStruct to an HTTP request.
 func New(inputStruct any, opts ...Option) (*Core, error) {
 	resolver, err := buildResolver(inputStruct)
 	if err != nil {
@@ -75,7 +80,7 @@ func (c *Core) Decode(req *http.Request) (any, error) {
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
 	)
 	if err != nil {
-		return nil, NewInvalidFieldError(err.(*owl.ResolveError))
+		return nil, NewInvalidFieldError(err)
 	}
 	return rv.Interface(), nil
 }
@@ -100,21 +105,39 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 	}
 
 	rb := &RequestBuilder{}
+
+	// NOTE(ggicci): the error returned a joined error by using errors.Join.
 	if err = c.resolver.Scan(
 		input,
 		owl.WithNamespace(encoderNamespace),
 		owl.WithValue(CtxRequestBuilder, rb),
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
-		owl.WithDirectiveRunOrder(func(d1, _ *owl.Directive) bool {
-			return d1.Name == "default" // make sure "default" directive is executed first
+
+		// FIXME(ggicci): reorder the directives only once at the build time to improve the performance.
+		owl.WithDirectiveRunOrder(func(d1, d2 *owl.Directive) bool {
+			if d1.Name == "default" {
+				return true // always the first one to run
+			} else if d1.Name == "nonzero" {
+				return true // always the second one to run
+			}
+			return false
 		}),
 	); err != nil {
-		return nil, err
+		// err is a list of *owl.ScanError that joined by errors.Join.
+		if errs, ok := err.(interface{ Unwrap() []error }); ok {
+			var invalidFieldErrors MultiInvalidFieldError
+			for _, err := range errs.Unwrap() {
+				invalidFieldErrors = append(invalidFieldErrors, NewInvalidFieldError(err))
+			}
+			return nil, invalidFieldErrors
+		} else {
+			return nil, err // should never happen, just in case
+		}
 	}
 
 	// Populate the request with the encoded values.
 	if err := rb.Populate(req); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to populate request: %w", err)
 	}
 
 	return req, nil
