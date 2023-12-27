@@ -124,25 +124,3 @@ func TestDirectiveDefault_NewRequest_WithNamedCoder(t *testing.T) {
 	assert.Equal(t, expected, req)
 	unregisterMyDate()
 }
-
-// func TestDirectiveDefault_NewRequest_WithNamedCoder_EncodeError(t *testing.T) {
-// 	registerMyDate()
-// 	type ListUsersRequest struct {
-// 		Page             int       `in:"query=page;default=1"`
-// 		PerPage          int       `in:"query=per_page;default=20"`
-// 		RegistrationDate time.Time `in:"query=registration_date;default=2020-13-01;coder=mydate"` // invalid month
-// 	}
-
-// 	co, err := New(ListUsersRequest{})
-// 	assert.NoError(t, err)
-
-// 	payload := &ListUsersRequest{Page: 4}
-// 	req, err := co.NewRequest("GET", "/users", payload)
-// 	assert.Nil(t, req)
-
-// 	var invalidDate *InvalidDate
-// 	assert.ErrorAs(t, err, &invalidDate)
-// 	assert.ErrorContains(t, err, "invalid date: \"2020-13-01\"")
-
-// 	unregisterMyDate()
-// }
