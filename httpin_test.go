@@ -9,9 +9,15 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/ggicci/httpin/core"
 	"github.com/justinas/alice"
 	"github.com/stretchr/testify/assert"
 )
+
+type Pagination struct {
+	Page    int `in:"form=page,page_index,index"`
+	PerPage int `in:"form=per_page,page_size"`
+}
 
 func TestDecode(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/", nil)
@@ -85,7 +91,7 @@ func TestNewInput_Success(t *testing.T) {
 	assert.Equal(t, expected, rw.Body.String())
 }
 
-func TestNewInput_Error_byDefaultErrorHandler(t *testing.T) {
+func TestNewInput_ErrorHandledByDefaultErrorHandler(t *testing.T) {
 	r, err := http.NewRequest("GET", "/", nil)
 	assert.NoError(t, err)
 
@@ -96,17 +102,17 @@ func TestNewInput_Error_byDefaultErrorHandler(t *testing.T) {
 	rw := httptest.NewRecorder()
 	handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
 	handler.ServeHTTP(rw, r)
-	var out map[string]interface{}
+	var out map[string]any
 	assert.Nil(t, json.NewDecoder(rw.Body).Decode(&out))
 
 	assert.Equal(t, 422, rw.Code)
 	assert.Equal(t, "Token", out["field"])
-	assert.Equal(t, "required", out["source"])
-	assert.Contains(t, out["error"], ErrMissingField.Error())
+	assert.Equal(t, "required", out["directive"])
+	assert.Contains(t, out["error"], "missing required field")
 }
 
 func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
-	var invalidFieldError *InvalidFieldError
+	var invalidFieldError *core.InvalidFieldError
 	if errors.As(err, &invalidFieldError) {
 		rw.WriteHeader(http.StatusBadRequest) // status: 400
 		io.WriteString(rw, invalidFieldError.Error())
@@ -115,7 +121,7 @@ func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
 	http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError) // status: 500
 }
 
-func TestNewInput_Error_byCustomErrorHandler(t *testing.T) {
+func TestNewInput_ErrorHandledByCustomErrorHandler(t *testing.T) {
 	r, err := http.NewRequest("GET", "/", nil)
 	assert.NoError(t, err)
 
@@ -132,23 +138,18 @@ func TestNewInput_Error_byCustomErrorHandler(t *testing.T) {
 	assert.Contains(t, rw.Body.String(), `invalid field "Token":`)
 }
 
-func TestReplaceDefaultErrorHandler(t *testing.T) {
-	// Nil handler should panic.
-	assert.PanicsWithError(t, "httpin: nil error handler", func() {
-		ReplaceDefaultErrorHandler(nil)
+func TestNewRequest(t *testing.T) {
+	req, err := NewRequest("GET", "/products", &Pagination{
+		Page:    19,
+		PerPage: 50,
 	})
-
-	r, err := http.NewRequest("GET", "/", nil)
 	assert.NoError(t, err)
 
-	var params = url.Values{}
-	params.Add("saying", "TO THINE OWE SELF BE TRUE")
-	r.URL.RawQuery = params.Encode()
-	rw := httptest.NewRecorder()
-	handler := alice.New(NewInput(EchoInput{})).ThenFunc(EchoHandler)
-	// NOTE: replace global error handler after NewInput should work
-	ReplaceDefaultErrorHandler(CustomErrorHandler)
-
-	handler.ServeHTTP(rw, r)
-	assert.Equal(t, 400, rw.Code)
+	expected, _ := http.NewRequest("GET", "/products", nil)
+	expected.Form = url.Values{
+		"page":     {"19"},
+		"per_page": {"50"},
+	}
+	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	assert.Equal(t, expected, req)
 }

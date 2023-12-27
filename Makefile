@@ -1,5 +1,6 @@
 default: test
 
+SHELL=/usr/bin/env bash
 GO=go
 GOTEST=$(GO) test
 GOCOVER=$(GO) tool cover
@@ -13,4 +14,10 @@ test/cover:
 
 .PHONY: test/report
 test/report:
-	$(GOCOVER) -html=main.cover.out
+	if [[ "$$HOSTNAME" =~ "codespaces-"* ]]; then \
+		mkdir -p /tmp/httpin_test; \
+		$(GOCOVER) -html=main.cover.out -o /tmp/httpin_test/coverage.html; \
+		sudo python -m http.server -d /tmp/httpin_test -b localhost 80; \
+	else \
+		$(GOCOVER) -html=main.cover.out; \
+	fi

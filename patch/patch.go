@@ -27,11 +27,3 @@ func (f *Field[T]) UnmarshalJSON(data []byte) error {
 	}
 	return err
 }
-
-func (f *Field[T]) SetValid(valid bool) {
-	f.Valid = valid
-}
-
-func (f *Field[T]) IsValid() bool {
-	return f.Valid
-}
