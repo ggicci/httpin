@@ -4,7 +4,7 @@
 
 # httpin - HTTP Input for Go
 
-<div align="center"><h3>Decode an HTTP request into a custom struct</h3></div>
+<div align="center"><h3>HTTP Request from/to Go Struct</h3></div>
 
 <div align="center">
 
@@ -29,7 +29,7 @@
 
 ## Core Features
 
-**httpin** helps you easily decoding HTTP request data from
+**httpin** helps you easily decode data from an HTTP request, including:
 
 - **Query parameters**, e.g. `?name=john&is_member=true`
 - **Headers**, e.g. `Authorization: xxx`
@@ -40,7 +40,15 @@
 
 You **only** need to define a struct to receive/bind data from an HTTP request, **without** writing any parsing stuff code by yourself.
 
-## How to use?
+Since v0.15.0, httpin also supports creating an HTTP request (`http.Request`) from a Go struct instance.
+
+**httpin** is:
+
+- **well documented**: at https://ggicci.github.io/httpin/
+- **open integrated**: with [net/http](https://ggicci.github.io/httpin/integrations/http), [go-chi/chi](https://ggicci.github.io/httpin/integrations/gochi), [gorilla/mux](https://ggicci.github.io/httpin/integrations/gorilla), [gin-gonic/gin](https://ggicci.github.io/httpin/integrations/gin), etc.
+- **extensible** (advanced feature): by adding your custom directives. Read [httpin - custom directives](https://ggicci.github.io/httpin/directives/custom) for more details.
+
+## How to decode an HTTP request to Go struct?
 
 ```go
 type ListUsersInput struct {
@@ -60,11 +68,28 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 }
 ```
 
-**httpin** is:
+## How to encode a Go struct to HTTP request?
 
-- **well documented**: at https://ggicci.github.io/httpin/
-- **open integrated**: with [net/http](https://ggicci.github.io/httpin/integrations/http), [go-chi/chi](https://ggicci.github.io/httpin/integrations/gochi), [gorilla/mux](https://ggicci.github.io/httpin/integrations/gorilla), [gin-gonic/gin](https://ggicci.github.io/httpin/integrations/gin), etc.
-- **extensible** (advanced feature): by adding your custom directives. Read [httpin - custom directives](https://ggicci.github.io/httpin/directives/custom) for more details.
+```go
+type ListUsersInput struct {
+	Token    string `in:"query=access_token;header=x-access-token"`
+	Page     int    `in:"query=page;default=1"`
+	PerPage  int    `in:"query=per_page;default=20"`
+	IsMember bool   `in:"query=is_member"`
+}
+
+func SDKListUsers() {
+	payload := &ListUsersInput{
+		Token:    os.Getenv("MY_APP_ACCESS_TOKEN"),
+		Page:     2,
+		IsMember: true,
+	}
+
+	// Easy to remember, http.NewRequest -> httpin.NewRequest
+	req, err := httpin.NewRequest("GET", "/users", payload)
+	// ...
+}
+```
 
 ## Why this package?
 
