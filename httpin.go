@@ -50,6 +50,19 @@ var WithMaxMemory = core.WithMaxMemory
 // If you want to override the default error handler globally, you can use core.RegisterErrorHandler.
 var WithErrorHandler = core.WithErrorHandler
 
+// File is the builtin type of httpin to manupulate file uploads. On the server
+// side, it is used to represent a file in a multipart/form-data request. On the
+// client side, it is used to represent a file to be uploaded.
+type File = core.File
+
+// UploadFile is a helper function to create a File instance from a file path.
+// It is useful when you want to upload a file from the local file system.
+var UploadFile = core.UploadFile
+
+// UploadStream is a helper function to create a File instance from a io.Reader. It
+// is useful when you want to upload a file from a stream.
+var UploadStream = core.UploadStream
+
 // Decode decodes an HTTP request to the given input struct. The input must be a
 // pointer to a struct instance. For example:
 //
