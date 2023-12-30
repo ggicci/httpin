@@ -58,6 +58,31 @@ func TestDecode(t *testing.T) {
 	}()
 }
 
+func TestDecode_ErrBuildResolverFailed(t *testing.T) {
+	r, _ := http.NewRequest("GET", "/", nil)
+	r.Form = url.Values{
+		"page":     {"1"},
+		"per_page": {"100"},
+	}
+
+	type Foo struct {
+		Name string `in:"nonexistent=foo"`
+	}
+
+	assert.Error(t, Decode(r, &Foo{}))
+}
+
+func TestDecode_ErrDecodeFailure(t *testing.T) {
+	r, _ := http.NewRequest("GET", "/", nil)
+	r.Form = url.Values{
+		"page":     {"1"},
+		"per_page": {"one-hundred"},
+	}
+
+	p := &Pagination{}
+	assert.Error(t, Decode(r, p))
+}
+
 type EchoInput struct {
 	Token  string `in:"form=access_token;header=x-api-key;required"`
 	Saying string `in:"form=saying"`
@@ -152,4 +177,9 @@ func TestNewRequest(t *testing.T) {
 	}
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	assert.Equal(t, expected, req)
+}
+
+func TestNewRequest_ErrNewFailure(t *testing.T) {
+	_, err := NewRequest("GET", "/products", 123)
+	assert.Error(t, err)
 }

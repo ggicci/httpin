@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"sort"
 	"sync"
 
 	"github.com/ggicci/owl"
@@ -16,10 +17,12 @@ var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 // Who is responsible for decoding an HTTP request to an instance of such struct
 // type.
 type Core struct {
-	resolver               *owl.Resolver
+	resolver               *owl.Resolver // for decoding
+	scanResolver           *owl.Resolver // for encoding
 	errorHandler           ErrorHandler
 	maxMemory              int64 // in bytes
 	enableNestedDirectives bool
+	resolverMu             sync.RWMutex
 }
 
 // New creates a new Core instance for the given intpuStruct. It will build a resolver
@@ -99,6 +102,7 @@ func (c *Core) NewRequest(method string, url string, input any) (*http.Request, 
 // performance penalty for doing so. Because there's a cache layer for all the
 // Core instances.
 func (c *Core) NewRequestWithContext(ctx context.Context, method string, url string, input any) (*http.Request, error) {
+	c.prepareScanResolver()
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, err
@@ -107,21 +111,11 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 	rb := &RequestBuilder{}
 
 	// NOTE(ggicci): the error returned a joined error by using errors.Join.
-	if err = c.resolver.Scan(
+	if err = c.scanResolver.Scan(
 		input,
 		owl.WithNamespace(encoderNamespace),
 		owl.WithValue(CtxRequestBuilder, rb),
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
-
-		// FIXME(ggicci): reorder the directives only once at the build time to improve the performance.
-		owl.WithDirectiveRunOrder(func(d1, d2 *owl.Directive) bool {
-			if d1.Name == "default" {
-				return true // always the first one to run
-			} else if d1.Name == "nonzero" {
-				return true // always the second one to run
-			}
-			return false
-		}),
 	); err != nil {
 		// err is a list of *owl.ScanError that joined by errors.Join.
 		if errs, ok := err.(interface{ Unwrap() []error }); ok {
@@ -151,6 +145,27 @@ func (c *Core) GetErrorHandler() ErrorHandler {
 	}
 
 	return globalCustomErrorHandler
+}
+
+func (c *Core) prepareScanResolver() {
+	c.resolverMu.RLock()
+	if c.scanResolver == nil {
+		c.resolverMu.RUnlock()
+		c.resolverMu.Lock()
+		defer c.resolverMu.Unlock()
+
+		if c.scanResolver == nil {
+			c.scanResolver = c.resolver.Copy()
+
+			// Reorder the directives to make sure the "default" and "nonzero" directives work properly.
+			c.scanResolver.Iterate(func(r *owl.Resolver) error {
+				sort.Sort(directiveOrderForEncoding(r.Directives))
+				return nil
+			})
+		}
+	} else {
+		c.resolverMu.RUnlock()
+	}
 }
 
 // buildResolver builds a resolver for the inputStruct. It will run normalizations
@@ -239,4 +254,23 @@ func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 		// will always be registered in both namespaces. See RegisterDirective().
 	}
 	return nil
+}
+
+type directiveOrderForEncoding []*owl.Directive
+
+func (d directiveOrderForEncoding) Len() int {
+	return len(d)
+}
+
+func (d directiveOrderForEncoding) Less(i, j int) bool {
+	if d[i].Name == "default" {
+		return true // always the first one to run
+	} else if d[i].Name == "nonzero" {
+		return true // always the second one to run
+	}
+	return false
+}
+
+func (d directiveOrderForEncoding) Swap(i, j int) {
+	d[i], d[j] = d[j], d[i]
 }
