@@ -146,23 +146,6 @@ func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
 	http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError) // status: 500
 }
 
-func TestNewInput_ErrorHandledByCustomErrorHandler(t *testing.T) {
-	r, err := http.NewRequest("GET", "/", nil)
-	assert.NoError(t, err)
-
-	var params = url.Values{}
-	params.Add("saying", "TO THINE OWE SELF BE TRUE")
-	r.URL.RawQuery = params.Encode()
-
-	rw := httptest.NewRecorder()
-	handler := alice.New(
-		NewInput(EchoInput{}, WithErrorHandler(CustomErrorHandler)),
-	).ThenFunc(EchoHandler)
-	handler.ServeHTTP(rw, r)
-	assert.Equal(t, 400, rw.Code)
-	assert.Contains(t, rw.Body.String(), `invalid field "Token":`)
-}
-
 func TestNewRequest(t *testing.T) {
 	req, err := NewRequest("GET", "/products", &Pagination{
 		Page:    19,

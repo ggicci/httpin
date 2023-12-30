@@ -41,15 +41,6 @@ const (
 // for you and put the decoded instance to the request's context.
 var New = core.New
 
-// WithMaxMemory overrides the default maximum memory size (32MB) when reading
-// the request body. See https://pkg.go.dev/net/http#Request.ParseMultipartForm
-// for more details.
-var WithMaxMemory = core.WithMaxMemory
-
-// WithErrorHandler overrides the default error handler.
-// If you want to override the default error handler globally, you can use core.RegisterErrorHandler.
-var WithErrorHandler = core.WithErrorHandler
-
 // File is the builtin type of httpin to manupulate file uploads. On the server
 // side, it is used to represent a file in a multipart/form-data request. On the
 // client side, it is used to represent a file to be uploaded.
