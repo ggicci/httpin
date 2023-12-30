@@ -8,18 +8,21 @@ import data from "./data/query"
 
 # query
 
-**query** is a [directive executor](/advanced/concepts#directive-executor) who decodes a field from URL querystring parameters, i.e. [`http.Request.URL.Query()`](https://pkg.go.dev/net/url#URL.Query).
+**query** is a [directive executor](/advanced/concepts#directive-executor) who decodes/encodes a field from/to URL querystring parameters, i.e. [`http.Request.URL.Query()`](https://pkg.go.dev/net/url#URL.Query).
 
-## Definition
+
+## Signature
 
 ```yaml
 Name: "query"
 Args: KEY1 [,KEY2 [,KEY3, ...]]
 ```
 
-**query** will examine values of the keys one by one (KEY1 -> KEY2 -> ...) from the URL query, the **first non-empty** value will be used to set the corresponding field of the input struct.
+## Decoding
 
-## Usage
+**query** will examine values of the keys one by one (KEY1 -> KEY2 -> ...) from the URL querystring, the **first non-empty** value will be used to set the corresponding field of the input struct.
+
+### Usage
 
 ```go
 type ListUsersInput struct {
@@ -34,7 +37,7 @@ type ListUsersInput struct {
   rows={data.inputOutput.rows}
 ></InputOutputTable>
 
-## Run Demo
+### Runable Example
 
 <GoPlay>
 
@@ -74,3 +77,10 @@ func main() {
 ```
 
 </GoPlay>
+
+
+## Encoding
+
+**query** will encode the field to the first key, i.e. `KEY1`, results in `?KEY1=VALUE`.
+
+

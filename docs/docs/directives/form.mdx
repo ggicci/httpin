@@ -7,14 +7,16 @@ import data from "./data/form"
 
 # form
 
-**form** is a [directive executor](/advanced/concepts#directive-executor) who decodes a field from HTTP form data, i.e. [`http.Request.Form`](https://pkg.go.dev/net/http#Request).
+**form** is a [directive executor](/advanced/concepts#directive-executor) who decodes/encodes a field from/to HTTP form data, i.e. [`http.Request.Form`](https://pkg.go.dev/net/http#Request).
 
-## Definition
+## Signature
 
 ```yaml
 Name: "form"
 Args: KEY1 [,KEY2 [,KEY3, ...]]
 ```
+
+## Decoding
 
 **form** will examine values of the keys one by one (KEY1 -> KEY2 -> ...) from the form data, the **first non-empty** value will be used to set the corresponding field of the input struct.
 
@@ -40,7 +42,7 @@ And for [`http.Request.ParseForm`](https://pkg.go.dev/net/http#Request.ParseForm
 > For POST, PUT, and PATCH requests, it also reads the request body, parses it as a form and puts the results into both `r.PostForm` and `r.Form`.
 > Request body parameters take precedence over URL query string values in `r.Form`.
 
-## Usage
+### Usage
 
 ```go
 type Profile struct {
@@ -54,3 +56,8 @@ type Profile struct {
   outputTitle={data.inputOutput.outputTitle}
   rows={data.inputOutput.rows}
 ></InputOutputTable>
+
+
+## Encoding
+
+**form** will encode the field value to the form data with the key specified in the directive argument, the first key will be used, i.e. `KEY1`, results in `http.Request.Form[KEY1] = VALUE`.

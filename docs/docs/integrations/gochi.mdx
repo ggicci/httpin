@@ -28,6 +28,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/ggicci/httpin"
+	httpin_integration "github.com/ggicci/httpin/integration"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -47,7 +48,7 @@ func ListUserRepos(rw http.ResponseWriter, r *http.Request) {
 func init() {
 	// Register a directive named "path" to retrieve values from `chi.URLParam`,
 	// i.e. decode path variables.
-	httpin.UseGochiURLParam("path", chi.URLParam)
+	httpin_integration.UseGochiURLParam("path", chi.URLParam)
 }
 
 func main() {

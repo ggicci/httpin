@@ -7,14 +7,17 @@ import data from "./data/header"
 
 # header
 
-**header** is a [directive executor](/advanced/concepts#directive-executor) who decodes a field from HTTP headers, i.e. [`http.Request.Header`](https://pkg.go.dev/net/http#Header).
+**header** is a [directive executor](/advanced/concepts#directive-executor) who decodes/encodes a field from/to HTTP headers, i.e. [`http.Request.Header`](https://pkg.go.dev/net/http#Header).
 
-## Definition
+
+## Signature
 
 ```yaml
 Name: "header"
 Args: KEY1 [,KEY2 [,KEY3, ...]]
 ```
+
+## Decoding
 
 **header** will examine values of the keys one by one (KEY1 -> KEY2 -> ...) from the HTTP headers, the **first non-empty** value will be used to set the corresponding field of the input struct.
 
@@ -24,7 +27,7 @@ The keys will be normalized, see [`CanonicalHeaderKey`](https://pkg.go.dev/net/h
 
 :::
 
-## Usage
+### Usage
 
 ```go
 type TokenInput struct {
@@ -37,3 +40,7 @@ type TokenInput struct {
   outputTitle={data.inputOutput.outputTitle}
   rows={data.inputOutput.rows}
 ></InputOutputTable>
+
+## Encoding
+
+**header** will encode the field value to the HTTP headers, the first key will be used, i.e. `KEY1`, results in `http.Request.Header.Set(KEY1, VALUE)`.

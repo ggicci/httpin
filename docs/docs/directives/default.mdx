@@ -9,9 +9,15 @@ import data from "./data/default"
 
 Introduced in v0.8.0.
 
-**default** is a [directive executor](/advanced/concepts#directive-executor) who populates unset fields to their default value.
+**default** is a [directive executor](/advanced/concepts#directive-executor) who
+populates **unset fields** to their default values while decoding, and populates
+**zero fields** to their default values while encoding.
 
-## Definition
+- **unset fields**: fields that have not been set by former directives.
+- **zero fields**: values are zero values, such as `0`, `""`, `false`, `nil`,
+  `[]`, `map[]`, `struct{}`.
+
+## Signature
 
 ```yaml
 Name: "default"
@@ -25,9 +31,11 @@ So the presence of comma in an array item can lead to unexpected behavior.
 
 :::
 
+## Decoding
+
 **default** will examine if the field has already been set by former directives. If not, it will set the field to the given value.
 
-## Usage
+### Usage
 
 ```go
 type ListTasksQuery struct {
@@ -42,3 +50,28 @@ type ListTasksQuery struct {
   outputTitle={data.inputOutput.outputTitle}
   rows={data.inputOutput.rows}
 ></InputOutputTable>
+
+
+## Encoding
+
+**default** will examine if the field is a zero value. If so, it will set the field to the given value.
+
+:::caution
+
+
+Since httpin runs the directives in the order of their appearance in the struct,
+you should **always** define the order of the directives based on decoding
+requirements, **default** should be placed after directives like
+[query](/directives/query) and [path](/directives/path) that set the field
+values. In order to make it also works for encoding, httpin will reorder the
+directives internally while encoding. The **default** directive will be placed
+at the beginning of the reordered directives. For example, the above struct will be reordered to:
+
+```
+type ListTasksQuery struct {
+	Page      int      `in:"default=1;query=page"`
+	PerPage   int      `in:"default=20;query=per_page"`
+}
+```
+
+:::

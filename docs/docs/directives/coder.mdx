@@ -13,7 +13,7 @@ Introduced in v0.15.0. For backward compatibility, `decoder` (introduced in v0.1
 **coder** is a **SPECIAL** [directive executor](/advanced/concepts#directive-executor)
 who overrides the coder that used to encode/decode the value of the corresponding field.
 
-## Definition
+## Signature
 
 ```yaml
 Name: "coder" | "decoder"
@@ -23,27 +23,42 @@ Args: CODER_NAME
 When there's a _coder_ directive defined for a field, the specified named decoder will be used rather than
 the default one which is auto-selected by the type of the field.
 
-## Usage
+### Usage
 
-```go {7,14}
-func decodeDate(value string) (interface{}, error) {
-	return time.Parse("2006-01-02", value)
+```go {20,21,22,29}
+import httpin_core "github.com/ggicci/httpin/core"
+
+type MyDate time.Time // adapted time.Time to MyDate, MyDate must implement httpin_core.Stringable
+
+func (t MyDate) ToString() (string, error) {
+	return time.Time(t).Format("2006-01-02"), nil
+}
+
+func (t *MyDate) FromString(value string) error {
+	v, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		return &InvalidDate{Value: value, Err: err}
+	}
+	*t = MyDate(v)
+	return nil
 }
 
 func init() {
-    // Before using the decoder, you need to register it.
-    httpin.RegisterNamedDecoder("date", httpin.ValueTypeDecoderFunc(decodeDate))
+	// Before using the named coder, you need to register it.
+	httpin_core.RegisterNamedCoder[time.Time]("date", func(t *time.Time) (httpin_core.Stringable, error) {
+		return (*MyDate)(t), nil
+	})
 }
 
 type ListUsersInput struct {
 	Gender string `in:"form=gender"`
 	// By default, the decoder is auto-selected by the field type, which is of `time.Time`.
-	// When decoder directive is set, the specified named decoder "date" will be used instead.
-	Birthday time.Time `in:"form=birthday;decoder=date"`
+	// When coder directive is set, the specified named coder "date" will be used instead.
+	Birthday time.Time `in:"form=birthday;coder=date"`
 }
 ```
 
-## Run Example
+### Runable Example
 
 <GoPlay>
 

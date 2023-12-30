@@ -14,9 +14,9 @@ func CustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
 }
 ```
 
-## Use WithErrorHandler option to specify a custom handler
+## The WithErrorHandler Option
 
-Create an HTTP middleware handler:
+Using with an HTTP middleware handler:
 
 ```go {5}
 router := chi.NewRouter()
@@ -28,15 +28,27 @@ func init() {
 }
 ```
 
-Create an engine:
+Using with a core:
 
 ```go {1}
-engine, err := httpin.New(Thing{}, WithErrorHandler(CustomErrorHandler))
-input, err := engine.Decode(req)
+co, err := httpin.New(Thing{}, WithErrorHandler(CustomErrorHandler))
+input, err := co.Decode(req)
 ```
 
-## Globally replace the default error handler
+## Global Error Handler
 
-If you are using `httpin.NewInput`, you will find that it's annoying to add an option to each call in order to use a custom error handler.
+If you are using `httpin.NewInput` to create middlewares, you will find that it's annoying to add an option to each call in order to use a custom error handler.
 
-So, `httpin.ReplaceDefaultErrorHandler` was introduced to replace the default error handler globally.
+Replace the default error handler globally:
+
+```go {8}
+import httpin_core "github.com/ggicci/httpin/core"
+
+func myCustomErrorHandler(rw http.ResponseWriter, r *http.Request, err error) {
+    // ...
+}
+
+func init() {
+    httpin_core.RegisterErrorHandler(myCustomErrorHandler)
+}
+```

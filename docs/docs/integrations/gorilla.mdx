@@ -27,6 +27,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/ggicci/httpin"
+	httpin_integration "github.com/ggicci/httpin/integration"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 )
@@ -47,7 +48,7 @@ func ListUserRepos(rw http.ResponseWriter, r *http.Request) {
 func init() {
 	// Register a directive named "path" to retrieve values from `mux.Vars`,
 	// i.e. decode path variables.
-	httpin.UseGorillaMux("path", mux.Vars)
+	httpin_integration.UseGorillaMux("path", mux.Vars)
 }
 
 func main() {

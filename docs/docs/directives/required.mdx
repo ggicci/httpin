@@ -7,18 +7,22 @@ import data from "./data/required"
 
 # required
 
-**required** is a [directive executor](/advanced/concepts#directive-executor) who tags a field as required. Worth to mention, **it was designed to ensure the key to be present in the input data, but doesn't check the value, it can be zero values, like `0`, `""`, etc.** If you want to ensure the value not to be zero/empty, use [nonzero](/directives/nonzero) instead.
+**required** is a [directive executor](/advanced/concepts#directive-executor) who tags a field as required. The "required" here **doesn't mean the final value after decoding must be non-zero**, it means **the key/field must be present in the input data**. If you want to ensure the value not to be zero/empty, use [nonzero](/directives/nonzero) instead.
 
-## Definition
+**required** always works as an accompany with some other directives. How it works is that **it checks whether the field had been set by the former directives**. Which means if you use **required** alone, or put it at the first place of the directives, it will always return an error "missing required field".
+
+## Signature
 
 ```yaml
 Name: "required"
 Args: (no args)
 ```
 
-**required** always works as an accompany with some other directives, **it checks whether the field had been set by the former directives**. When the field were not set by the former directives, an error "missing required field" will occur.
+## Decoding
 
-## Usage
+When the field were not set by the former directives, an error "missing required field" will occur.
+
+### Usage
 
 ```go
 type TokenInput struct {
@@ -33,3 +37,8 @@ type TokenInput struct {
   outputTitle={data.inputOutput.outputTitle}
   rows={data.inputOutput.rows}
 ></InputOutputTable>
+
+
+## Encoding
+
+Useless.

@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # path
 
-**path** is a [directive executor](/advanced/concepts#directive-executor) who decodes a field from the path of the request URI, aka. path variables.
+**path** is a [directive executor](/advanced/concepts#directive-executor) who decodes/encodes a field from/to the path of the request URI, aka. path variables.
 
 :::danger
 
@@ -18,18 +18,26 @@ You can quickly implement a **path** directive with the following code (routing 
 - go-chi/chi
 
 ```go
-httpin.UseGochiURLParam("path", chi.URLParam)
+import httpin_integration "github.com/ggicci/httpin/integration"
+
+func init() {
+    httpin_integration.UseGochiURLParam("path", chi.URLParam)
+}
 ```
 
 - gorilla/mux
 
 ```go
-httpin.UseGorillaMux("path", mux.Vars)
+import httpin_integration "github.com/ggicci/httpin/integration"
+
+func init() {
+    httpin_integration.UseGorillaMux("path", mux.Vars)
+}
 ```
 
 Please visit the **Integrations** section on the left sidebar to find more details on how to integrate **httpin** with other packages.
 
-If you can't find the package you wanted in the list, you could either open an issue on the [**Github**](https://github.com/ggicci/httpin/issues)
-or visit [custom 🔌](/directives/custom) to learn to implement a "path" directive of your own.
+If you can't find the package you wanted on the list, you could either open an issue on the [**Github**](https://github.com/ggicci/httpin/issues)
+or visit [Custom 🔌](/directives/custom) to learn to implement a "path" directive of your own.
 
 We do hope that you would like to make contributions to the **httpin** project to make it better!

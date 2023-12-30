@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Concepts
 
-**httpin** is driven by defining Go struct tags.
+**httpin** is driven by [owl](https://github.com/ggicci/owl) - a framework that drives particular algorithms by defining Go struct tags.
 
 Let's take the following declaration of a struct as an example to explain how it works:
 
@@ -25,7 +25,7 @@ We can define multiple [directives](#directive) in the tag, which must be **sepa
 
 Not every directive will be executed by **httpin**. It's decided by the executors (algorithms) of the directives and the actual input (request data).
 
-The execution of a directive can fail.  If a directive fails, none of the directives listed after it will execute. i.e. If `d1` fails, `d2` and `d3` will not run.
+The execution of a directive can fail. If a directive fails, none of the directives listed after it will execute. i.e. If `d1` fails, `d2` and `d3` will not run.
 
 :::
 
@@ -49,11 +49,11 @@ For the above example, there are three directives:
 - d2: `header=x-api-token`
 - d3: `required`
 
-Let's dissect `d1`, i.e. `query=access_token,token`. 
+Let's dissect `d1`, i.e. `query=access_token,token`.
 
-The **name** is `query`. 
+The **name** is `query`.
 
-The **argv** is `access_token,token`. 
+The **argv** is `access_token,token`.
 
 After reading the documentation of the [**query**](/directives/query) directive, we know the args will be treated as `["access_token", "token"]`.
 
@@ -66,7 +66,7 @@ For better understanding, we can think of a `Directive Executor` as a function i
 e.g.
 
 | Directive Executor | Directive                          | Execution                                  |
-| ----------------- | ---------------------------------- | ------------------------------------------ |
-| query             | `query=access_token,token`         | `query(["access_token", "token"])`         |
-| header            | `header=x-api-token,Authorization` | `header(["x-api-token", "Authorization"])` |
-| required          | `required`                         | `required([])`                             |
+| ------------------ | ---------------------------------- | ------------------------------------------ |
+| query              | `query=access_token,token`         | `query(["access_token", "token"])`         |
+| header             | `header=x-api-token,Authorization` | `header(["x-api-token", "Authorization"])` |
+| required           | `required`                         | `required([])`                             |

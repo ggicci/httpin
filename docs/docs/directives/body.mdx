@@ -8,23 +8,27 @@ import data from "./data/body"
 
 # body
 
-**body** is a [directive executor](/advanced/concepts#directive-executor) who decodes a field from the body of the request, i.e. [`http.Request.Body`](https://pkg.go.dev/net/http#Request), **JSON** and **XML** formats are supported.
+**body** is a [directive executor](/advanced/concepts#directive-executor) who decodes/encodes a field from/to the body of the request, i.e. [`http.Request.Body`](https://pkg.go.dev/net/http#Request), **JSON** and **XML** formats are supported.
 
-## Definition
+## Signature
 
 ```yaml
 Name: "body"
 Args: BODY_TYPE
 ```
 
-**body** will read the content of the request body and parses it as `BODY_TYPE` into the corresponding field of the struct. Supported BODY_TYPE are:
+Supported BODY_TYPE are:
 
 - **json**: parses the body as an JSON object
 - **xml**: parses the body as an XML object
 
 If BODY_TYPE were not specified, `json` will be used.
 
-## Usage
+## Decoding
+
+**body** will read the content of the request body and parses it as `BODY_TYPE` into the corresponding field of the struct. 
+
+### Usage
 
 ```go
 type User struct {
@@ -43,6 +47,8 @@ type CreateUserInput struct {
   rows={data.inputOutput.rows}
 ></InputOutputTable>
 
+### Runable Example
+
 <GoPlay>
 
 ```go
@@ -56,6 +62,7 @@ import (
 	"strings"
 
 	"github.com/ggicci/httpin"
+	httpin_integration "github.com/ggicci/httpin/integration"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -74,7 +81,7 @@ func UpdateUserHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func init() {
-	httpin.UseGochiURLParam("path", chi.URLParam)
+	httpin_integration.UseGochiURLParam("path", chi.URLParam)
 }
 
 func main() {
@@ -97,74 +104,22 @@ func main() {
 
 </GoPlay>
 
-## <del>Body Annotations</del>
+## Encoding
 
-:::warning
+**body** will encode the corresponding field of the struct into the body of the response, in `BODY_TYPE` format.
 
-Deprecated since v0.12.0
 
-:::
+## Custom Body Format
 
-There're two _body decoder annotations_ that can be used to read the body of the request:
-
-- <del>`httpin.JSONBody`: parses the body as an JSON object</del>
-- <del>`httpin.XMLBody`: parses the body as an XML object</del>
-
-You can embed one of them into your struct like the following:
-
-```go
-type CreateUserInput struct {
-	httpin.JSONBody
-	Login  string `json:"login"`
-	Gender string `json:"gender"`
-}
-```
-
-or
-
-```go
-type User struct {
-	Login  string `json:"login"`
-	Gender string `json:"gender"`
-}
-
-type CreateUserInput struct {
-	httpin.JSONBody
-	*User
-}
-```
-
-:::caution
-
-**Body Annotations** turns the whole struct into a target to which the request body
-will be decoded and populated. So it doesn't support a mix of body input and
-param input. Instead, embedding a struct into the input struct can achieve this.
-Check the demo code above.
-
-:::
-
-## Custom Body Decoders
-
-Use one of the following methods to add/replace a new body decoder to **httpin**.
-
-1. [`RegisterBodyDecoder`](https://pkg.go.dev/github.com/ggicci/httpin#RegisterBodyDecoder)
-2. [`ReplaceBodyDecoder`](https://pkg.go.dev/github.com/ggicci/httpin#ReplaceBodyDecoder)
+Call [`RegisterBodyFormat`](https://pkg.go.dev/github.com/ggicci/httpin#RegisterBodyFormat) to register a new body format/serializer to **httpin**.
 
 For example, the default JSON decoder is borrowed from Go's standard [`encoding/json`](https://pkg.go.dev/encoding/json) package.
 If you want to use a different JSON decoder, you can replace it by using the following code:
 
 ```go
-func init() {
-	httpin.ReplaceBodyDecoder("json", &myJSONDecoder{})
-}
-```
+import httpin_core "github.com/ggicci/httpin/core"
 
-You also can register a new body decoder by using the following code:
-
-```go
 func init() {
-	httpin.RegisterBodyDecoder("yaml", &myYAMLDecoder{})
-	// OR
-	httpin.ReplaceBodyDecoder("yaml", &myYAMLDecoder{})
+	httpin_core.RegisterBodyFormat("json", &MyPerformanentJSONSerializer{})
 }
 ```

@@ -4,12 +4,22 @@ sidebar_position: 7
 
 # nonzero
 
+Introduced in v0.15.0.
+
 **nonzero** is a [directive executor](/advanced/concepts#directive-executor) who ensures the value of the field not to be zero/empty.
 
-## Definition
-
+## Signature
 
 ```yaml
 Name: "nonzero"
 Args: (no args)
 ```
+
+## Decoding
+
+The **nonzero** directive executor will return an error if the value of the field is zero/empty.
+
+
+## Encoding
+
+The **nonzero** directive executor will return an error if the value of the field is zero/empty.
