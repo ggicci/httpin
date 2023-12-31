@@ -123,6 +123,58 @@ input: &main.UpdateUserInput{
 **body** will encode the corresponding field of the struct into the body of the response, in `BODY_TYPE` format.
 
 
+### Runable Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http/httputil"
+
+	"github.com/ggicci/httpin"
+)
+
+type UserPatch struct {
+	Display string `json:"display"`
+	Email   string `json:"email"`
+	IsAdmin bool   `json:"is_admin"`
+}
+
+type UpdateUserInput struct {
+	ID      string    `in:"path=id"`
+	Payload UserPatch `in:"body=json"`
+}
+
+func main() {
+	input := &UpdateUserInput{
+		ID: "ggicci",
+		Payload: UserPatch{
+			Display: "Ggicci",
+			Email:   "secret_@xxx.com",
+			IsAdmin: true,
+		},
+	}
+	r, _ := httpin.NewRequest("PATCH", "/users/{id}", input)
+	data, _ := httputil.DumpRequest(r, true)
+	fmt.Printf("%s\n", data)
+}
+```
+
+</GoPlay>
+
+Output:
+
+```text
+PATCH /users/ggicci HTTP/1.1
+Content-Type: application/json
+
+{"display":"Ggicci","email":"secret_@xxx.com","is_admin":true}
+```
+
+
 ## Custom Body Format
 
 Call [`RegisterBodyFormat`](https://pkg.go.dev/github.com/ggicci/httpin#RegisterBodyFormat) to register a new body format/serializer to **httpin**.

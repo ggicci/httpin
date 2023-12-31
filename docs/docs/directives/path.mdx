@@ -8,10 +8,18 @@ sidebar_position: 5
 
 :::danger
 
-**httpin** doesn't provide a builtin **path** directive, because **httpin** doesn't provide routing functionality.
-But **httpin** can be easily integrated with other packages that provide routing functionality, to decode path variables.
+**httpin** has registered a **path** directive by default. However, it only
+supports the encoding. An error will be returned if you try to decode some
+structs with **path** directives.
 
+Q: Why we don't support decoding of path variables by default?
+
+A: Because the decoding of path variables relys on the routing functionality of the web framework you are using. It cannot be done by **httpin** alone.
+
+
+Even though, **httpin** can be easily integrated with other packages that provide routing functionality, to decode path variables. See below for more details.
 :::
+
 
 You can quickly implement a **path** directive with the following code (routing package specific):
 
@@ -35,7 +43,7 @@ func init() {
 }
 ```
 
-Please visit the **Integrations** section on the left sidebar to find more details on how to integrate **httpin** with other packages.
+See **Integrations** section on the menu left to learn more details and examples on how to integrate **httpin** with other packages.
 
 If you can't find the package you wanted on the list, you could either open an issue on the [**Github**](https://github.com/ggicci/httpin/issues)
 or visit [Custom 🔌](/directives/custom) to learn to implement a "path" directive of your own.
