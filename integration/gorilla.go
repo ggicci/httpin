@@ -27,6 +27,7 @@ func UseGorillaMux(name string, fnVars GorillaMuxVarsFunc) {
 	core.RegisterDirective(
 		name,
 		core.NewDirectivePath((&gorillaMuxVarsExtractor{Vars: fnVars}).Execute),
+		true,
 	)
 }
 

@@ -19,9 +19,20 @@ func TestDirectivePath_Decode(t *testing.T) {
 	assert.ErrorIs(t, pathDirective.Decode(nil), assert.AnError)
 }
 
-func TestDirectivePath_NewRequest(t *testing.T) {
+func TestDirectivePath_ErrDefaultPathDecodingIsUnimplemented(t *testing.T) {
+	type GetProfileRequest struct {
+		Username string `in:"path=username"`
+	}
+
+	co, err := New(GetProfileRequest{})
+	assert.NoError(t, err)
+	req, _ := http.NewRequest("GET", "/users/ggicci", nil)
+	_, err = co.Decode(req)
+	assert.ErrorContains(t, err, "unimplemented path decoding function")
+}
+
+func TestDirectivePath_NewRequest_DefalutPathEncodingShouldWork(t *testing.T) {
 	assert := assert.New(t)
-	RegisterDirective("path", NewDirectivePath(myCustomPathDecode))
 	type Repository struct {
 		Name       string `json:"name"`
 		Visibility string `json:"visibility"` // public, private, internal

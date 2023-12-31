@@ -15,7 +15,13 @@ func init() {
 	RegisterDirective("body", &DirectiveBody{})
 	RegisterDirective("required", &DirectiveRequired{})
 	RegisterDirective("default", &DirectiveDefault{})
-	registerDirective("nonzero", &DirectiveNonzero{})
+	RegisterDirective("nonzero", &DirectiveNonzero{})
+	registerDirective("path", defaultPathDirective)
+
+	// decoder is a special executor which does nothing, but is an indicator of
+	// overriding the decoder for a specific field.
+	registerDirective("decoder", noopDirective)
+	registerDirective("coder", noopDirective)
 }
 
 var (
@@ -39,13 +45,6 @@ type DirectiveExecutor interface {
 
 	// Decode decodes the field of the input struct from the HTTP request.
 	Decode(*DirectiveRuntime) error
-}
-
-func init() {
-	// decoder is a special executor which does nothing, but is an indicator of
-	// overriding the decoder for a specific field.
-	registerDirective("decoder", noopDirective)
-	registerDirective("coder", noopDirective)
 }
 
 // RegisterDirective registers a DirectiveExecutor with the given directive name. The

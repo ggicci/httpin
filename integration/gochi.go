@@ -28,6 +28,7 @@ func UseGochiURLParam(name string, fn GochiURLParamFunc) {
 	core.RegisterDirective(
 		name,
 		core.NewDirectivePath((&gochiURLParamExtractor{URLParam: fn}).Execute),
+		true,
 	)
 }
 

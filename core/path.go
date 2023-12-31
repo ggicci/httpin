@@ -3,6 +3,8 @@
 
 package core
 
+import "errors"
+
 type DirectivePath struct {
 	decode func(*DirectiveRuntime) error
 }
@@ -24,3 +26,11 @@ func (*DirectivePath) Encode(rtm *DirectiveRuntime) error {
 	}
 	return encoder.Execute(rtm)
 }
+
+// defaultPathDirective is the default path directive, which only supports encoding,
+// while the decoding function is not implmented. Because the path decoding depends on the
+// routing framework, it should be implemented in the integration package.
+// See integration/gochi.go and integration/gorilla.go for examples.
+var defaultPathDirective = NewDirectivePath(func(rtm *DirectiveRuntime) error {
+	return errors.New("unimplemented path decoding function")
+})
