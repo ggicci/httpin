@@ -2,6 +2,8 @@
 sidebar_position: 100
 ---
 
+import GoPlay from "../../src/components/GoPlay"
+
 # Custom 🔌
 
 You can extend **httpin** by adding your custom directives.
@@ -10,43 +12,146 @@ Firstly you should understand the concepts of [**Directive**](/advanced/concepts
 
 To add your custom directive, you need to:
 
-## 1. Create a Directive Executor
+## Steps
 
-by implementing the [`httpin.DirectiveExecutor`](https://pkg.go.dev/github.com/ggicci/httpin#DirectiveExecutor) interface:
+### 1. Create a Directive Executor
+
+by implementing the [`httpin_core.DirectiveExecutor`](https://pkg.go.dev/github.com/ggicci/httpin/core#DirectiveExecutor) interface:
 
 ```go {13}
-func toLower(rtm *DirectiveRuntime) error {
+type DirectiveCaseFormatter struct {
+	Transform func(string) string
+}
+
+func (f *DirectiveCaseFormatter) Decode(rtm *httpin_core.DirectiveRuntime) error {
 	if rtm.Value.Type().Elem().Kind() != reflect.String {
 		return errors.New("not a string")
 	}
 
 	currentValue := rtm.Value.Elem().String()
-	newValue := strings.ToLower(currentValue)
+	newValue := f.Transform(currentValue)
 	rtm.Value.Elem().SetString(newValue)
 	return nil
 }
 
-// Adapt to the httpin.DirectiveExecutor interface.
-var MyLowercaseDirectiveExecutor = httpin.DirectiveExecutorFunc(toLower)
+func (f *DirectiveCaseFormatter) Encode(rtm *httpin_core.DirectiveRuntime) error {
+	if rtm.Value.Type().Kind() != reflect.String {
+		return errors.New("not a string")
+	}
+
+	currentValue := rtm.Value.String()
+	newValue := f.Transform(currentValue)
+	rtm.Value.SetString(newValue)
+	return nil
+}
 ```
 
-## 2. Register your Directive to httpin
+### 2. Register your Directive to httpin
 
-by calling [`httpin.RegisterDirectiveExecutor`](https://pkg.go.dev/github.com/ggicci/httpin#RegisterDirectiveExecutor):
+by calling [`httpin_core.RegisterDirective`](https://pkg.go.dev/github.com/ggicci/httpin/core#RegisterDirective):
 
 ```go {2}
 func init() {
-	httpin.RegisterDirectiveExecutor("to_lowercase", MyLowercaseDirectiveExecutor)
+	httpin_core.RegisterDirective("to_lowercase", DirectiveCaseFormatter{
+		Transform: strings.ToLower,
+	})
+
+	httpin_core.RegisterDirective("to_uppercase", DirectiveCaseFormatter{
+		Transform: strings.ToUpper,
+	})
 }
 ```
 
 **NB**: make sure to register your directive executor before you start the server.
 
-## 3. Use your Directive
+### 3. Use your Directive
 
-```go {2}
-type LoginFormInput struct {
-	Login string `in:"form=login;required;to_lowercase"`
-	Pass  string `in:"form=login;required"`
+```go {2,3}
+type ListUsersInput struct {
+	Username string `in:"query=username;to_lowercase"`
+	Gender   string `in:"query=gender;to_uppercase"`
 }
 ```
+
+## Runable Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"strings"
+
+	"github.com/ggicci/httpin"
+	httpin_core "github.com/ggicci/httpin/core"
+	"github.com/go-chi/chi/v5"
+)
+
+type DirectiveCaseFormatter struct {
+	Transform func(string) string
+}
+
+func (f *DirectiveCaseFormatter) Decode(rtm *httpin_core.DirectiveRuntime) error {
+	if rtm.Value.Type().Elem().Kind() != reflect.String {
+		return errors.New("not a string")
+	}
+
+	currentValue := rtm.Value.Elem().String()
+	newValue := f.Transform(currentValue)
+	rtm.Value.Elem().SetString(newValue)
+	return nil
+}
+
+func (f *DirectiveCaseFormatter) Encode(rtm *httpin_core.DirectiveRuntime) error {
+	if rtm.Value.Type().Kind() != reflect.String {
+		return errors.New("not a string")
+	}
+
+	currentValue := rtm.Value.String()
+	newValue := f.Transform(currentValue)
+	rtm.Value.SetString(newValue)
+	return nil
+}
+
+func init() {
+	httpin_core.RegisterDirective("to_lowercase", &DirectiveCaseFormatter{
+		Transform: strings.ToLower,
+	})
+
+	httpin_core.RegisterDirective("to_uppercase", &DirectiveCaseFormatter{
+		Transform: strings.ToUpper,
+	})
+}
+
+type ListUsersInput struct {
+	Username string `in:"query=username;to_lowercase"`
+	Gender   string `in:"query=gender;to_uppercase"`
+}
+
+func ListUsersHandler(rw http.ResponseWriter, r *http.Request) {
+	input := r.Context().Value(httpin.Input).(*ListUsersInput)
+	fmt.Printf("input: %#v\n", input)
+}
+
+func main() {
+	router := chi.NewRouter()
+
+	// Bind input struct with handler.
+	router.With(
+		httpin.NewInput(ListUsersInput{}),
+	).Get("/users", ListUsersHandler)
+
+	r, _ := http.NewRequest("GET", "/users?username=Ggicci&gender=male", nil)
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>

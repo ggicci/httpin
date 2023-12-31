@@ -84,3 +84,37 @@ func main() {
 **query** will encode the field to the first key, i.e. `KEY1`, results in `?KEY1=VALUE`.
 
 
+### Runable Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/ggicci/httpin"
+)
+
+type ListUsersInput struct {
+	IsMember bool  `in:"query=is_member"`
+	AgeRange []int `in:"query=age_range[],age_range"`
+}
+
+func main() {
+	input := &ListUsersInput{
+		IsMember: true,
+		AgeRange: []int{18, 60},
+	}
+	req, err := httpin.NewRequest("GET", "/users", input)
+	if err != nil {
+		panic(err)
+	}
+
+	// Echo the request URL.
+	fmt.Printf("URL: %s\n", req.URL.String())
+}
+```
+
+</GoPlay>
