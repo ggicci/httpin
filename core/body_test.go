@@ -28,13 +28,17 @@ type BodyPayload struct {
 }
 
 type BodyPayloadInJSON struct {
-	Page     int          `in:"form=page"`
-	PageSize int          `in:"form=page_size"`
-	Body     *BodyPayload `in:"body=json"`
+	Body *BodyPayload `in:"body=json"`
 }
 
 type BodyPayloadInXML struct {
 	Body *BodyPayload `in:"body=xml"`
+}
+
+type YouCannotUseFormAndBodyAtTheSameTime struct {
+	Page     int          `in:"form=page"`
+	PageSize int          `in:"form=page_size"`
+	Body     *BodyPayload `in:"body=json"`
 }
 
 var sampleBodyPayloadInJSONText = `
@@ -50,8 +54,6 @@ var sampleBodyPayloadInJSONText = `
 }`
 
 var sampleBodyPayloadInJSONObject = &BodyPayloadInJSON{
-	Page:     4,
-	PageSize: 30,
 	Body: &BodyPayload{
 		Name:     "Elia",
 		Age:      14,
@@ -137,6 +139,18 @@ func TestBodyDirective_Decode_ErrUnknownBodyFormat(t *testing.T) {
 	assert.ErrorContains(t, err, "unknown body format: \"yaml\"")
 }
 
+func TestBodyDirective_Decode_ErrConflictWithFormDirective(t *testing.T) {
+	co, err := New(YouCannotUseFormAndBodyAtTheSameTime{})
+	assert.NoError(t, err)
+	req, err := co.NewRequest("POST", "/data", &YouCannotUseFormAndBodyAtTheSameTime{
+		Page:     1,
+		PageSize: 20,
+		Body:     sampleBodyPayloadInJSONObject.Body,
+	})
+	assert.ErrorContains(t, err, "cannot use both form and body directive at the same time")
+	assert.Nil(t, req)
+}
+
 type yamlBody struct{}
 
 var errYamlNotImplemented = errors.New("yaml not implemented")
@@ -201,10 +215,6 @@ func TestBodyDirective_NewRequest_JSON(t *testing.T) {
 	assert.NoError(err)
 	req, err := co.NewRequest("POST", "/data", sampleBodyPayloadInJSONObject)
 	expected, _ := http.NewRequest("POST", "/data", nil)
-	expected.Form = url.Values{
-		"page":      {"4"},
-		"page_size": {"30"},
-	}
 	expected.Header.Set("Content-Type", "application/json")
 	assert.NoError(err)
 	var body bytes.Buffer

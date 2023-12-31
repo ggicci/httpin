@@ -1,9 +1,11 @@
 package core
 
 import (
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ggicci/httpin/patch"
@@ -156,12 +158,13 @@ func TestPatchField_NewRequest_NoFiles(t *testing.T) {
 	}
 
 	expected, _ := http.NewRequest("POST", "/patchAccount", nil)
-	expected.Form = url.Values{
+	expectedForm := url.Values{
 		"email":   {"abc@example.com"},
 		"age":     {"18"},
 		"hobbies": {"reading", "swimming"},
 	}
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	expected.Body = io.NopCloser(strings.NewReader(expectedForm.Encode()))
 
 	co, err := New(AccountPatch{})
 	assert.NoError(err)

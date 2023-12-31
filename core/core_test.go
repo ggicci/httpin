@@ -370,12 +370,13 @@ func TestCore_NamedCoder(t *testing.T) {
 		assert.NoError(t, err)
 
 		expected, _ := http.NewRequest("PUT", "/users/ggicci", nil)
-		expected.Form = url.Values{
+		expectedForm := url.Values{
 			"name":              {"Ggicci"},
 			"birthday":          {"1991-11-10"},
 			"effective_between": {"2021-04-12", "2025-04-12"},
 			"created_between":   {"2021-01-01T00:00:00Z", "2022-01-01T00:00:00Z"},
 		}
+		expected.Body = io.NopCloser(strings.NewReader(expectedForm.Encode()))
 		expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		assert.Equal(t, expected, req)
 	}()
@@ -499,10 +500,11 @@ func TestRegisterCoder_CustomType_OverrideDefaultTypeCoder(t *testing.T) {
 			RegisterationPlace: &Place{Country: "US", City: "New_York"},
 		}
 		expected, _ := http.NewRequest("GET", "/search", nil)
-		expected.Form = url.Values{
+		expectedForm := url.Values{
 			"is_member":          {"yes"},
 			"registration_place": {"US.New_York"},
 		}
+		expected.Body = io.NopCloser(strings.NewReader(expectedForm.Encode()))
 		expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		req, err := co.NewRequest("GET", "/search", payload)

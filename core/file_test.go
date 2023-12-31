@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ggicci/httpin/internal"
@@ -246,10 +247,11 @@ func TestUpload_WithNilFile(t *testing.T) {
 		Avatar: nil,
 	}
 	expected, _ := http.NewRequest("POST", "/post", nil)
-	expected.Form = url.Values{
+	expectedForm := url.Values{
 		"name":   {""},
 		"gender": {""},
 	}
+	expected.Body = io.NopCloser(strings.NewReader(expectedForm.Encode()))
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	co, err := New(UpdateUserProfileInput{})
 	assert.NoError(t, err)
@@ -263,9 +265,10 @@ func TestUpload_WithNilMultiFile(t *testing.T) {
 		Attachments: nil,
 	}
 	expected, _ := http.NewRequest("POST", "/post", nil)
-	expected.Form = url.Values{
+	expectedForm := url.Values{
 		"title": {""},
 	}
+	expected.Body = io.NopCloser(strings.NewReader(expectedForm.Encode()))
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	co, err := New(UpdateGitHubIssueInput{})
 	assert.NoError(t, err)

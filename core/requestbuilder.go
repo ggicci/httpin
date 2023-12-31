@@ -23,6 +23,17 @@ type RequestBuilder struct {
 	Body       io.ReadCloser
 }
 
+func NewRequestBuilder() *RequestBuilder {
+	return &RequestBuilder{
+		Query:      make(url.Values),
+		Form:       make(url.Values),
+		Attachment: make(map[string][]FileMarshaler),
+		Header:     make(http.Header),
+		Cookie:     make([]*http.Cookie, 0),
+		Path:       make(map[string]string),
+	}
+}
+
 func (rb *RequestBuilder) Populate(req *http.Request) error {
 	if err := rb.validate(); err != nil {
 		return err
@@ -38,15 +49,14 @@ func (rb *RequestBuilder) Populate(req *http.Request) error {
 				return err
 			}
 		} else { // urlencoded form
-			req.Form = rb.Form
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			rb.populateForm(req)
 		}
 	}
 
 	// Populate body.
 	if rb.hasBody() {
 		req.Body = rb.Body
-		req.Header.Set("Content-Type", rb.bodyContentType())
+		rb.Header.Set("Content-Type", rb.bodyContentType())
 	}
 
 	// Populate path.
@@ -73,30 +83,18 @@ func (rb *RequestBuilder) Populate(req *http.Request) error {
 }
 
 func (rb *RequestBuilder) SetQuery(key string, value []string) {
-	if rb.Query == nil {
-		rb.Query = make(url.Values)
-	}
 	rb.Query[key] = value
 }
 
 func (rb *RequestBuilder) SetForm(key string, value []string) {
-	if rb.Form == nil {
-		rb.Form = make(url.Values)
-	}
 	rb.Form[key] = value
 }
 
 func (rb *RequestBuilder) SetHeader(key string, value []string) {
-	if rb.Header == nil {
-		rb.Header = make(http.Header)
-	}
 	rb.Header[http.CanonicalHeaderKey(key)] = value
 }
 
 func (rb *RequestBuilder) SetPath(key string, value []string) {
-	if rb.Path == nil {
-		rb.Path = make(map[string]string)
-	}
 	if len(value) > 0 {
 		rb.Path[key] = value[0]
 	}
@@ -108,9 +106,6 @@ func (rb *RequestBuilder) SetBody(bodyType string, bodyReader io.ReadCloser) {
 }
 
 func (rb *RequestBuilder) SetAttachment(key string, files []FileMarshaler) {
-	if rb.Attachment == nil {
-		rb.Attachment = make(map[string][]FileMarshaler)
-	}
 	rb.Attachment[key] = files
 }
 
@@ -125,8 +120,8 @@ func (rb *RequestBuilder) bodyContentType() string {
 }
 
 func (rb *RequestBuilder) validate() error {
-	if rb.hasAttachment() && rb.hasBody() {
-		return errors.New("cannot use body directive and file upload at the same time")
+	if rb.hasForm() && rb.hasBody() {
+		return errors.New("cannot use both form and body directive at the same time")
 	}
 	return nil
 }
@@ -145,6 +140,12 @@ func (rb *RequestBuilder) hasAttachment() bool {
 
 func (rb *RequestBuilder) hasBody() bool {
 	return rb.Body != nil && rb.BodyType != ""
+}
+
+func (rb *RequestBuilder) populateForm(req *http.Request) {
+	rb.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	formData := rb.Form.Encode()
+	req.Body = io.NopCloser(strings.NewReader(formData))
 }
 
 func (rb *RequestBuilder) populateMultipartForm(req *http.Request) error {
@@ -183,7 +184,7 @@ func (rb *RequestBuilder) populateMultipartForm(req *http.Request) error {
 
 	// Set the body and content type.
 	req.Body = io.NopCloser(body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rb.Header.Set("Content-Type", writer.FormDataContentType())
 	return nil
 }
 

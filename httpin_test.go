@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/ggicci/httpin/core"
@@ -154,10 +155,7 @@ func TestNewRequest(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected, _ := http.NewRequest("GET", "/products", nil)
-	expected.Form = url.Values{
-		"page":     {"19"},
-		"per_page": {"50"},
-	}
+	expected.Body = io.NopCloser(strings.NewReader("page=19&per_page=50"))
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	assert.Equal(t, expected, req)
 }

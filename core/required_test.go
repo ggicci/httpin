@@ -1,8 +1,10 @@
 package core
 
 import (
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,11 +61,12 @@ func TestDirectiveRequired_NewRequest_RequiredFieldPresent(t *testing.T) {
 		Color:     "red",
 	}
 	expected, _ := http.NewRequest("GET", "/hello", nil)
-	expected.Form = url.Values{
+	expectedForm := url.Values{
 		"created_at": {"1991-11-10T00:00:00Z"},
 		"colour":     {"red"}, // NOTE: will use the first name in the tag
 	}
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	expected.Body = io.NopCloser(strings.NewReader(expectedForm.Encode()))
 	req, err := co.NewRequest("GET", "/hello", payload)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, req)

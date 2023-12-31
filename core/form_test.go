@@ -2,8 +2,10 @@ package core
 
 import (
 	"encoding/base64"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -168,7 +170,7 @@ func TestDirectiveForm_NewRequest(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected, _ := http.NewRequest("POST", "/signup", nil)
-	expected.Form = url.Values{
+	expectedForm := url.Values{
 		"bool":       {"true"},
 		"int":        {"9"},
 		"int8":       {"14"},
@@ -211,6 +213,7 @@ func TestDirectiveForm_NewRequest(t *testing.T) {
 		"strings": {"Life", "is", "a", "Miracle"},
 		"times":   {"2000-01-02T22:04:05Z", "1991-06-28T06:00:00Z"},
 	}
+	expected.Body = io.NopCloser(strings.NewReader(expectedForm.Encode()))
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	assert.Equal(t, expected, req)
 }
@@ -230,7 +233,7 @@ func TestDirectiveForm_NewRequest_ByteSlice(t *testing.T) {
 		},
 	}
 	expected, _ := http.NewRequest("POST", "/api", nil)
-	expected.Form = url.Values{
+	expectedForm := url.Values{
 		"bytes": {base64.StdEncoding.EncodeToString(payload.Bytes)},
 		"multi_bytes": {
 			base64.StdEncoding.EncodeToString(payload.MultiBytes[0]),
@@ -238,6 +241,7 @@ func TestDirectiveForm_NewRequest_ByteSlice(t *testing.T) {
 		},
 	}
 	expected.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	expected.Body = io.NopCloser(strings.NewReader(expectedForm.Encode()))
 	req, err := co.NewRequest("POST", "/api", payload)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, req)
