@@ -54,16 +54,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
-	"strings"
 
 	"github.com/ggicci/httpin"
 	"github.com/go-chi/chi/v5"
 )
 
 type UpdateAccountInput struct {
-	AccessToken string `in:"header=x-myapp-access-token"`
-	Bio         string `in:"form=bio"`
+	AccessToken   string `in:"header=x-myapp-access-token"`
+	ClientVersion int    `in:"header=x-myapp-client-version"`
 }
 
 func UpdateAccount(rw http.ResponseWriter, r *http.Request) {
@@ -79,10 +77,8 @@ func main() {
 
 	r, _ := http.NewRequest("PATCH", "/me", nil)
 	r.Header.Set("x-myapp-access-token", "rainbow")
-	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	form := make(url.Values)
-	form.Add("bio", "ありがどう")
-	r.Body = io.NopCloser(strings.NewReader(form.Encode()))
+	r.Header.Set("X-Myapp-Client-Version", "284")
+	r.Body = io.NopCloser(nil)
 
 	rw := httptest.NewRecorder()
 	router.ServeHTTP(rw, r)
@@ -95,7 +91,7 @@ func main() {
 Output:
 
 ```text
-input: &main.UpdateAccountInput{AccessToken:"rainbow", Bio:"ありがどう"}
+input: &main.UpdateAccountInput{AccessToken:"rainbow", ClientVersion:284}
 ```
 
 ## Encoding

@@ -66,13 +66,15 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type UserPatch struct {
+	Display string `json:"display"`
+	Email   string `json:"email"`
+	IsAdmin bool   `json:"is_admin"`
+}
+
 type UpdateUserInput struct {
-	ID      string `in:"path=id"` // NOTE: register a path directive before using
-	Payload struct {
-		Display string `json:"display"`
-		Email   string `json:"email"`
-		IsAdmin bool   `json:"is_admin"`
-	} `in:"body=json"`
+	ID      string    `in:"path=id"` // NOTE: register a path directive before using
+	Payload UserPatch `in:"body=json"`
 }
 
 func UpdateUserHandler(rw http.ResponseWriter, r *http.Request) {
@@ -103,6 +105,18 @@ func main() {
 ```
 
 </GoPlay>
+
+Output:
+
+```text
+input: &main.UpdateUserInput{
+	ID:"19911110",
+	Payload:main.UserPatch{
+		Display:"Ggicci Never Cry",
+		Email:"secret_@xxx.com", IsAdmin:true
+	}
+}
+```
 
 ## Encoding
 
