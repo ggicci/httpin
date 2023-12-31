@@ -2,6 +2,7 @@
 sidebar_position: 2
 ---
 
+import GoPlay from "../../src/components/GoPlay"
 import InputOutputTable from "../../src/components/InputOutputTable"
 import data from "./data/header"
 
@@ -40,6 +41,50 @@ type TokenInput struct {
   outputTitle={data.inputOutput.outputTitle}
   rows={data.inputOutput.rows}
 ></InputOutputTable>
+
+### Runable Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+
+	"github.com/ggicci/httpin"
+	"github.com/go-chi/chi/v5"
+)
+
+type UpdateAccountInput struct {
+	AccessToken string `in:"header=x-myapp-access-token"`
+	Bio         string `in:"form=bio"`
+}
+
+func UpdateAccount(rw http.ResponseWriter, r *http.Request) {
+	input := r.Context().Value(httpin.Input).(*UpdateAccountInput)
+	fmt.Printf("input: %#v\n", input)
+}
+
+func main() {
+	router := chi.NewRouter()
+	router.With(
+		httpin.NewInput(UpdateAccountInput{}),
+	).Get("/users", UpdateAccount)
+
+	r, _ := http.NewRequest("GET", "/users", nil)
+	r.Header.Set("x-myapp-access-token", "rainbow")
+	r.Form = url.Values{"bio": {"Love is love."}}
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>
 
 ## Encoding
 
