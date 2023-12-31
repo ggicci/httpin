@@ -2,6 +2,7 @@
 sidebar_position: 3
 ---
 
+import GoPlay from "../../src/components/GoPlay"
 import InputOutputTable from "../../src/components/InputOutputTable"
 import data from "./data/form"
 
@@ -58,6 +59,110 @@ type Profile struct {
 ></InputOutputTable>
 
 
+### Runable Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+
+	"github.com/ggicci/httpin"
+	"github.com/go-chi/chi/v5"
+)
+
+type UpdateAccountInput struct {
+	AccessToken string `in:"form=access_token"`
+	Bio         string `in:"form=bio"`
+}
+
+func UpdateAccount(rw http.ResponseWriter, r *http.Request) {
+	input := r.Context().Value(httpin.Input).(*UpdateAccountInput)
+	fmt.Printf("input: %#v\n", input)
+}
+
+func main() {
+	router := chi.NewRouter()
+	router.With(
+		httpin.NewInput(UpdateAccountInput{}),
+	).Patch("/me", UpdateAccount)
+
+	// NOTE: form directive also visits querystring
+	r, _ := http.NewRequest("PATCH", "/me?access_token=rainbow", nil)
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	form := make(url.Values)
+	form.Add("bio", "ありがどう")
+	r.Body = io.NopCloser(strings.NewReader(form.Encode()))
+
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+}
+```
+
+</GoPlay>
+
+Output:
+
+```text
+input: &main.UpdateAccountInput{AccessToken:"rainbow", Bio:"ありがどう"}
+```
+
+
 ## Encoding
 
 **form** will encode the field value to the form data with the key specified in the directive argument, the first key will be used, i.e. `KEY1`, results in `http.Request.Form[KEY1] = VALUE`.
+
+
+### Runable Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http/httputil"
+
+	"github.com/ggicci/httpin"
+)
+
+type Questionare struct {
+	Name     string  `in:"form=name;nonzero"`
+	Gender   int     `in:"form=gender"`
+	Position string  `in:"form=position"`
+	Height   float32 `in:"form=height"`
+	Weight   float32 `in:"form=weight"`
+}
+
+func main() {
+	payload := &Questionare{
+		Name:     "Ggicci",
+		Gender:   0,
+		Position: "Stand up",
+		Height:   182.3,
+		Weight:   73.5,
+	}
+	r, _ := httpin.NewRequest("POST", "/forms/weight-and-height", payload)
+	data, _ := httputil.DumpRequest(r, true)
+	fmt.Printf("%s\n", data)
+}
+```
+
+</GoPlay>
+
+Output:
+
+```text
+POST /forms/weight-and-height HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+gender=0&height=182.3&name=Ggicci&position=Stand+up&weight=73.5
+```

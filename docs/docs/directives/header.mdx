@@ -51,9 +51,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 
 	"github.com/ggicci/httpin"
 	"github.com/go-chi/chi/v5"
@@ -73,11 +75,14 @@ func main() {
 	router := chi.NewRouter()
 	router.With(
 		httpin.NewInput(UpdateAccountInput{}),
-	).Get("/users", UpdateAccount)
+	).Patch("/me", UpdateAccount)
 
-	r, _ := http.NewRequest("GET", "/users", nil)
+	r, _ := http.NewRequest("PATCH", "/me", nil)
 	r.Header.Set("x-myapp-access-token", "rainbow")
-	r.Form = url.Values{"bio": {"Love is love."}}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	form := make(url.Values)
+	form.Add("bio", "ありがどう")
+	r.Body = io.NopCloser(strings.NewReader(form.Encode()))
 
 	rw := httptest.NewRecorder()
 	router.ServeHTTP(rw, r)
@@ -86,6 +91,54 @@ func main() {
 
 </GoPlay>
 
+
+Output:
+
+```text
+input: &main.UpdateAccountInput{AccessToken:"rainbow", Bio:"ありがどう"}
+```
+
 ## Encoding
 
 **header** will encode the field value to the HTTP headers, the first key will be used, i.e. `KEY1`, results in `http.Request.Header.Set(KEY1, VALUE)`.
+
+
+### Runable Example
+
+<GoPlay>
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http/httputil"
+
+	"github.com/ggicci/httpin"
+)
+
+type UpdateAccountInput struct {
+	AccessToken   string `in:"header=x-myapp-access-token"`
+	ClientVersion int    `in:"header=x-myapp-client-version"`
+}
+
+func main() {
+	payload := &UpdateAccountInput{
+		AccessToken:   "rainbow",
+		ClientVersion: 813,
+	}
+	r, _ := httpin.NewRequest("PATCH", "/me", payload)
+	data, _ := httputil.DumpRequest(r, true)
+	fmt.Printf("%s\n", data)
+}
+```
+
+</GoPlay>
+
+Output:
+
+```text
+PATCH /me HTTP/1.1
+X-Myapp-Access-Token: rainbow
+X-Myapp-Client-Version: 813
+```

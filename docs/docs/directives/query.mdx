@@ -78,6 +78,12 @@ func main() {
 
 </GoPlay>
 
+Output:
+
+```text
+input: &main.ListUsersInput{IsMember:true, AgeRange:[]int{18, 60}}
+```
+
 
 ## Encoding
 
@@ -93,6 +99,7 @@ package main
 
 import (
 	"fmt"
+	"net/http/httputil"
 
 	"github.com/ggicci/httpin"
 )
@@ -107,14 +114,16 @@ func main() {
 		IsMember: true,
 		AgeRange: []int{18, 60},
 	}
-	req, err := httpin.NewRequest("GET", "/users", input)
-	if err != nil {
-		panic(err)
-	}
-
-	// Echo the request URL.
-	fmt.Printf("URL: %s\n", req.URL.String())
+	r, _ := httpin.NewRequest("GET", "/users", input)
+	data, _ := httputil.DumpRequest(r, false)
+	fmt.Printf("%s\n", data)
 }
 ```
 
 </GoPlay>
+
+Output:
+
+```text
+GET /users?age_range%5B%5D=18&age_range%5B%5D=60&is_member=true HTTP/1.1
+```

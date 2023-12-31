@@ -1,3 +1,7 @@
+.toolbar {
+  margin-bottom: var(--ifm-leading);
+}
+
 .toolbar > .button {
   font-size: 0.75rem;
   padding: 0.25rem 1.5rem;
