@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/ggicci/httpin/internal"
 	"github.com/stretchr/testify/assert"
+	"github.com/ggicci/owl"
 )
 
 func TestDirectiveQuery_Decode(t *testing.T) {
@@ -106,7 +106,7 @@ func TestDirectiveQuery_NewRequest_ErrUnsupportedType(t *testing.T) {
 	co, err := New(SearchQuery{})
 	assert.NoError(t, err)
 	_, err = co.NewRequest("GET", "/pets", &SearchQuery{})
-	assert.ErrorIs(t, err, internal.ErrUnsupportedType)
+	assert.ErrorIs(t, err, owl.ErrUnsupportedType)
 }
 
 // See hybridcoder_test.go for more details.

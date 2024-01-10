@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/ggicci/owl"
 )
 
 func TestNewStringable_string(t *testing.T) {
@@ -156,7 +157,7 @@ func TestNewStringable_ErrUnsupportedType(t *testing.T) {
 	})
 	rvStructPointer := reflect.ValueOf(&s)
 	sv, err := NewStringable(rvStructPointer)
-	assert.ErrorIs(t, err, ErrUnsupportedType)
+	assert.ErrorIs(t, err, owl.ErrUnsupportedType)
 	assert.Nil(t, sv)
 }
 

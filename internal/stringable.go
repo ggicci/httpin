@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/ggicci/owl"
 )
 
 var (
-	ErrUnsupportedType = errors.New("unsupported type")
-	ErrTypeMismatch    = errors.New("type mismatch")
+	ErrTypeMismatch = errors.New("type mismatch")
 
 	builtinStringableAdaptors = make(map[reflect.Type]AnyStringableAdaptor)
 )
@@ -380,5 +380,5 @@ func (bs *ByteSlice) FromString(s string) error {
 }
 
 func UnsupportedType(rt reflect.Type) error {
-	return fmt.Errorf("%w: %v", ErrUnsupportedType, rt)
+	return fmt.Errorf("%w: %v", owl.ErrUnsupportedType, rt)
 }
