@@ -61,15 +61,6 @@ func (f *File) UnmarshalFile(fh FileHeader) error {
 	return nil
 }
 
-// Encode implements FileEncoder.
-// func (f File) Encode() (string, io.ReadCloser, error) {
-// 	uploadReader, err := f.OpenUploadStream()
-// 	if err != nil {
-// 		return "", nil, err
-// 	}
-// 	return f.Filename(), uploadReader, nil
-// }
-
 // IsUpload returns true when the File instance is created for an upload purpose.
 // Typically, you should use UploadFilename or UploadReader to create a File instance
 // for upload.

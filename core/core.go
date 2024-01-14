@@ -108,7 +108,7 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 		return nil, err
 	}
 
-	rb := NewRequestBuilder()
+	rb := NewRequestBuilder(ctx)
 
 	// NOTE(ggicci): the error returned a joined error by using errors.Join.
 	if err = c.scanResolver.Scan(

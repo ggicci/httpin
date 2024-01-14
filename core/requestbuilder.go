@@ -1,7 +1,7 @@
 package core
 
 import (
-	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,9 +21,10 @@ type RequestBuilder struct {
 	Path       map[string]string // placeholder: value
 	BodyType   string            // json, xml, etc.
 	Body       io.ReadCloser
+	ctx        context.Context
 }
 
-func NewRequestBuilder() *RequestBuilder {
+func NewRequestBuilder(ctx context.Context) *RequestBuilder {
 	return &RequestBuilder{
 		Query:      make(url.Values),
 		Form:       make(url.Values),
@@ -31,6 +32,7 @@ func NewRequestBuilder() *RequestBuilder {
 		Header:     make(http.Header),
 		Cookie:     make([]*http.Cookie, 0),
 		Path:       make(map[string]string),
+		ctx:        ctx,
 	}
 }
 
@@ -149,41 +151,58 @@ func (rb *RequestBuilder) populateForm(req *http.Request) {
 }
 
 func (rb *RequestBuilder) populateMultipartForm(req *http.Request) error {
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
+	// Create a pipe and a multipart writer.
+	pr, pw := io.Pipe()
+	writer := multipart.NewWriter(pw)
 
-	// Populate the form fields.
-	for k, v := range rb.Form {
-		for _, sv := range v {
-			fieldWriter, _ := writer.CreateFormField(k)
-			fieldWriter.Write([]byte(sv))
-		}
-	}
+	// Write the multipart form data to the pipe in a separate goroutine.
+	go func() {
+		defer pw.Close()
+		defer writer.Close()
 
-	// Populate the attachments.
-	for key, files := range rb.Attachment {
-		for i, file := range files {
-			filename := file.Filename()
-			contentReader, err := file.MarshalFile()
-			filename = normalizeUploadFilename(key, filename, i)
-
-			if err != nil {
-				return fmt.Errorf("upload %s %q failed: %w", key, filename, err)
-			}
-
-			fileWriter, _ := writer.CreateFormFile(key, filename)
-			if _, err = io.Copy(fileWriter, contentReader); err != nil {
-				return fmt.Errorf("upload %s %q failed: %w", key, filename, err)
+		// Populate the form fields.
+		for k, v := range rb.Form {
+			for _, sv := range v {
+				select {
+				case <-rb.ctx.Done():
+					pw.CloseWithError(rb.ctx.Err())
+					return
+				default:
+					fieldWriter, _ := writer.CreateFormField(k)
+					fieldWriter.Write([]byte(sv))
+				}
 			}
 		}
-	}
 
-	if err := writer.Close(); err != nil {
-		return fmt.Errorf("close multipart writer: %w", err)
-	}
+		// Populate the attachments.
+		for key, files := range rb.Attachment {
+			for i, file := range files {
+				select {
+				case <-rb.ctx.Done():
+					pw.CloseWithError(rb.ctx.Err())
+					return
+				default:
+					filename := file.Filename()
+					contentReader, err := file.MarshalFile()
+					filename = normalizeUploadFilename(key, filename, i)
 
-	// Set the body and content type.
-	req.Body = io.NopCloser(body)
+					if err != nil {
+						pw.CloseWithError(fmt.Errorf("upload %s %q failed: %w", key, filename, err))
+						return
+					}
+
+					fileWriter, _ := writer.CreateFormFile(key, filename)
+					if _, err = io.Copy(fileWriter, contentReader); err != nil {
+						pw.CloseWithError(fmt.Errorf("upload %s %q failed: %w", key, filename, err))
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	// Set the body to the read end of the pipe and the content type.
+	req.Body = io.NopCloser(pr)
 	rb.Header.Set("Content-Type", writer.FormDataContentType())
 	return nil
 }
