@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	ErrTypeMismatch = errors.New("type mismatch")
+	ErrTypeMismatch    = errors.New("type mismatch")
+	ErrUnsupportedType = owl.ErrUnsupportedType
 
 	builtinStringableAdaptors = make(map[reflect.Type]AnyStringableAdaptor)
 )
@@ -380,5 +381,5 @@ func (bs *ByteSlice) FromString(s string) error {
 }
 
 func UnsupportedType(rt reflect.Type) error {
-	return fmt.Errorf("%w: %v", owl.ErrUnsupportedType, rt)
+	return fmt.Errorf("%w: %v", ErrUnsupportedType, rt)
 }

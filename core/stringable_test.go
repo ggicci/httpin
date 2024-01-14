@@ -9,7 +9,6 @@ import (
 	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/httpin/patch"
 	"github.com/stretchr/testify/assert"
-	"github.com/ggicci/owl"
 )
 
 type Point2D struct {
@@ -235,7 +234,7 @@ func testAssignString(t *testing.T, rv reflect.Value, value string) {
 
 func testNewStringableErrUnsupported(t *testing.T, rv reflect.Value) {
 	s, err := NewStringable(rv, nil)
-	assert.ErrorIs(t, err, owl.ErrUnsupportedType)
+	assert.ErrorIs(t, err, ErrUnsupportedType)
 	assert.Nil(t, s)
 }
 
