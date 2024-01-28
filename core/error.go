@@ -5,7 +5,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/owl"
+)
+
+var (
+	ErrUnregisteredDirective = errors.New("unregistered directive")
+	ErrUnregisteredCoder     = errors.New("unregistered coder")
+	ErrTypeMismatch          = internal.ErrTypeMismatch
 )
 
 type InvalidFieldError struct {

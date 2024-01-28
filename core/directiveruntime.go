@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/owl"
 )
 
@@ -88,7 +87,7 @@ func (rtm *DirectiveRuntime) SetValue(value any) error {
 
 	if !newValue.Type().AssignableTo(targetType) {
 		return fmt.Errorf("%w: value of type %q is not assignable to type %q",
-			internal.ErrTypeMismatch, reflect.TypeOf(value), targetType)
+			ErrTypeMismatch, reflect.TypeOf(value), targetType)
 	}
 
 	rtm.Value.Elem().Set(newValue)

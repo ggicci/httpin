@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -318,6 +319,52 @@ func TestCore_Decode_PointerTypes(t *testing.T) {
 	assert.Equal([]string{"Canada"}, ife.Value)
 	assert.Equal("form", ife.Directive)
 	assert.ErrorContains(err, "invalid place")
+}
+
+type CommaSeparatedIntegerArray struct {
+	Value []int
+}
+
+func (a CommaSeparatedIntegerArray) ToString() (string, error) {
+	var res = make([]string, len(a.Value))
+	for i := range a.Value {
+		res[i] = strconv.Itoa(a.Value[i])
+	}
+	return strings.Join(res, ","), nil
+}
+
+func (pa *CommaSeparatedIntegerArray) FromString(value string) error {
+	a := CommaSeparatedIntegerArray{}
+	values := strings.Split(value, ",")
+	a.Value = make([]int, len(values))
+	for i := range values {
+		if value, err := strconv.Atoi(values[i]); err != nil {
+			return err
+		} else {
+			a.Value[i] = value
+		}
+	}
+	*pa = a
+	return nil
+}
+
+func TestCore_Decode_CustomTypeSliceValueWrapper(t *testing.T) {
+	assert := assert.New(t)
+
+	type Input struct {
+		Ids CommaSeparatedIntegerArray `in:"form=ids"`
+	}
+	co, err := New(Input{})
+	assert.NoError(err)
+
+	// Missing fields.
+	r := newMultipartFormRequestFromMap(map[string]any{
+		"ids": "1,2,3",
+	})
+	gotValue, err := co.Decode(r)
+	assert.NoError(err)
+	got := gotValue.(*Input)
+	assert.Equal([]int{1, 2, 3}, got.Ids.Value)
 }
 
 // Test: register named coders and use them in the "coder" directive,

@@ -236,7 +236,7 @@ func reserveCoderDirective(r *owl.Resolver, name string) error {
 
 	namedAdaptor := namedStringableAdaptors[d.Argv[0]]
 	if namedAdaptor == nil {
-		return fmt.Errorf("directive %s: unregistered coder: %q", name, d.Argv[0])
+		return fmt.Errorf("directive %s: %w: %q", name, ErrUnregisteredCoder, d.Argv[0])
 	}
 
 	r.Context = context.WithValue(r.Context, CtxCustomCoder, namedAdaptor)
@@ -248,7 +248,7 @@ func reserveCoderDirective(r *owl.Resolver, name string) error {
 func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 	for _, d := range r.Directives {
 		if decoderNamespace.LookupExecutor(d.Name) == nil {
-			return fmt.Errorf("unregistered directive: %q", d.Name)
+			return fmt.Errorf("%w: %q", ErrUnregisteredDirective, d.Name)
 		}
 		// NOTE: don't need to check encoderNamespace because a directive
 		// will always be registered in both namespaces. See RegisterDirective().

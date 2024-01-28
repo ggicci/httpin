@@ -6,6 +6,7 @@ package httpin
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 
@@ -21,6 +22,13 @@ const (
 	//     input := r.Context().Value(httpin.Input).(*InputStruct)
 	Input contextKey = iota
 )
+
+// Option is a collection of options for creating a Core instance.
+var Option coreOptions = coreOptions{
+	WithErrorHandler:            core.WithErrorHandler,
+	WithMaxMemory:               core.WithMaxMemory,
+	WithNestedDirectivesEnabled: core.WithNestedDirectivesEnabled,
+}
 
 // New calls core.New to create a new Core instance. Which is responsible for both:
 //
@@ -39,7 +47,9 @@ const (
 // API, chained with other middlewares, and also reused in other APIs. You even
 // don't need to call the Deocde() method explicitly, the middleware will do it
 // for you and put the decoded instance to the request's context.
-var New = core.New
+func New(inputStruct any, opts ...core.Option) (*core.Core, error) {
+	return core.New(inputStruct, opts...)
+}
 
 // File is the builtin type of httpin to manupulate file uploads. On the server
 // side, it is used to represent a file in a multipart/form-data request. On the
@@ -48,11 +58,15 @@ type File = core.File
 
 // UploadFile is a helper function to create a File instance from a file path.
 // It is useful when you want to upload a file from the local file system.
-var UploadFile = core.UploadFile
+func UploadFile(path string) *File {
+	return core.UploadFile(path)
+}
 
 // UploadStream is a helper function to create a File instance from a io.Reader. It
 // is useful when you want to upload a file from a stream.
-var UploadStream = core.UploadStream
+func UploadStream(r io.ReadCloser) *File {
+	return core.UploadStream(r)
+}
 
 // Decode decodes an HTTP request to the given input struct. The input must be a
 // pointer to a struct instance. For example:
@@ -61,12 +75,12 @@ var UploadStream = core.UploadStream
 //	if err := Decode(req, &input); err != nil { ... }
 //
 // input is now populated with data from the request.
-func Decode(req *http.Request, input any) error {
+func Decode(req *http.Request, input any, opts ...core.Option) error {
 	originalType := reflect.TypeOf(input)
 	if originalType.Kind() != reflect.Ptr {
 		return fmt.Errorf("httpin: input must be a pointer")
 	}
-	co, err := New(originalType.Elem())
+	co, err := New(originalType.Elem(), opts...)
 	if err != nil {
 		return err
 	}
@@ -83,15 +97,15 @@ func Decode(req *http.Request, input any) error {
 }
 
 // NewRequest wraps NewRequestWithContext using context.Background.
-func NewRequest(method, url string, input any) (*http.Request, error) {
+func NewRequest(method, url string, input any, opts ...core.Option) (*http.Request, error) {
 	return NewRequestWithContext(context.Background(), method, url, input)
 }
 
 // NewRequestWithContext returns a new http.Request given a method, url and an
 // input struct instance. The fields of the input struct will be encoded to the
 // request by resolving the "in" tags and executing the directives.
-func NewRequestWithContext(ctx context.Context, method, url string, input any) (*http.Request, error) {
-	co, err := New(input)
+func NewRequestWithContext(ctx context.Context, method, url string, input any, opts ...core.Option) (*http.Request, error) {
+	co, err := New(input, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -144,4 +158,17 @@ func NewInput(inputStruct any, opts ...core.Option) func(http.Handler) http.Hand
 			next.ServeHTTP(rw, r.WithContext(ctx))
 		})
 	}
+}
+
+type coreOptions struct {
+	// WithErrorHandler overrides the default error handler.
+	WithErrorHandler func(core.ErrorHandler) core.Option
+
+	// WithMaxMemory overrides the default maximum memory size (32MB) when reading
+	// the request body. See https://pkg.go.dev/net/http#Request.ParseMultipartForm
+	// for more details.
+	WithMaxMemory func(int64) core.Option
+
+	// WithNestedDirectivesEnabled enables/disables nested directives.
+	WithNestedDirectivesEnabled func(bool) core.Option
 }
