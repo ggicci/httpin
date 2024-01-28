@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ggicci/httpin/internal"
-	"github.com/ggicci/owl"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,7 +55,7 @@ func (p *Place) FromString(value string) error {
 func TestNew_WithNonStructType(t *testing.T) {
 	co, err := New(string("hello"))
 	assert.Nil(t, co)
-	assert.ErrorIs(t, err, owl.ErrUnsupportedType)
+	assert.ErrorIs(t, err, ErrUnsupportedType)
 }
 
 func TestNew_ErrUnregisteredDirective(t *testing.T) {
@@ -226,7 +225,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		co, err := New(Cursor{})
 		assert.NoError(t, err)
 		got, err := co.Decode(r)
-		assert.ErrorIs(t, err, internal.ErrUnsupportedType)
+		assert.ErrorIs(t, err, ErrUnsupportedType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -244,7 +243,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		co, err := New(Payload{})
 		assert.NoError(t, err)
 		got, err := co.Decode(r)
-		assert.ErrorIs(t, err, internal.ErrUnsupportedType)
+		assert.ErrorIs(t, err, ErrUnsupportedType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()

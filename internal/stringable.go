@@ -9,11 +9,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/ggicci/owl"
 )
 
 var (
-	ErrUnsupportedType = errors.New("unsupported type")
 	ErrTypeMismatch    = errors.New("type mismatch")
+	ErrUnsupportedType = owl.ErrUnsupportedType
 
 	builtinStringableAdaptors = make(map[reflect.Type]AnyStringableAdaptor)
 )

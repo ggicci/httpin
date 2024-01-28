@@ -7,9 +7,12 @@ import (
 	"time"
 
 	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/owl"
 )
 
 type Stringable = internal.Stringable
+
+var ErrUnsupportedType = owl.ErrUnsupportedType
 
 func NewStringable(rv reflect.Value, adapt AnyStringableAdaptor) (stringable Stringable, err error) {
 	if IsPatchField(rv.Type()) {
