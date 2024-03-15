@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/ggicci/owl v0.7.0
-	github.com/go-chi/chi/v5 v5.0.11
+	github.com/go-chi/chi/v5 v5.0.12
 	github.com/gorilla/mux v1.8.1
 	github.com/justinas/alice v1.2.0
 	github.com/labstack/echo/v4 v4.11.4
