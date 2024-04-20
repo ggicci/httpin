@@ -20,57 +20,79 @@ type Pagination struct {
 	PerPage int `in:"form=per_page,page_size"`
 }
 
-func TestDecode(t *testing.T) {
+func testcasePagination1100() (*http.Request, *Pagination) {
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.Form = url.Values{
 		"page":     {"1"},
 		"per_page": {"100"},
 	}
-	expected := &Pagination{
+	return r, &Pagination{
 		Page:    1,
 		PerPage: 100,
 	}
+}
+
+func TestDecodeTo(t *testing.T) {
+	r, expected := testcasePagination1100()
 
 	func() {
 		input := &Pagination{}
-		err := Decode(r, input) // pointer to a struct instance
+		err := DecodeTo(r, input) // pointer to a struct instance
 		assert.NoError(t, err)
 		assert.Equal(t, expected, input)
 	}()
 
 	func() {
 		input := Pagination{}
-		err := Decode(r, &input) // addressable struct instance
+		err := DecodeTo(r, &input) // addressable struct instance
 		assert.NoError(t, err)
 		assert.Equal(t, expected, &input)
 	}()
 
 	func() {
 		input := &Pagination{}
-		err := Decode(r, &input) // pointer to pointer of struct instance
+		err := DecodeTo(r, &input) // pointer to pointer of struct instance
 		assert.NoError(t, err)
 		assert.Equal(t, expected, input)
 	}()
 
 	func() {
 		input := Pagination{}
-		err := Decode(r, input) // non-pointer struct instance should fail
-		assert.ErrorContains(t, err, "input must be a pointer")
+		err := DecodeTo(r, input) // non-pointer struct instance should fail
+		assert.ErrorContains(t, err, "invalid resolve target")
 	}()
 }
 
+func TestDecode(t *testing.T) {
+	r, expected := testcasePagination1100()
+
+	p, err := Decode[Pagination](r)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, p)
+}
+
+func TestDecode_ErrNotAStruct(t *testing.T) {
+	r, _ := testcasePagination1100()
+
+	_, err := Decode[int](r)
+	assert.ErrorContains(t, err, "T must be a struct type")
+
+	_, err = Decode[*Pagination](r)
+	assert.ErrorContains(t, err, "T must be a struct type")
+}
+
 func TestDecode_ErrBuildResolverFailed(t *testing.T) {
-	r, _ := http.NewRequest("GET", "/", nil)
-	r.Form = url.Values{
-		"page":     {"1"},
-		"per_page": {"100"},
-	}
+	r, _ := testcasePagination1100()
 
 	type Foo struct {
 		Name string `in:"nonexistent=foo"`
 	}
 
-	assert.Error(t, Decode(r, &Foo{}))
+	assert.Error(t, DecodeTo(r, &Foo{}))
+
+	v, err := Decode[Foo](r)
+	assert.Nil(t, v)
+	assert.Error(t, err)
 }
 
 func TestDecode_ErrDecodeFailure(t *testing.T) {
@@ -81,7 +103,11 @@ func TestDecode_ErrDecodeFailure(t *testing.T) {
 	}
 
 	p := &Pagination{}
-	assert.Error(t, Decode(r, p))
+	assert.Error(t, DecodeTo(r, p))
+
+	v, err := Decode[Pagination](r)
+	assert.Nil(t, v)
+	assert.Error(t, err)
 }
 
 type EchoInput struct {

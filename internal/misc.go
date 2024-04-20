@@ -7,7 +7,7 @@ import (
 
 func IsNil(value reflect.Value) bool {
 	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Slice:
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.Interface, reflect.Slice:
 		return value.IsNil()
 	default:
 		return false
@@ -29,4 +29,13 @@ func TypeOf[T any]() reflect.Type {
 
 func Pointerize[T any](v T) *T {
 	return &v
+}
+
+// DereferencedType returns the underlying type of a pointer.
+func DereferencedType(v any) reflect.Type {
+	rv := reflect.ValueOf(v)
+	for rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	return rv.Type()
 }

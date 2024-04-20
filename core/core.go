@@ -2,9 +2,11 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"mime"
 	"net/http"
+	"reflect"
 	"sort"
 	"sync"
 
@@ -30,7 +32,7 @@ type Core struct {
 // is responsible for both:
 //
 //   - decoding an HTTP request to an instance of the inputStruct;
-//   - and encoding an instance of the inputStruct to an HTTP request.
+//   - encoding an instance of the inputStruct to an HTTP request.
 func New(inputStruct any, opts ...Option) (*Core, error) {
 	resolver, err := buildResolver(inputStruct)
 	if err != nil {
@@ -52,55 +54,59 @@ func New(inputStruct any, opts ...Option) (*Core, error) {
 
 	for _, opt := range allOptions {
 		if err := opt(core); err != nil {
-			return nil, fmt.Errorf("httpin: invalid option: %w", err)
+			return nil, fmt.Errorf("invalid option: %w", err)
 		}
 	}
 
 	return core, nil
 }
 
-// Decode decodes an HTTP request to a struct instance.
-// The return value is a pointer to the input struct.
-// For example:
+// Decode decodes an HTTP request to a struct instance. The return value is a
+// pointer to the input struct. For example:
 //
-//	New(&Input{}).Decode(req) -> *Input
 //	New(Input{}).Decode(req) -> *Input
 func (c *Core) Decode(req *http.Request) (any, error) {
-	var err error
-	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
-	if ct == "multipart/form-data" {
-		err = req.ParseMultipartForm(c.maxMemory)
-	} else {
-		err = req.ParseForm()
-	}
-	if err != nil {
+	// Create the input struct instance. Used to be created by owl.Resolve().
+	value := reflect.New(c.resolver.Type).Interface()
+	if err := c.DecodeTo(req, value); err != nil {
 		return nil, err
+	} else {
+		return value, nil
+	}
+}
+
+// DecodeTo decodes an HTTP request to the given value. The value must be a pointer
+// to the struct instance of the type that the Core instance holds.
+func (c *Core) DecodeTo(req *http.Request, value any) (err error) {
+	if err = c.parseRequestForm(req); err != nil {
+		return fmt.Errorf("failed to parse request form: %w", err)
 	}
 
-	rv, err := c.resolver.Resolve(
+	err = c.resolver.ResolveTo(
+		value,
 		owl.WithNamespace(decoderNamespace),
 		owl.WithValue(CtxRequest, req),
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
 	)
-	if err != nil {
-		return nil, NewInvalidFieldError(err)
+	if err != nil && !errors.Is(err, owl.ErrInvalidResolveTarget) {
+		return NewInvalidFieldError(err)
 	}
-	return rv.Interface(), nil
+	return err
 }
 
-// NewRequest wraps NewRequestWithContext using context.Background.
+// NewRequest wraps NewRequestWithContext using context.Background(), see
+// NewRequestWithContext.
 func (c *Core) NewRequest(method string, url string, input any) (*http.Request, error) {
 	return c.NewRequestWithContext(context.Background(), method, url, input)
 }
 
-// NewRequestWithContext returns a new http.Request given a method, url and an
-// input struct instance. Note that the Core instance is bound to a specific
-// type of struct. Which means when the given input is not the type of the
-// struct that the Core instance holds, error of type mismatch will be returned.
-// In order to avoid this error, you can always use httpin.NewRequest() function
-// instead. Which will create a Core instance for you when needed. There's no
-// performance penalty for doing so. Because there's a cache layer for all the
-// Core instances.
+// NewRequestWithContext turns the given input struct into an HTTP request. Note
+// that the Core instance is bound to a specific type of struct. Which means
+// when the given input is not the type of the struct that the Core instance
+// holds, error of type mismatch will be returned. In order to avoid this error,
+// you can always use httpin.NewRequest() instead. Which will create a Core
+// instance for you on demand. There's no performance penalty for doing so.
+// Because there's a cache layer for all the Core instances.
 func (c *Core) NewRequestWithContext(ctx context.Context, method string, url string, input any) (*http.Request, error) {
 	c.prepareScanResolver()
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
@@ -166,6 +172,16 @@ func (c *Core) prepareScanResolver() {
 	} else {
 		c.resolverMu.RUnlock()
 	}
+}
+
+func (c *Core) parseRequestForm(req *http.Request) (err error) {
+	ct, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
+	if ct == "multipart/form-data" {
+		err = req.ParseMultipartForm(c.maxMemory)
+	} else {
+		err = req.ParseForm()
+	}
+	return
 }
 
 // buildResolver builds a resolver for the inputStruct. It will run normalizations
