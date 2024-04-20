@@ -5,7 +5,7 @@ package httpin
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"reflect"
@@ -68,42 +68,55 @@ func UploadStream(r io.ReadCloser) *File {
 	return core.UploadStream(r)
 }
 
-// Decode decodes an HTTP request to the given input struct. The input must be a
-// pointer to a struct instance. For example:
+// DecodeTo decodes an HTTP request and populates input with data from the HTTP request.
+// The input must be a pointer to a struct instance. For example:
 //
 //	input := &InputStruct{}
-//	if err := Decode(req, &input); err != nil { ... }
+//	if err := DecodeTo(req, input); err != nil { ... }
 //
 // input is now populated with data from the request.
-func Decode(req *http.Request, input any, opts ...core.Option) error {
-	originalType := reflect.TypeOf(input)
-	if originalType.Kind() != reflect.Ptr {
-		return fmt.Errorf("httpin: input must be a pointer")
-	}
-	co, err := New(originalType.Elem(), opts...)
+func DecodeTo(req *http.Request, input any, opts ...core.Option) error {
+	co, err := New(internal.DereferencedType(input), opts...)
 	if err != nil {
 		return err
 	}
-	if value, err := co.Decode(req); err != nil {
-		return err
+	return co.DecodeTo(req, input)
+}
+
+// Decode decodes an HTTP request to an instance of T and returns its pointer
+// (*T). T must be a struct type. For example:
+//
+//	if user, err := Decode[User](req); err != nil { ... }
+//	// now user is a *User instance, which has been populated with data from the request.
+func Decode[T any](req *http.Request, opts ...core.Option) (*T, error) {
+	rt := internal.TypeOf[T]()
+	if rt.Kind() != reflect.Struct {
+		return nil, errors.New("generic type T must be a struct type")
+	}
+	co, err := New(rt, opts...)
+	if err != nil {
+		return nil, err
+	}
+	if v, err := co.Decode(req); err != nil {
+		return nil, err
 	} else {
-		if originalType.Elem().Kind() == reflect.Ptr {
-			reflect.ValueOf(input).Elem().Set(reflect.ValueOf(value))
-		} else {
-			reflect.ValueOf(input).Elem().Set(reflect.ValueOf(value).Elem())
-		}
-		return nil
+		return v.(*T), nil
 	}
 }
 
-// NewRequest wraps NewRequestWithContext using context.Background.
+// NewRequest wraps NewRequestWithContext using context.Background(), see NewRequestWithContext.
 func NewRequest(method, url string, input any, opts ...core.Option) (*http.Request, error) {
 	return NewRequestWithContext(context.Background(), method, url, input)
 }
 
-// NewRequestWithContext returns a new http.Request given a method, url and an
-// input struct instance. The fields of the input struct will be encoded to the
-// request by resolving the "in" tags and executing the directives.
+// NewRequestWithContext turns the given input into an HTTP request. The input
+// must be a struct instance. And its fields' "in" tags define how to bind the
+// data from the struct to the HTTP request. Use it as the replacement of
+// http.NewRequest().
+//
+//	addUserPayload := &AddUserRequest{...}
+//	addUserRequest, err := NewRequestWithContext(context.Background(), "GET", "http://example.com", addUserPayload)
+//	http.DefaultClient.Do(addUserRequest)
 func NewRequestWithContext(ctx context.Context, method, url string, input any, opts ...core.Option) (*http.Request, error) {
 	co, err := New(input, opts...)
 	if err != nil {
@@ -116,9 +129,9 @@ func NewRequestWithContext(ctx context.Context, method, url string, input any, o
 // in an http.Handler and returns another http.Handler.
 //
 // The middleware created by NewInput is to add the decoding function to an
-// existing http.Handler. This functionality will decode the HTTP request and
-// put the decoded struct instance to the request's context. So that the next
-// hop can get the decoded struct instance from the request's context.
+// existing http.Handler. This functionality will decode the HTTP request into a
+// struct instance and put its pointer to the request's context. So that the
+// next hop can get the decoded struct instance from the request's context.
 //
 // We recommend using https://github.com/justinas/alice to chain your
 // middlewares. If you're using some popular web frameworks, they may have
