@@ -61,8 +61,8 @@ func New(inputStruct any, opts ...Option) (*Core, error) {
 	return core, nil
 }
 
-// Decode decodes an HTTP request to a struct instance. The return value is a
-// pointer to the input struct. For example:
+// Decode decodes an HTTP request to an instance of the input struct and returns
+// its pointer. For example:
 //
 //	New(Input{}).Decode(req) -> *Input
 func (c *Core) Decode(req *http.Request) (any, error) {

@@ -68,8 +68,8 @@ func UploadStream(r io.ReadCloser) *File {
 	return core.UploadStream(r)
 }
 
-// DecodeTo decodes an HTTP request to the given input struct. The input must be
-// a pointer (no matter how many levels) to a struct instance. For example:
+// DecodeTo decodes an HTTP request and populates input with data from the HTTP request.
+// The input must be a pointer to a struct instance. For example:
 //
 //	input := &InputStruct{}
 //	if err := DecodeTo(req, input); err != nil { ... }
@@ -83,8 +83,8 @@ func DecodeTo(req *http.Request, input any, opts ...core.Option) error {
 	return co.DecodeTo(req, input)
 }
 
-// Decode decodes an HTTP request to a struct instance. The return value is a
-// pointer to the input struct. For example:
+// Decode decodes an HTTP request to an instance of T and returns its pointer
+// (*T). T must be a struct type. For example:
 //
 //	if user, err := Decode[User](req); err != nil { ... }
 //	// now user is a *User instance, which has been populated with data from the request.
@@ -109,9 +109,10 @@ func NewRequest(method, url string, input any, opts ...core.Option) (*http.Reque
 	return NewRequestWithContext(context.Background(), method, url, input)
 }
 
-// NewRequestWithContext turns the given input struct into an HTTP request. The
-// input struct with the "in" tags defines how to bind the data from the struct
-// to the HTTP request. Use it as the replacement of http.NewRequest().
+// NewRequestWithContext turns the given input into an HTTP request. The input
+// must be a struct instance. And its fields' "in" tags define how to bind the
+// data from the struct to the HTTP request. Use it as the replacement of
+// http.NewRequest().
 //
 //	addUserPayload := &AddUserRequest{...}
 //	addUserRequest, err := NewRequestWithContext(context.Background(), "GET", "http://example.com", addUserPayload)
@@ -128,9 +129,9 @@ func NewRequestWithContext(ctx context.Context, method, url string, input any, o
 // in an http.Handler and returns another http.Handler.
 //
 // The middleware created by NewInput is to add the decoding function to an
-// existing http.Handler. This functionality will decode the HTTP request and
-// put the decoded struct instance to the request's context. So that the next
-// hop can get the decoded struct instance from the request's context.
+// existing http.Handler. This functionality will decode the HTTP request into a
+// struct instance and put its pointer to the request's context. So that the
+// next hop can get the decoded struct instance from the request's context.
 //
 // We recommend using https://github.com/justinas/alice to chain your
 // middlewares. If you're using some popular web frameworks, they may have
