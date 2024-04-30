@@ -1,4 +1,4 @@
-package integration
+package integration_test
 
 import (
 	"fmt"
@@ -8,19 +8,14 @@ import (
 	"testing"
 
 	"github.com/ggicci/httpin"
+	httpin_integration "github.com/ggicci/httpin/integration"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 
-type GetPostOfUserInput struct {
-	Username string `in:"path=username"`
-	PostID   int64  `in:"path=pid"`
-}
-
 func TestUseEchoMux(t *testing.T) {
-
 	e := echo.New()
-	UseEchoPathRouter(e)
+	httpin_integration.UseEchoPathRouter(e)
 
 	req := httptest.NewRequest(http.MethodGet, "/users/ggicci/posts/123", nil)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
