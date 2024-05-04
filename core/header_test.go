@@ -29,23 +29,45 @@ func TestDirectiveHeader_Decode(t *testing.T) {
 
 func TestDirectiveHeader_NewRequest(t *testing.T) {
 	type ApiQuery struct {
-		ApiUid   int    `in:"header=x-api-uid"`
-		ApiToken string `in:"header=X-Api-Token"`
+		ApiUid   int     `in:"header=x-api-uid"`
+		ApiToken *string `in:"header=X-Api-Token,omitempty"`
 	}
 
-	query := &ApiQuery{
-		ApiUid:   91241844,
-		ApiToken: "some-secret-token",
-	}
+	t.Run("with all values", func(t *testing.T) {
+		tk := "some-secret-token"
+		query := &ApiQuery{
+			ApiUid:   91241844,
+			ApiToken: &tk,
+		}
 
-	co, err := New(ApiQuery{})
-	assert.NoError(t, err)
-	req, err := co.NewRequest("POST", "/api", query)
-	assert.NoError(t, err)
+		co, err := New(ApiQuery{})
+		assert.NoError(t, err)
+		req, err := co.NewRequest("POST", "/api", query)
+		assert.NoError(t, err)
 
-	expected, _ := http.NewRequest("POST", "/api", nil)
-	// NOTE: the key will be canonicalized
-	expected.Header.Set("x-api-uid", "91241844")
-	expected.Header.Set("X-Api-Token", "some-secret-token")
-	assert.Equal(t, expected, req)
+		expected, _ := http.NewRequest("POST", "/api", nil)
+		// NOTE: the key will be canonicalized
+		expected.Header.Set("x-api-uid", "91241844")
+		expected.Header.Set("X-Api-Token", "some-secret-token")
+		assert.Equal(t, expected, req)
+	})
+
+	t.Run("with nil value", func(t *testing.T) {
+		query := &ApiQuery{
+			ApiUid:   91241844,
+			ApiToken: nil,
+		}
+
+		co, err := New(ApiQuery{})
+		assert.NoError(t, err)
+		req, err := co.NewRequest("POST", "/api", query)
+		assert.NoError(t, err)
+
+		expected, _ := http.NewRequest("POST", "/api", nil)
+		expected.Header.Set("x-api-uid", "91241844")
+		assert.Equal(t, expected, req)
+
+		_, ok := req.Header["X-Api-Token"]
+		assert.False(t, ok)
+	})
 }

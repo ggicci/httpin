@@ -1,12 +1,20 @@
 package core
 
-import "github.com/ggicci/httpin/internal"
+import (
+	"github.com/ggicci/httpin/internal"
+	"strings"
+)
 
 type FormEncoder struct {
 	Setter func(key string, value []string) // form value setter
 }
 
 func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
+	tag := rtm.Resolver.Field.Tag.Get("in")
+	if rtm.Value.IsZero() && strings.Contains(tag, "omitempty") {
+		return nil
+	}
+
 	if rtm.IsFieldSet() {
 		return nil // skip when already encoded by former directives
 	}
