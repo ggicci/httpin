@@ -33,14 +33,14 @@ func TestDirectiveQuery_Decode(t *testing.T) {
 func TestDirectiveQuery_NewRequest(t *testing.T) {
 	type SearchQuery struct {
 		Name    string  `in:"query=name"`
-		Age     int     `in:"query=age"`
+		Age     int     `in:"query=age,omitempty"`
 		Enabled bool    `in:"query=enabled"`
 		Price   float64 `in:"query=price"`
 
 		NameList []string `in:"query=name_list[]"`
 		AgeList  []int    `in:"query=age_list[]"`
 
-		NamePointer *string `in:"query=name_pointer,omitempty"`
+		NamePointer *string `in:"query=name_pointer"`
 		AgePointer  *int    `in:"query=age_pointer,omitempty"`
 	}
 
@@ -81,7 +81,7 @@ func TestDirectiveQuery_NewRequest(t *testing.T) {
 		assert.Equal(t, expected, req)
 	})
 
-	t.Run("with nil values", func(t *testing.T) {
+	t.Run("with empty values", func(t *testing.T) {
 		query := &SearchQuery{}
 
 		co, err := New(SearchQuery{})
@@ -90,9 +90,9 @@ func TestDirectiveQuery_NewRequest(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.True(t, req.URL.Query().Has("name"))
-		assert.True(t, req.URL.Query().Has("age"))
+		assert.False(t, req.URL.Query().Has("age"))
 
-		assert.False(t, req.URL.Query().Has("name_pointer"))
+		assert.True(t, req.URL.Query().Has("name_pointer"))
 		assert.False(t, req.URL.Query().Has("age_pointer"))
 	})
 }

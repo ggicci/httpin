@@ -52,7 +52,7 @@ func TestDirectiveHeader_NewRequest(t *testing.T) {
 		assert.Equal(t, expected, req)
 	})
 
-	t.Run("with nil value", func(t *testing.T) {
+	t.Run("with empty value", func(t *testing.T) {
 		query := &ApiQuery{
 			ApiUid:   91241844,
 			ApiToken: nil,
