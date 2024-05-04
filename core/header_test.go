@@ -29,7 +29,7 @@ func TestDirectiveHeader_Decode(t *testing.T) {
 
 func TestDirectiveHeader_NewRequest(t *testing.T) {
 	type ApiQuery struct {
-		ApiUid   int     `in:"header=x-api-uid"`
+		ApiUid   int     `in:"header=x-api-uid,omitempty"`
 		ApiToken *string `in:"header=X-Api-Token,omitempty"`
 	}
 
@@ -54,7 +54,7 @@ func TestDirectiveHeader_NewRequest(t *testing.T) {
 
 	t.Run("with empty value", func(t *testing.T) {
 		query := &ApiQuery{
-			ApiUid:   91241844,
+			ApiUid:   0,
 			ApiToken: nil,
 		}
 
@@ -64,10 +64,12 @@ func TestDirectiveHeader_NewRequest(t *testing.T) {
 		assert.NoError(t, err)
 
 		expected, _ := http.NewRequest("POST", "/api", nil)
-		expected.Header.Set("x-api-uid", "91241844")
 		assert.Equal(t, expected, req)
 
-		_, ok := req.Header["X-Api-Token"]
+		_, ok := req.Header["X-Api-Uid"]
+		assert.False(t, ok)
+
+		_, ok = req.Header["X-Api-Token"]
 		assert.False(t, ok)
 	})
 }
