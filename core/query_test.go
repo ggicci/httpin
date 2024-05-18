@@ -33,7 +33,7 @@ func TestDirectiveQuery_Decode(t *testing.T) {
 func TestDirectiveQuery_NewRequest(t *testing.T) {
 	type SearchQuery struct {
 		Name    string  `in:"query=name"`
-		Age     int     `in:"query=age,omitempty"`
+		Age     int     `in:"query=age;omitempty"`
 		Enabled bool    `in:"query=enabled"`
 		Price   float64 `in:"query=price"`
 
@@ -41,7 +41,7 @@ func TestDirectiveQuery_NewRequest(t *testing.T) {
 		AgeList  []int    `in:"query=age_list[]"`
 
 		NamePointer *string `in:"query=name_pointer"`
-		AgePointer  *int    `in:"query=age_pointer,omitempty"`
+		AgePointer  *int    `in:"query=age_pointer;omitempty"`
 	}
 
 	t.Run("with all values", func(t *testing.T) {

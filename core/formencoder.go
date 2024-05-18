@@ -2,7 +2,6 @@ package core
 
 import (
 	"github.com/ggicci/httpin/internal"
-	"slices"
 )
 
 type FormEncoder struct {
@@ -10,8 +9,12 @@ type FormEncoder struct {
 }
 
 func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
-	if rtm.Value.IsZero() && slices.Contains(rtm.Directive.Argv, "omitempty") {
-		return nil
+	if rtm.Value.IsZero() {
+		for _, d := range rtm.Resolver.Directives {
+			if d.Name == "omitempty" {
+				return nil
+			}
+		}
 	}
 
 	if rtm.IsFieldSet() {

@@ -29,8 +29,8 @@ func TestDirectiveHeader_Decode(t *testing.T) {
 
 func TestDirectiveHeader_NewRequest(t *testing.T) {
 	type ApiQuery struct {
-		ApiUid   int     `in:"header=x-api-uid,omitempty"`
-		ApiToken *string `in:"header=X-Api-Token,omitempty"`
+		ApiUid   int     `in:"header=x-api-uid;omitempty"`
+		ApiToken *string `in:"header=X-Api-Token;omitempty"`
 	}
 
 	t.Run("with all values", func(t *testing.T) {
