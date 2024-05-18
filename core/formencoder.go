@@ -10,10 +10,8 @@ type FormEncoder struct {
 
 func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 	if rtm.Value.IsZero() {
-		for _, d := range rtm.Resolver.Directives {
-			if d.Name == "omitempty" {
-				return nil
-			}
+		if rtm.Resolver.GetDirective("omitempty") != nil {
+			return nil
 		}
 	}
 
