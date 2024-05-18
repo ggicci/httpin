@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/ggicci/httpin/internal"
-	"strings"
+	"slices"
 )
 
 type FormEncoder struct {
@@ -10,8 +10,7 @@ type FormEncoder struct {
 }
 
 func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
-	tag := rtm.Resolver.Field.Tag.Get("in")
-	if rtm.Value.IsZero() && strings.Contains(tag, "omitempty") {
+	if rtm.Value.IsZero() && slices.Contains(rtm.Directive.Argv, "omitempty") {
 		return nil
 	}
 
