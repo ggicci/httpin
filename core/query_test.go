@@ -33,7 +33,7 @@ func TestDirectiveQuery_Decode(t *testing.T) {
 func TestDirectiveQuery_NewRequest(t *testing.T) {
 	type SearchQuery struct {
 		Name    string  `in:"query=name"`
-		Age     int     `in:"query=age"`
+		Age     int     `in:"query=age;omitempty"`
 		Enabled bool    `in:"query=enabled"`
 		Price   float64 `in:"query=price"`
 
@@ -41,42 +41,60 @@ func TestDirectiveQuery_NewRequest(t *testing.T) {
 		AgeList  []int    `in:"query=age_list[]"`
 
 		NamePointer *string `in:"query=name_pointer"`
-		AgePointer  *int    `in:"query=age_pointer"`
-	}
-	query := &SearchQuery{
-		Name:     "cupcake",
-		Age:      12,
-		Enabled:  true,
-		Price:    6.28,
-		NameList: []string{"apple", "banana", "cherry"},
-		AgeList:  []int{1, 2, 3},
-		NamePointer: func() *string {
-			s := "pointer cupcake"
-			return &s
-		}(),
-		AgePointer: func() *int {
-			i := 19
-			return &i
-		}(),
+		AgePointer  *int    `in:"query=age_pointer;omitempty"`
 	}
 
-	co, err := New(SearchQuery{})
-	assert.NoError(t, err)
-	req, err := co.NewRequest("GET", "/pets", query)
-	assert.NoError(t, err)
+	t.Run("with all values", func(t *testing.T) {
+		query := &SearchQuery{
+			Name:     "cupcake",
+			Age:      12,
+			Enabled:  true,
+			Price:    6.28,
+			NameList: []string{"apple", "banana", "cherry"},
+			AgeList:  []int{1, 2, 3},
+			NamePointer: func() *string {
+				s := "pointer cupcake"
+				return &s
+			}(),
+			AgePointer: func() *int {
+				i := 19
+				return &i
+			}(),
+		}
 
-	expected, _ := http.NewRequest("GET", "/pets", nil)
-	expectedQuery := make(url.Values)
-	expectedQuery.Set("name", query.Name)                 // query.Name
-	expectedQuery.Set("age", "12")                        // query.Age
-	expectedQuery.Set("enabled", "true")                  // query.Enabled
-	expectedQuery.Set("price", "6.28")                    // query.Price
-	expectedQuery["name_list[]"] = query.NameList         // query.NameList
-	expectedQuery["age_list[]"] = []string{"1", "2", "3"} // query.AgeList
-	expectedQuery.Set("name_pointer", *query.NamePointer) // query.NamePointer
-	expectedQuery.Set("age_pointer", "19")                // query.PointerAge
-	expected.URL.RawQuery = expectedQuery.Encode()
-	assert.Equal(t, expected, req)
+		co, err := New(SearchQuery{})
+		assert.NoError(t, err)
+		req, err := co.NewRequest("GET", "/pets", query)
+		assert.NoError(t, err)
+
+		expected, _ := http.NewRequest("GET", "/pets", nil)
+		expectedQuery := make(url.Values)
+		expectedQuery.Set("name", query.Name)                 // query.Name
+		expectedQuery.Set("age", "12")                        // query.Age
+		expectedQuery.Set("enabled", "true")                  // query.Enabled
+		expectedQuery.Set("price", "6.28")                    // query.Price
+		expectedQuery["name_list[]"] = query.NameList         // query.NameList
+		expectedQuery["age_list[]"] = []string{"1", "2", "3"} // query.AgeList
+		expectedQuery.Set("name_pointer", *query.NamePointer) // query.NamePointer
+		expectedQuery.Set("age_pointer", "19")                // query.PointerAge
+		expected.URL.RawQuery = expectedQuery.Encode()
+		assert.Equal(t, expected, req)
+	})
+
+	t.Run("with empty values", func(t *testing.T) {
+		query := &SearchQuery{}
+
+		co, err := New(SearchQuery{})
+		assert.NoError(t, err)
+		req, err := co.NewRequest("GET", "/pets", query)
+		assert.NoError(t, err)
+
+		assert.True(t, req.URL.Query().Has("name"))
+		assert.False(t, req.URL.Query().Has("age"))
+
+		assert.True(t, req.URL.Query().Has("name_pointer"))
+		assert.False(t, req.URL.Query().Has("age_pointer"))
+	})
 }
 
 type Location struct {

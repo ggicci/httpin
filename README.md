@@ -52,10 +52,11 @@ Since v0.15.0, httpin also supports creating an HTTP request (`http.Request`) fr
 
 ```go
 type ListUsersInput struct {
-	Token    string `in:"query=access_token;header=x-access-token"`
-	Page     int    `in:"query=page;default=1"`
-	PerPage  int    `in:"query=per_page;default=20"`
-	IsMember bool   `in:"query=is_member"`
+	Token    string  `in:"query=access_token;header=x-access-token"`
+	Page     int     `in:"query=page;default=1"`
+	PerPage  int     `in:"query=per_page;default=20"`
+	IsMember bool    `in:"query=is_member"`
+	Search   *string `in:"query=search;omitempty"`
 }
 
 func ListUsers(rw http.ResponseWriter, r *http.Request) {

@@ -17,6 +17,7 @@ func init() {
 	RegisterDirective("default", &DirectiveDefault{})
 	RegisterDirective("nonzero", &DirectiveNonzero{})
 	registerDirective("path", defaultPathDirective)
+	registerDirective("omitempty", &DirectiveOmitEmpty{})
 
 	// decoder is a special executor which does nothing, but is an indicator of
 	// overriding the decoder for a specific field.
