@@ -48,7 +48,7 @@ Since v0.15.0, httpin also supports creating an HTTP request (`http.Request`) fr
 - **open integrated**: with [net/http](https://ggicci.github.io/httpin/integrations/http), [go-chi/chi](https://ggicci.github.io/httpin/integrations/gochi), [gorilla/mux](https://ggicci.github.io/httpin/integrations/gorilla), [gin-gonic/gin](https://ggicci.github.io/httpin/integrations/gin), etc.
 - **extensible** (advanced feature): by adding your custom directives. Read [httpin - custom directives](https://ggicci.github.io/httpin/directives/custom) for more details.
 
-## How to decode an HTTP request to Go struct?
+## Add Httpin Directives by Tagging the Struct Fields with `in`
 
 ```go
 type ListUsersInput struct {
@@ -56,9 +56,13 @@ type ListUsersInput struct {
 	Page     int     `in:"query=page;default=1"`
 	PerPage  int     `in:"query=per_page;default=20"`
 	IsMember bool    `in:"query=is_member"`
-	Search   *string `in:"query=search;omitempty"`
+    Search   *string `in:"query=search;omitempty"`
 }
+```
 
+## How to decode an HTTP request to Go struct?
+
+```go
 func ListUsers(rw http.ResponseWriter, r *http.Request) {
 	input := r.Context().Value(httpin.Input).(*ListUsersInput)
 
@@ -72,13 +76,6 @@ func ListUsers(rw http.ResponseWriter, r *http.Request) {
 ## How to encode a Go struct to HTTP request?
 
 ```go
-type ListUsersInput struct {
-	Token    string `in:"query=access_token;header=x-access-token"`
-	Page     int    `in:"query=page;default=1"`
-	PerPage  int    `in:"query=per_page;default=20"`
-	IsMember bool   `in:"query=is_member"`
-}
-
 func SDKListUsers() {
 	payload := &ListUsersInput{
 		Token:    os.Getenv("MY_APP_ACCESS_TOKEN"),
