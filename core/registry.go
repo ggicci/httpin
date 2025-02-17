@@ -4,14 +4,14 @@ import (
 	"reflect"
 
 	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/strconvx"
 )
 
-type AnyStringableAdaptor = internal.AnyStringableAdaptor
+type AnyStringConverterAdaptor = strconvx.AnyStringConverterAdaptor
 
 var (
-	fileTypes                = make(map[reflect.Type]struct{})
-	customStringableAdaptors = make(map[reflect.Type]AnyStringableAdaptor)
-	namedStringableAdaptors  = make(map[string]*NamedAnyStringableAdaptor)
+	fileTypes               = make(map[reflect.Type]struct{})
+	namedStringableAdaptors = make(map[string]*NamedAnyStringConverterAdaptor)
 )
 
 // RegisterCoder registers a custom coder for the given type T. When a field of
@@ -49,7 +49,8 @@ var (
 //		return nil
 //	}
 func RegisterCoder[T any](adapt func(*T) (Stringable, error)) {
-	customStringableAdaptors[internal.TypeOf[T]()] = internal.NewAnyStringableAdaptor[T](adapt)
+	typ, adaptor := strconvx.ToAnyStringConverterAdaptor[T](adapt)
+	strconvxNS.Adapt(typ, adaptor)
 }
 
 // RegisterNamedCoder works similar to RegisterCoder, except that it binds the
@@ -89,10 +90,11 @@ func RegisterCoder[T any](adapt func(*T) (Stringable, error)) {
 //		return nil
 //	}
 func RegisterNamedCoder[T any](name string, adapt func(*T) (Stringable, error)) {
-	namedStringableAdaptors[name] = &NamedAnyStringableAdaptor{
+	typ, adaptor := strconvx.ToAnyStringConverterAdaptor[T](adapt)
+	namedStringableAdaptors[name] = &NamedAnyStringConverterAdaptor{
 		Name:     name,
-		BaseType: internal.TypeOf[T](),
-		Adapt:    internal.NewAnyStringableAdaptor[T](adapt),
+		BaseType: typ,
+		Adapt:    adaptor,
 	}
 }
 
@@ -104,10 +106,10 @@ func RegisterFileCoder[T Fileable]() error {
 	return nil
 }
 
-type NamedAnyStringableAdaptor struct {
+type NamedAnyStringConverterAdaptor struct {
 	Name     string
 	BaseType reflect.Type
-	Adapt    AnyStringableAdaptor
+	Adapt    AnyStringConverterAdaptor
 }
 
 func isFileType(typ reflect.Type) bool {

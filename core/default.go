@@ -32,7 +32,7 @@ func (*DirectiveDefault) Encode(rtm *DirectiveRuntime) error {
 	if !rtm.Value.IsZero() {
 		return nil // skip if the field is not empty
 	}
-	var adapt AnyStringableAdaptor
+	var adapt AnyStringConverterAdaptor
 	coder := rtm.GetCustomCoder()
 	if coder != nil {
 		adapt = coder.Adapt

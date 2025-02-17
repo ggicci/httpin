@@ -7,14 +7,12 @@ import (
 	"time"
 
 	"github.com/ggicci/httpin/internal"
-	"github.com/ggicci/owl"
+	"github.com/ggicci/strconvx"
 )
 
-type Stringable = internal.Stringable
+type Stringable = strconvx.StringConverter
 
-var ErrUnsupportedType = owl.ErrUnsupportedType
-
-func NewStringable(rv reflect.Value, adapt AnyStringableAdaptor) (stringable Stringable, err error) {
+func NewStringable(rv reflect.Value, adapt AnyStringConverterAdaptor) (stringable Stringable, err error) {
 	if IsPatchField(rv.Type()) {
 		stringable, err = NewStringablePatchFieldWrapper(rv, adapt)
 	} else {
@@ -30,7 +28,7 @@ func NewStringable(rv reflect.Value, adapt AnyStringableAdaptor) (stringable Str
 // try to create a Stringable from rv. Otherwise, it will try to create a
 // Stringable from rv.Addr(). Only basic built-in types are supported. As a
 // special case, time.Time is also supported.
-func newStringable(rv reflect.Value, adapt AnyStringableAdaptor) (Stringable, error) {
+func newStringable(rv reflect.Value, adapt AnyStringConverterAdaptor) (Stringable, error) {
 	rv, err := getPointer(rv)
 	if err != nil {
 		return nil, err
@@ -41,24 +39,14 @@ func newStringable(rv reflect.Value, adapt AnyStringableAdaptor) (Stringable, er
 		return adapt(rv.Interface())
 	}
 
-	// Custom type adaptors go first. Which means the coder of a specific type
-	// has already been registered/overridden by user.
-	if adapt, ok := customStringableAdaptors[rv.Type().Elem()]; ok {
-		return adapt(rv.Interface())
-	}
-
 	// For the base type time.Time, it is a special case here.
 	// We won't use TextMarshaler/TextUnmarshaler for time.Time.
-	if rv.Type().Elem() == timeType {
-		return internal.NewStringable(rv)
-	}
-
-	if hybridCoder := hybridizeCoder(rv); hybridCoder != nil {
-		return hybridCoder, nil
-	}
+	// if rv.Type().Elem() == timeType {
+	// 	return strconvxNS.New(rv)
+	// }
 
 	// Fallback to use built-in stringable types.
-	return internal.NewStringable(rv)
+	return strconvxNS.New(rv)
 }
 
 type StringablePatchFieldWrapper struct {
@@ -66,7 +54,7 @@ type StringablePatchFieldWrapper struct {
 	internalStringable Stringable
 }
 
-func NewStringablePatchFieldWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringablePatchFieldWrapper, error) {
+func NewStringablePatchFieldWrapper(rv reflect.Value, adapt AnyStringConverterAdaptor) (*StringablePatchFieldWrapper, error) {
 	stringable, err := NewStringable(rv.FieldByName("Value"), adapt)
 	if err != nil {
 		return &StringablePatchFieldWrapper{}, fmt.Errorf("cannot create Stringable for PatchField: %w", err)

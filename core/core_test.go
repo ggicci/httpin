@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/strconvx"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -226,7 +227,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		co, err := New(Cursor{})
 		assert.NoError(t, err)
 		got, err := co.Decode(r)
-		assert.ErrorIs(t, err, ErrUnsupportedType)
+		assert.ErrorIs(t, err, ErrUnsupportedFieldType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -244,7 +245,7 @@ func TestCore_Decode_ErrUnsupporetedType(t *testing.T) {
 		co, err := New(Payload{})
 		assert.NoError(t, err)
 		got, err := co.Decode(r)
-		assert.ErrorIs(t, err, ErrUnsupportedType)
+		assert.ErrorIs(t, err, ErrUnsupportedFieldType)
 		assert.ErrorContains(t, err, "ObjectID")
 		assert.Nil(t, got)
 	}()
@@ -444,7 +445,7 @@ func TestCore_NamedCoder_ErrTypeMismatch(t *testing.T) {
 		r, _ := http.NewRequest("GET", "/", nil)
 		r.Form = url.Values{"birthday": {"1991-11-10"}}
 		_, err = co.Decode(r)
-		assert.ErrorIs(t, err, internal.ErrTypeMismatch)
+		assert.ErrorIs(t, err, strconvx.ErrTypeMismatch)
 		assert.ErrorContains(t, err, "Birthday")
 		assert.ErrorContains(t, err, "string")
 		assert.ErrorContains(t, err, "time.Time")
@@ -454,7 +455,7 @@ func TestCore_NamedCoder_ErrTypeMismatch(t *testing.T) {
 	func() {
 		payload := &Input{Birthday: "1991-11-10"}
 		_, err := co.NewRequest("GET", "/", payload)
-		assert.ErrorIs(t, err, internal.ErrTypeMismatch)
+		assert.ErrorIs(t, err, strconvx.ErrTypeMismatch)
 		assert.ErrorContains(t, err, "Birthday")
 		assert.ErrorContains(t, err, "string")
 		assert.ErrorContains(t, err, "time.Time")
@@ -512,7 +513,7 @@ func (yn *YesNo) FromString(s string) error {
 }
 
 func TestRegisterCoder_CustomType_OverrideDefaultTypeCoder(t *testing.T) {
-	RegisterCoder[bool](func(b *bool) (internal.Stringable, error) {
+	RegisterCoder[bool](func(b *bool) (Stringable, error) {
 		return (*YesNo)(b), nil
 	})
 
@@ -562,7 +563,7 @@ func TestRegisterCoder_CustomType_OverrideDefaultTypeCoder(t *testing.T) {
 }
 
 func removeType[T any]() {
-	delete(customStringableAdaptors, internal.TypeOf[T]())
+	strconvxNS.UndoAdapt(internal.TypeOf[T]())
 }
 
 func removeNamedType(name string) {

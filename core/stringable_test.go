@@ -8,6 +8,7 @@ import (
 
 	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/httpin/patch"
+	"github.com/ggicci/strconvx"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -202,7 +203,8 @@ func TestStringable_WithAdaptor(t *testing.T) {
 	var now = time.Now()
 	rvTimePointer := reflect.ValueOf(&now)
 
-	coder, err := NewStringable(rvTimePointer, internal.NewAnyStringableAdaptor[time.Time](adapt))
+	_, adaptor := strconvx.ToAnyStringConverterAdaptor[time.Time](adapt)
+	coder, err := NewStringable(rvTimePointer, adaptor)
 	assert.NoError(t, err)
 	assert.NoError(t, coder.FromString("1991-11-10"))
 
@@ -234,7 +236,7 @@ func testAssignString(t *testing.T, rv reflect.Value, value string) {
 
 func testNewStringableErrUnsupported(t *testing.T, rv reflect.Value) {
 	s, err := NewStringable(rv, nil)
-	assert.ErrorIs(t, err, ErrUnsupportedType)
+	assert.ErrorIs(t, err, ErrUnsupportedFieldType)
 	assert.Nil(t, s)
 }
 

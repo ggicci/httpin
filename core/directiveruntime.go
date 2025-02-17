@@ -60,9 +60,9 @@ func (rtm *DirectiveRuntime) GetRequestBuilder() *RequestBuilder {
 	return nil
 }
 
-func (rtm *DirectiveRuntime) GetCustomCoder() *NamedAnyStringableAdaptor {
+func (rtm *DirectiveRuntime) GetCustomCoder() *NamedAnyStringConverterAdaptor {
 	if info := rtm.Resolver.Context.Value(CtxCustomCoder); info != nil {
-		return info.(*NamedAnyStringableAdaptor)
+		return info.(*NamedAnyStringConverterAdaptor)
 	} else {
 		return nil
 	}
@@ -87,7 +87,7 @@ func (rtm *DirectiveRuntime) SetValue(value any) error {
 
 	if !newValue.Type().AssignableTo(targetType) {
 		return fmt.Errorf("%w: value of type %q is not assignable to type %q",
-			ErrTypeMismatch, reflect.TypeOf(value), targetType)
+			ErrFieldTypeMismatch, reflect.TypeOf(value), targetType)
 	}
 
 	rtm.Value.Elem().Set(newValue)

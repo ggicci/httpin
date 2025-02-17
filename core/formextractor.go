@@ -60,7 +60,7 @@ func (e *FormExtractor) extract(key string) error {
 		}
 		sourceValue = values
 
-		var adapt AnyStringableAdaptor
+		var adapt AnyStringConverterAdaptor
 		decoderInfo := e.Runtime.GetCustomCoder() // custom decoder, specified by "decoder" directive
 		if decoderInfo != nil {
 			adapt = decoderInfo.Adapt

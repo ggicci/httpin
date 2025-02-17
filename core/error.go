@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/owl"
+	"github.com/ggicci/strconvx"
 )
 
 var (
 	ErrUnregisteredDirective = errors.New("unregistered directive")
 	ErrUnregisteredCoder     = errors.New("unregistered coder")
-	ErrTypeMismatch          = internal.ErrTypeMismatch
+	ErrFieldTypeMismatch     = strconvx.ErrTypeMismatch
+	ErrUnsupportedFieldType  = strconvx.ErrUnsupportedType
+	ErrUnsupportedType       = owl.ErrUnsupportedType
 )
 
 type InvalidFieldError struct {

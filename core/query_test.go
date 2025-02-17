@@ -123,10 +123,10 @@ func TestDirectiveQuery_NewRequest_ErrUnsupportedType(t *testing.T) {
 	co, err := New(SearchQuery{})
 	assert.NoError(t, err)
 	_, err = co.NewRequest("GET", "/pets", &SearchQuery{})
-	assert.ErrorIs(t, err, ErrUnsupportedType)
+	assert.ErrorIs(t, err, ErrUnsupportedFieldType)
 }
 
-// See hybridcoder_test.go for more details.
+// See github.com/ggicci/strconvx for more details.
 func TestDirectiveQuery_NewRequest_WithTextMarshaler(t *testing.T) {
 	type SearchQuery struct {
 		L0     *Location                         `in:"query=l0"`

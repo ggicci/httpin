@@ -120,7 +120,8 @@ type dummyFileHeader struct {
 func mockFileHeader(t *testing.T, filename string) FileHeader {
 	file, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		t.Error(err)
+		t.FailNow()
 	}
 	return &dummyFileHeader{
 		file: file,

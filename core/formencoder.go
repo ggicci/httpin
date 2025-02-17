@@ -41,7 +41,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 		return fileUploadBuilder(rtm, files)
 	}
 
-	var adapt AnyStringableAdaptor
+	var adapt AnyStringConverterAdaptor
 	encoderInfo := rtm.GetCustomCoder()
 	if encoderInfo != nil {
 		adapt = encoderInfo.Adapt

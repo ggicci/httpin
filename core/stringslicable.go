@@ -13,7 +13,7 @@ type StringSlicable interface {
 	FromStringSlice([]string) error
 }
 
-func NewStringSlicable(rv reflect.Value, adapt AnyStringableAdaptor) (StringSlicable, error) {
+func NewStringSlicable(rv reflect.Value, adapt AnyStringConverterAdaptor) (StringSlicable, error) {
 	if rv.Type().Implements(stringSliceableType) && rv.CanInterface() {
 		return rv.Interface().(StringSlicable), nil
 	}
@@ -41,7 +41,7 @@ type StringSlicablePatchFieldWrapper struct {
 
 // NewStringSlicablePatchFieldWrapper creates a StringSlicablePatchFieldWrapper from rv.
 // Returns error when patch.Field.Value is not a StringSlicable.
-func NewStringSlicablePatchFieldWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringSlicablePatchFieldWrapper, error) {
+func NewStringSlicablePatchFieldWrapper(rv reflect.Value, adapt AnyStringConverterAdaptor) (*StringSlicablePatchFieldWrapper, error) {
 	stringSlicable, err := NewStringSlicable(rv.FieldByName("Value"), adapt)
 	if err != nil {
 		return nil, err
@@ -97,12 +97,12 @@ func (sa StringableSlice) FromStringSlice(values []string) error {
 // wrapped reflect.Value must be a slice of Stringable.
 type StringableSliceWrapper struct {
 	Value reflect.Value
-	Adapt AnyStringableAdaptor
+	Adapt AnyStringConverterAdaptor
 }
 
 // NewStringableSliceWrapper creates a StringableSliceWrapper from rv.
 // Returns error when rv is not a slice of Stringable or cannot get address of rv.
-func NewStringableSliceWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringableSliceWrapper, error) {
+func NewStringableSliceWrapper(rv reflect.Value, adapt AnyStringConverterAdaptor) (*StringableSliceWrapper, error) {
 	if !rv.CanAddr() {
 		return nil, errors.New("unaddressable value")
 	}
@@ -138,7 +138,7 @@ func (w *StringableSliceWrapper) FromStringSlice(ss []string) error {
 // StringSlicable. The wrapped reflect.Value must be a Stringable.
 type StringSlicableSingleStringableWrapper struct{ Stringable }
 
-func NewStringSlicableSingleStringableWrapper(rv reflect.Value, adapt AnyStringableAdaptor) (*StringSlicableSingleStringableWrapper, error) {
+func NewStringSlicableSingleStringableWrapper(rv reflect.Value, adapt AnyStringConverterAdaptor) (*StringSlicableSingleStringableWrapper, error) {
 	if stringable, err := NewStringable(rv, adapt); err != nil {
 		return nil, err
 	} else {
