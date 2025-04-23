@@ -1,0 +1,53 @@
+package integration_test
+
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/ggicci/httpin"
+	httpinIntegration "github.com/ggicci/httpin/integration"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestUseHttpMux(t *testing.T) {
+	httpinIntegration.UseHttpMux("path")
+
+	srv := http.NewServeMux()
+	srv.HandleFunc("/users/{username}/posts/{pid}", func(w http.ResponseWriter, r *http.Request) {
+		param := &GetPostOfUserInput{}
+		core, err := httpin.New(param)
+		if err != nil {
+			t.Fatal(err)
+			return
+		}
+		v, err := core.Decode(r)
+		if err != nil {
+			t.Fatal(err)
+			return
+		}
+		jsonBytes, err := json.Marshal(v)
+		if err != nil {
+			t.Fatal(err)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonBytes)
+	})
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	resp, err := http.DefaultClient.Get(ts.URL + "/users/ggicci/posts/123")
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	bodyString := string(bodyBytes)
+
+	assert.Equal(t, `{"Username":"ggicci","PostID":123}`, strings.TrimSpace(bodyString))
+}
