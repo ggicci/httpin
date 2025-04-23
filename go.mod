@@ -1,6 +1,6 @@
 module github.com/ggicci/httpin
 
-go 1.22.4
+go 1.22
 
 require (
 	github.com/ggicci/owl v0.8.2
