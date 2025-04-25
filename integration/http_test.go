@@ -41,7 +41,7 @@ func TestUseHttpMux(t *testing.T) {
 	ts := httptest.NewServer(srv)
 	defer ts.Close()
 
-	resp, err := http.DefaultClient.Get(ts.URL + "/users/ggicci/posts/123")
+	resp, err := http.DefaultClient.Get(ts.URL + "/users/chriss-de/posts/456")
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -49,5 +49,5 @@ func TestUseHttpMux(t *testing.T) {
 	assert.NoError(t, err)
 	bodyString := string(bodyBytes)
 
-	assert.Equal(t, `{"Username":"ggicci","PostID":123}`, strings.TrimSpace(bodyString))
+	assert.Equal(t, `{"Username":"chriss-de","PostID":456}`, strings.TrimSpace(bodyString))
 }
