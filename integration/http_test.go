@@ -13,12 +13,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type HttpMuxPathInput struct {
+	Username string `in:"path=username"`
+	PostID   int64  `in:"path=pid"`
+}
+
 func TestUseHttpMux(t *testing.T) {
 	httpinIntegration.UseHttpMux("path")
 
 	srv := http.NewServeMux()
 	srv.HandleFunc("/users/{username}/posts/{pid}", func(w http.ResponseWriter, r *http.Request) {
-		param := &GetPostOfUserInput{}
+		param := &HttpMuxPathInput{}
 		core, err := httpin.New(param)
 		if err != nil {
 			t.Fatal(err)
