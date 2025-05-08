@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/ggicci/httpin"
-	httpinIntegration "github.com/ggicci/httpin/integration"
+	httpin_integration "github.com/ggicci/httpin/integration"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ type HttpMuxPathInput struct {
 }
 
 func TestUseHttpMux(t *testing.T) {
-	httpinIntegration.UseHttpMux("path")
+	httpin_integration.UseHttpPathVariable("path")
 
 	srv := http.NewServeMux()
 	srv.HandleFunc("/users/{username}/posts/{pid}", func(w http.ResponseWriter, r *http.Request) {
