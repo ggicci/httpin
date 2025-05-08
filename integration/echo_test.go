@@ -15,7 +15,9 @@ import (
 
 func TestUseEchoMux(t *testing.T) {
 	e := echo.New()
-	httpin_integration.UseEchoPathRouter(e)
+	// NOTE: I removed the API UseEchoPathRouter because it introduces minimal benefit
+	// but adds surface area and maintenance cost.
+	httpin_integration.UseEchoRouter("path", e)
 
 	req := httptest.NewRequest(http.MethodGet, "/users/ggicci/posts/123", nil)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

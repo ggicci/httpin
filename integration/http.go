@@ -1,14 +1,25 @@
 package integration
 
 import (
-	"github.com/ggicci/httpin/core"
 	"mime/multipart"
 	"net/http"
+
+	"github.com/ggicci/httpin/core"
 )
 
 type HttpMuxVarsFunc func(*http.Request) map[string]string
 
-func UseHttpMux(name string) {
+// UseHttpPathVariable registers a new directive executor which can extract
+// values from URL path variables via `http.Request.PathValue` API.
+// https://ggicci.github.io/httpin/integrations/http
+//
+// Usage:
+//
+//	import httpin_integration "github.com/ggicci/httpin/integration"
+//	func init() {
+//		httpin_integration.UseHttpPathVariable("path")
+//	}
+func UseHttpPathVariable(name string) {
 	core.RegisterDirective(
 		name,
 		core.NewDirectivePath((&httpMuxVarsExtractor{}).Execute),
@@ -16,13 +27,7 @@ func UseHttpMux(name string) {
 	)
 }
 
-func UseHttpPathMux() {
-	UseHttpMux("path")
-}
-
-type httpMuxVarsExtractor struct {
-	Vars http.ServeMux
-}
+type httpMuxVarsExtractor struct{}
 
 func (mux *httpMuxVarsExtractor) Execute(rtm *core.DirectiveRuntime) error {
 	req := rtm.GetRequest()
