@@ -18,10 +18,6 @@ import (
 //	func init() {
 //	    e := echo.New()
 //	    httpin_integration.UseEchoRouter("path", e)
-//
-// // or
-//
-//	    httpin_integration.UseEchoPathRouter(e)
 //	}
 func UseEchoRouter(name string, e *echo.Echo) {
 	core.RegisterDirective(
@@ -29,10 +25,6 @@ func UseEchoRouter(name string, e *echo.Echo) {
 		core.NewDirectivePath((&echoRouterExtractor{e}).Execute),
 		true,
 	)
-}
-
-func UseEchoPathRouter(e *echo.Echo) {
-	UseEchoRouter("path", e)
 }
 
 // echoRouterExtractor is an extractor for mux.Vars
