@@ -28,10 +28,10 @@ func fixedZone(offset int) *time.Location {
 	if offset == 0 {
 		return time.UTC
 	}
-	_, localOffset := time.Now().Local().Zone()
-	if offset == localOffset {
-		return time.Local
-	}
+	// _, localOffset := time.Now().Local().Zone()
+	// if offset == localOffset {
+	// 	return time.Local
+	// }
 	return time.FixedZone("", offset)
 }
 
