@@ -1,4 +1,4 @@
-package core
+package codec
 
 import (
 	"errors"
@@ -27,12 +27,12 @@ type FileUnmarshaler interface {
 	UnmarshalFile(FileHeader) error
 }
 
-type Fileable interface {
+type FileCodec interface {
 	FileMarshaler
 	FileUnmarshaler
 }
 
-func NewFileable(rv reflect.Value) (Fileable, error) {
+func NewFileable(rv reflect.Value) (FileCodec, error) {
 	if IsPatchField(rv.Type()) {
 		return NewFileablePatchFieldWrapper(rv)
 	}
@@ -40,21 +40,21 @@ func NewFileable(rv reflect.Value) (Fileable, error) {
 	return newFileable(rv)
 }
 
-func newFileable(rv reflect.Value) (Fileable, error) {
+func newFileable(rv reflect.Value) (FileCodec, error) {
 	rv, err := getPointer(rv)
 	if err != nil {
 		return nil, err
 	}
 
-	if rv.Type().Implements(fileableType) && rv.CanInterface() {
-		return rv.Interface().(Fileable), nil
+	if rv.Type().Implements(fileCodecType) && rv.CanInterface() {
+		return rv.Interface().(FileCodec), nil
 	}
 	return nil, errors.New("unsupported file type")
 }
 
 type FileablePatchFieldWrapper struct {
 	Value            reflect.Value // of patch.Field[T]
-	internalFileable Fileable
+	internalFileable FileCodec
 }
 
 func NewFileablePatchFieldWrapper(rv reflect.Value) (*FileablePatchFieldWrapper, error) {
@@ -86,7 +86,7 @@ func (w *FileablePatchFieldWrapper) UnmarshalFile(fh FileHeader) error {
 	}
 }
 
-var fileableType = internal.TypeOf[Fileable]()
+var fileCodecType = internal.TypeOf[FileCodec]()
 
 // multipartFileHeader is the adaptor of multipart.FileHeader.
 type multipartFileHeader struct{ *multipart.FileHeader }
@@ -107,7 +107,7 @@ func (h *multipartFileHeader) Open() (multipart.File, error) {
 	return h.FileHeader.Open()
 }
 
-func toFileHeaderList(fhs []*multipart.FileHeader) []FileHeader {
+func ToFileHeaderList(fhs []*multipart.FileHeader) []FileHeader {
 	result := make([]FileHeader, len(fhs))
 	for i, fh := range fhs {
 		result[i] = &multipartFileHeader{fh}

@@ -2,6 +2,8 @@ package core
 
 import (
 	"mime/multipart"
+
+	"github.com/ggicci/httpin/internal"
 )
 
 type FormExtractor struct {
@@ -49,10 +51,10 @@ func (e *FormExtractor) extract(key string) error {
 		}
 		sourceValue = files
 
-		var decoder FileSlicable
-		decoder, err = NewFileSlicable(e.Runtime.Value.Elem())
+		var decoder FileSliceCodec
+		decoder, err = internal.NewFileSliceCodec(e.Runtime.Value.Elem())
 		if err == nil {
-			err = decoder.FromFileSlice(toFileHeaderList(files))
+			err = decoder.FromFileSlice(internal.ToFileHeaderList(files))
 		}
 	} else {
 		if len(values) == 0 {
@@ -60,13 +62,13 @@ func (e *FormExtractor) extract(key string) error {
 		}
 		sourceValue = values
 
-		var adapt AnyStringConverterAdaptor
+		var adapt StringCodecAdaptor
 		decoderInfo := e.Runtime.GetCustomCoder() // custom decoder, specified by "decoder" directive
 		if decoderInfo != nil {
-			adapt = decoderInfo.Adapt
+			adapt = decoderInfo.Adaptor
 		}
-		var decoder StringSlicable
-		decoder, err = NewStringSlicable(e.Runtime.Value.Elem(), adapt)
+		var decoder StringSliceCodec
+		decoder, err = internal.NewStringSliceCodec(e.Runtime.Value.Elem(), adapt)
 		if err == nil {
 			err = decoder.FromStringSlice(values)
 		}

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/httpin/internal/testutil"
 	"github.com/ggicci/strconvx"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,7 +36,7 @@ type ProductQuery struct {
 	Authorization
 }
 
-// Place is a custom type that implements Stringable interface.
+// Place is a custom type that implements StringCodec interface.
 type Place struct {
 	Country string
 	City    string
@@ -368,7 +369,7 @@ func TestCore_Decode_CustomTypeSliceValueWrapper(t *testing.T) {
 	assert.Equal([]int{1, 2, 3}, got.Ids.Value)
 }
 
-// Test: register named coders and use them in the "coder" directive,
+// Test: register named coders and use them in the "codec" directive,
 // i.e. customizing the encoding/decoding for a specific struct field.
 
 type NamedCoderInput struct {
@@ -476,7 +477,7 @@ func TestCore_NamedCoder_DecoderError(t *testing.T) {
 	assert.NoError(t, err)
 
 	got, err := co.Decode(r)
-	var invalidDate *InvalidDate
+	var invalidDate *testutil.InvalidDate
 	assert.ErrorAs(t, err, &invalidDate)
 	assert.ErrorContains(t, err, "invalid date: \"1991-11-10 08:00:00\"")
 	assert.Nil(t, got)
@@ -513,7 +514,7 @@ func (yn *YesNo) FromString(s string) error {
 }
 
 func TestRegisterCoder_CustomType_OverrideDefaultTypeCoder(t *testing.T) {
-	RegisterCoder[bool](func(b *bool) (Stringable, error) {
+	RegisterCodec[bool](func(b *bool) (StringCodec, error) {
 		return (*YesNo)(b), nil
 	})
 
@@ -563,16 +564,16 @@ func TestRegisterCoder_CustomType_OverrideDefaultTypeCoder(t *testing.T) {
 }
 
 func removeType[T any]() {
-	strconvxNS.UndoAdapt(internal.TypeOf[T]())
+	internal.StrconvxNS.UndoAdapt(internal.TypeOf[T]())
 }
 
 func removeNamedType(name string) {
-	delete(namedStringableAdaptors, name)
+	delete(namedStringCodecAdaptors, name)
 }
 
 func registerMyDate() {
-	RegisterNamedCoder[time.Time]("mydate", func(t *time.Time) (Stringable, error) {
-		return (*MyDate)(t), nil
+	RegisterNamedCodec("mydate", func(t *time.Time) (StringCodec, error) {
+		return (*testutil.MyDate)(t), nil
 	})
 }
 

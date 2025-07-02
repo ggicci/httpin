@@ -46,6 +46,9 @@ const (
 // See owl.DirectiveRuntime for more details.
 type DirectiveRuntime owl.DirectiveRuntime
 
+// GetRequest returns the HTTP request value from the context of
+// DirectiveRuntime. This is useful for executors that need to access the HTTP
+// request, such as "query", "header", "cookie", etc.
 func (rtm *DirectiveRuntime) GetRequest() *http.Request {
 	if req := rtm.Context.Value(CtxRequest); req != nil {
 		return req.(*http.Request)
@@ -53,6 +56,10 @@ func (rtm *DirectiveRuntime) GetRequest() *http.Request {
 	return nil
 }
 
+// GetRequestBuilder returns the RequestBuilder from the context of
+// DirectiveRuntime. The RequestBuilder is used to build the HTTP request
+// from the directive arguments. It is useful for executors that need to
+// build the HTTP request, such as "query", "header", "cookie", etc.
 func (rtm *DirectiveRuntime) GetRequestBuilder() *RequestBuilder {
 	if rb := rtm.Context.Value(CtxRequestBuilder); rb != nil {
 		return rb.(*RequestBuilder)
@@ -60,22 +67,48 @@ func (rtm *DirectiveRuntime) GetRequestBuilder() *RequestBuilder {
 	return nil
 }
 
-func (rtm *DirectiveRuntime) GetCustomCoder() *NamedAnyStringConverterAdaptor {
+// GetCustomCodec returns the custom codec bound to the field by the "coder",
+// "decoder" directives.
+func (rtm *DirectiveRuntime) GetCustomCodec() *NamedStringCodecAdaptor {
 	if info := rtm.Resolver.Context.Value(CtxCustomCoder); info != nil {
-		return info.(*NamedAnyStringConverterAdaptor)
+		return info.(*NamedStringCodecAdaptor)
 	} else {
 		return nil
 	}
 }
 
+// Deprecated: Use GetCustomCodec instead.
+func (rtm *DirectiveRuntime) GetCustomCoder() *NamedStringCodecAdaptor {
+	return rtm.GetCustomCodec()
+}
+
+// IsFieldSet checks whether the field has been set by a former executor.
+// If the field has been set, the latter executors MAY skip running.
+// This is useful when multiple executors are applied to a field, and you want
+// to avoid running the latter executors if the field has been set by a former
+// executor. For example:
+//
+//	token string `in:"query=access_token;header=x-api-token"
+//
+// If the "query" executor has set the field (i.e., got a value of access_token
+// key from the querystring), the "header" executor can skip running, because
+// the field is already set.
 func (rtm *DirectiveRuntime) IsFieldSet() bool {
 	return rtm.Context.Value(CtxFieldSet) == true
 }
 
+// MarkFieldSet marks the field as set. This is used by executors to tell
+// that the field has been set. The latter executors can consult this value
+// to decide whether to skip running.
 func (rtm *DirectiveRuntime) MarkFieldSet(value bool) {
 	rtm.Context = context.WithValue(rtm.Context, CtxFieldSet, value)
 }
 
+// SetValue sets the value of the field that being wrapped by this
+// DirectiveRuntime. It is useful for users who is implementing custom
+// directives and need to set the value of a field directly. This helper method
+// will check the type of the value and ensure it is assignable to the field's
+// type and throws an appropriate error on failure.
 func (rtm *DirectiveRuntime) SetValue(value any) error {
 	if value == nil {
 		// NOTE: should we wipe the value here? i.e. set the value to nil if necessary.

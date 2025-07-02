@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -29,7 +28,7 @@ func (bf *BadFile) MarshalFile() (io.ReadCloser, error) {
 
 var errBadFile = errors.New("bad file")
 
-func (bf *BadFile) UnmarshalFile(fh FileHeader) error {
+func (bf *BadFile) UnmarshalFile(fh internal.FileHeader) error {
 	return errBadFile
 }
 
@@ -45,8 +44,8 @@ type UpdateGitHubIssueInput struct {
 }
 
 func TestRegisterFileCoder(t *testing.T) {
-	RegisterFileCoder[*File]()
-	RegisterFileCoder[*File]() // register twice is ok
+	RegisterFileCodec[*File]()
+	RegisterFileCodec[*File]() // register twice is ok
 }
 
 func TestFile_OpenUploadStream_FailOnInvalidUpload(t *testing.T) {
@@ -120,7 +119,7 @@ func TestMultipartForm_UploadSingleFile_FailOnBrokenBoundaries(t *testing.T) {
 }
 
 func TestMultipartForm_UploadSingleFile_FailOnDecodeError(t *testing.T) {
-	RegisterFileCoder[*BadFile]()
+	RegisterFileCodec[*BadFile]()
 
 	type AccountUpdate struct {
 		Username string   `in:"form=username"`
@@ -284,35 +283,6 @@ func createTempFile(t *testing.T, content []byte) string {
 	_, err = f.Write(content)
 	assert.NoError(t, err)
 	return f.Name()
-}
-
-type tempFile struct {
-	Filename string
-	Content  []byte
-}
-
-func createTempFileV2(t *testing.T) *tempFile {
-	t.Helper()
-	f, err := os.CreateTemp("", "httpin_test_*.txt")
-	assert.NoError(t, err)
-	randomContent := randomString(32)
-	_, err = f.Write([]byte(randomContent))
-	assert.NoError(t, err)
-	f.Close()
-
-	return &tempFile{
-		Filename: f.Name(),
-		Content:  []byte(randomContent),
-	}
-}
-
-func randomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	var result = make([]byte, length)
-	for i := range result {
-		result[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(result)
 }
 
 func breakMultipartFormBoundary(body *bytes.Buffer) *bytes.Buffer {

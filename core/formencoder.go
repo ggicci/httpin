@@ -27,7 +27,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 			return nil // skip when nil, which means no file uploaded
 		}
 
-		encoder, err := NewFileSlicable(rtm.Value)
+		encoder, err := internal.NewFileSliceCodec(rtm.Value)
 		if err != nil {
 			return err
 		}
@@ -41,13 +41,13 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 		return fileUploadBuilder(rtm, files)
 	}
 
-	var adapt AnyStringConverterAdaptor
-	encoderInfo := rtm.GetCustomCoder()
+	var adapt StringCodecAdaptor
+	encoderInfo := rtm.GetCustomCodec()
 	if encoderInfo != nil {
-		adapt = encoderInfo.Adapt
+		adapt = encoderInfo.Adaptor
 	}
-	var encoder StringSlicable
-	encoder, err := NewStringSlicable(rtm.Value, adapt)
+	var encoder StringSliceCodec
+	encoder, err := internal.NewStringSliceCodec(rtm.Value, adapt)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 	}
 }
 
-func fileUploadBuilder(rtm *DirectiveRuntime, files []FileMarshaler) error {
+func fileUploadBuilder(rtm *DirectiveRuntime, files []internal.FileMarshaler) error {
 	rb := rtm.GetRequestBuilder()
 	key := rtm.Directive.Argv[0]
 	rb.SetAttachment(key, files)

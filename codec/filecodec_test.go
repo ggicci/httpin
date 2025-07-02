@@ -1,4 +1,4 @@
-package core
+package codec
 
 import (
 	"io"
@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ggicci/httpin/internal/testutil"
 	"github.com/ggicci/httpin/patch"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,7 +25,7 @@ type MyFiles struct {
 	PatchAvatarPointers patch.Field[[]*File]
 }
 
-func TestFileable_UnmarshalFile(t *testing.T) {
+func TestFileCodec_UnmarshalFile(t *testing.T) {
 	rv := reflect.New(reflect.TypeOf(MyFiles{})).Elem()
 	s := rv.Addr().Interface().(*MyFiles)
 
@@ -48,10 +49,10 @@ func TestFileable_UnmarshalFile(t *testing.T) {
 }
 
 func TestFileable_MarshalFile(t *testing.T) {
-	fileAvatar := createTempFileV2(t)
-	fileAvatarPointer := createTempFileV2(t)
-	filePatchAvatar := createTempFileV2(t)
-	filePatchAvatarPointer := createTempFileV2(t)
+	fileAvatar := testutil.CreateTempFileV2(t)
+	fileAvatarPointer := testutil.CreateTempFileV2(t)
+	filePatchAvatar := testutil.CreateTempFileV2(t)
+	filePatchAvatarPointer := testutil.CreateTempFileV2(t)
 
 	var s = &MyFiles{
 		Avatar:         *UploadFile(fileAvatar.Filename),
@@ -84,7 +85,7 @@ func testNewFileableErrUnsupported(t *testing.T, rv reflect.Value) {
 	assert.Nil(t, fileable)
 }
 
-func validateFile(t *testing.T, expected *tempFile, actual FileMarshaler) {
+func validateFile(t *testing.T, expected *testutil.NamedTempFile, actual FileMarshaler) {
 	assert.Equal(t, expected.Filename, actual.Filename())
 	reader, err := actual.MarshalFile()
 	assert.NoError(t, err)
@@ -93,7 +94,7 @@ func validateFile(t *testing.T, expected *tempFile, actual FileMarshaler) {
 	assert.Equal(t, expected.Content, content)
 }
 
-func validateRvFile(t *testing.T, expected *tempFile, actual reflect.Value) {
+func validateRvFile(t *testing.T, expected *testutil.NamedTempFile, actual reflect.Value) {
 	file, err := NewFileable(actual)
 	assert.NoError(t, err)
 	reader, err := file.MarshalFile()
@@ -105,10 +106,10 @@ func validateRvFile(t *testing.T, expected *tempFile, actual reflect.Value) {
 	assert.Equal(t, expected.Content, content)
 }
 
-func testAssignFile(t *testing.T, rv reflect.Value) *tempFile {
+func testAssignFile(t *testing.T, rv reflect.Value) *testutil.NamedTempFile {
 	fileable, err := NewFileable(rv)
 	assert.NoError(t, err)
-	file := createTempFileV2(t)
+	file := testutil.CreateTempFileV2(t)
 	assert.NoError(t, fileable.UnmarshalFile(mockFileHeader(t, file.Filename)))
 	return file
 }

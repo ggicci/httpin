@@ -187,7 +187,7 @@ func TestRegisterBodyFormat(t *testing.T) {
 	unregisterBodyFormat("yaml")
 }
 
-func TestRegisterBodyFormat_ErrNilBodySerializer(t *testing.T) {
+func TestRegisterBodyFormat_ErrNilBodyCodec(t *testing.T) {
 	assert.Panics(t, func() {
 		RegisterBodyFormat("toml", nil)
 	})

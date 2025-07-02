@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/owl"
-	"github.com/ggicci/strconvx"
 )
 
 var (
 	ErrUnregisteredDirective = errors.New("unregistered directive")
 	ErrUnregisteredCoder     = errors.New("unregistered coder")
-	ErrFieldTypeMismatch     = strconvx.ErrTypeMismatch
-	ErrUnsupportedFieldType  = strconvx.ErrUnsupportedType
+	ErrFieldTypeMismatch     = internal.ErrFieldTypeMismatch
+	ErrUnsupportedFieldType  = internal.ErrUnsupportedFieldType
 	ErrUnsupportedType       = owl.ErrUnsupportedType
 )
 

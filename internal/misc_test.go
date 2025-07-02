@@ -25,7 +25,7 @@ func TestTypeOf(t *testing.T) {
 }
 
 func TestPointerize(t *testing.T) {
-	assert.Equal(t, 102, *Pointerize[int](102))
+	assert.Equal(t, 102, *Pointerize(102))
 }
 
 func TestDereferencedType(t *testing.T) {

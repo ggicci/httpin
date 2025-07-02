@@ -10,7 +10,11 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+
+	"github.com/ggicci/httpin/internal"
 )
+
+type FileMarshaler = internal.FileMarshaler
 
 type RequestBuilder struct {
 	Query      url.Values

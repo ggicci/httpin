@@ -3,27 +3,47 @@ package core
 import (
 	"reflect"
 
+	"github.com/ggicci/httpin/codec"
 	"github.com/ggicci/httpin/internal"
 	"github.com/ggicci/strconvx"
 )
 
-type AnyStringConverterAdaptor = strconvx.AnyStringConverterAdaptor
+type (
+	// StringCodec is implemented by types that support bidirectional conversion
+	// between their value and a string representation.
+	StringCodec = codec.StringCodec
 
-var (
-	fileTypes               = make(map[reflect.Type]struct{})
-	namedStringableAdaptors = make(map[string]*NamedAnyStringConverterAdaptor)
+	// StringSliceCodec is implemented by types that support bidirectional conversion
+	// between their value and a []string.
+	StringSliceCodec = codec.StringSliceCodec
+
+	// FileCodec is implemented by types that support bidirectional conversion
+	// between their value and a file representation. This is used for file uploads.
+	FileCodec = codec.FileCodec
+
+	// FileSliceCodec is implemented by types that support bidirectional conversion
+	// between their value and a []FileCodec. This is used for file uploads where
+	// multiple files can be uploaded at once.
+	FileSliceCodec = codec.FileSliceCodec
+
+	StringCodecAdaptor = codec.StringCodecAdaptor
 )
 
-// RegisterCoder registers a custom coder for the given type T. When a field of
-// type T is encountered, this coder will be used to convert the value to a
-// Stringable, which will be used to convert the value from/to string.
+var (
+	fileTypes                = make(map[reflect.Type]struct{})
+	namedStringCodecAdaptors = make(map[string]*NamedStringCodecAdaptor)
+)
+
+// RegisterCodec registers a custom codec for the given type T. When a field of
+// type T is encountered, this codec will be used to convert the value to a
+// StringCodec, which will be used to convert the value from/to string.
 //
-// NOTE: this function is designed to override the default Stringable adaptors
+// NOTE: this function is designed to override the default StringCodec adaptors
 // that are registered by this package. For example, if you want to override the
 // defualt behaviour of converting a bool value from/to string, you can do this:
 //
 //	func init() {
-//		core.RegisterCoder[bool](func(b *bool) (core.Stringable, error) {
+//		core.RegisterCodec[bool](func(b *bool) (core.StringCodec, error) {
 //			return (*YesNo)(b), nil
 //		})
 //	}
@@ -48,23 +68,27 @@ var (
 //		}
 //		return nil
 //	}
-func RegisterCoder[T any](adapt func(*T) (Stringable, error)) {
-	typ, adaptor := strconvx.ToAnyStringConverterAdaptor[T](adapt)
-	strconvxNS.Adapt(typ, adaptor)
+func RegisterCodec[T any](adaptor func(*T) (StringCodec, error)) {
+	internal.StrconvxNS.Adapt(strconvx.ToAnyAdaptor(adaptor))
 }
 
-// RegisterNamedCoder works similar to RegisterCoder, except that it binds the
-// coder to a name. This is useful when you only want to override the types in
-// a specific struct field. You will be using the "coder" or "decoder" directive
-// to specify the name of the coder to use. For example:
+// Deprecated: Use RegisterCodec instead.
+func RegisterCoder[T any](adapt func(*T) (StringCodec, error)) {
+	RegisterCodec(adapt)
+}
+
+// RegisterNamedCodec works similar to RegisterCodec, except that it binds the
+// codec to a name. This is useful when you only want to override the types in
+// a specific struct field. You will be using the "codec" directive
+// to specify the name of the codec to use. For example:
 //
 //	type MyStruct struct {
-//		Bool bool // use default bool coder
-//		YesNo bool `in:"coder=yesno"` // use YesNo coder
+//		Bool bool // use default bool codec
+//		YesNo bool `in:"codec=yesno"` // use YesNo codec
 //	}
 //
 //	func init() {
-//		core.RegisterNamedCoder[bool]("yesno", func(b *bool) (core.Stringable, error) {
+//		core.RegisterNamedCodec[bool]("yesno", func(b *bool) (core.StringCodec, error) {
 //			return (*YesNo)(b), nil
 //		})
 //	}
@@ -89,31 +113,40 @@ func RegisterCoder[T any](adapt func(*T) (Stringable, error)) {
 //		}
 //		return nil
 //	}
-func RegisterNamedCoder[T any](name string, adapt func(*T) (Stringable, error)) {
-	typ, adaptor := strconvx.ToAnyStringConverterAdaptor[T](adapt)
-	namedStringableAdaptors[name] = &NamedAnyStringConverterAdaptor{
+func RegisterNamedCodec[T any](name string, adapt func(*T) (StringCodec, error)) {
+	typ, adaptor := strconvx.ToAnyAdaptor(adapt)
+	namedStringCodecAdaptors[name] = &NamedStringCodecAdaptor{
 		Name:     name,
 		BaseType: typ,
-		Adapt:    adaptor,
+		Adaptor:  adaptor,
 	}
 }
 
-// RegisterFileCoder registers the given type T as a file type. T must implement
-// the Fileable interface. Remember if you don't register the type explicitly,
-// it won't be recognized as a file type.
-func RegisterFileCoder[T Fileable]() error {
-	fileTypes[internal.TypeOf[T]()] = struct{}{}
-	return nil
+// Deprecated: Use RegisterNamedCodec instead.
+func RegisterNamedCoder[T any](name string, adapt func(*T) (StringCodec, error)) {
+	RegisterNamedCodec(name, adapt)
 }
 
-type NamedAnyStringConverterAdaptor struct {
+// RegisterFileCodec registers the given type T as a file type. T must implement
+// the FileCodec interface. Remember if you don't register the type explicitly,
+// it won't be recognized as a file type.
+func RegisterFileCodec[T FileCodec]() {
+	fileTypes[internal.TypeOf[T]()] = struct{}{}
+}
+
+// Deprecated: Use RegisterFileCodec instead.
+func RegisterFileCoder[T FileCodec]() {
+	RegisterFileCodec[T]()
+}
+
+type NamedStringCodecAdaptor struct {
 	Name     string
 	BaseType reflect.Type
-	Adapt    AnyStringConverterAdaptor
+	Adaptor  StringCodecAdaptor
 }
 
 func isFileType(typ reflect.Type) bool {
-	baseType, _ := BaseTypeOf(typ)
+	baseType, _ := internal.BaseTypeOf(typ)
 	_, ok := fileTypes[baseType]
 	return ok
 }

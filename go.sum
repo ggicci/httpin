@@ -8,6 +8,8 @@ github.com/ggicci/strconvx v1.1.1 h1:obXYT2xTTY0atxKf0ERdchVYSV32am7Xjp5LsmaayRk
 github.com/ggicci/strconvx v1.1.1/go.mod h1:EJc4xKkrsVd4fIMP97phweEFBGo1WH0J7sgRT6INgLU=
 github.com/ggicci/strconvx v1.2.0 h1:/tgKRUXyK7w9ULDpIhySE3ozxE3eluNLyperXqqGJEY=
 github.com/ggicci/strconvx v1.2.0/go.mod h1:EJc4xKkrsVd4fIMP97phweEFBGo1WH0J7sgRT6INgLU=
+github.com/ggicci/strconvx v1.3.0 h1:Ib1ksGjtHfDN03nDVMJtqGjn4hAJZ4CEn02PD6/1rUA=
+github.com/ggicci/strconvx v1.3.0/go.mod h1:EJc4xKkrsVd4fIMP97phweEFBGo1WH0J7sgRT6INgLU=
 github.com/go-chi/chi/v5 v5.0.11 h1:BnpYbFZ3T3S1WMpD79r7R5ThWX40TaFB7L31Y8xqSwA=
 github.com/go-chi/chi/v5 v5.0.11/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/gorilla/mux v1.8.1 h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=

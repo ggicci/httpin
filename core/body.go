@@ -15,7 +15,7 @@ import (
 	"github.com/ggicci/httpin/internal"
 )
 
-// ErrUnknownBodyFormat is returned when a serializer for the specified body format has not been specified.
+// ErrUnknownBodyFormat is returned when a codec for the specified body format has not been specified.
 var ErrUnknownBodyFormat = errors.New("unknown body format")
 
 // DirectiveBody is the implementation of the "body" directive.
@@ -23,22 +23,22 @@ type DirectiveBody struct{}
 
 func (db *DirectiveBody) Decode(rtm *DirectiveRuntime) error {
 	req := rtm.GetRequest()
-	bodyFormat, bodySerializer := db.getSerializer(rtm)
-	if bodySerializer == nil {
+	bodyFormat, bodyCodec := db.getCodec(rtm)
+	if bodyCodec == nil {
 		return fmt.Errorf("%w: %q", ErrUnknownBodyFormat, bodyFormat)
 	}
-	if err := bodySerializer.Decode(req.Body, rtm.Value.Elem().Addr().Interface()); err != nil {
+	if err := bodyCodec.Decode(req.Body, rtm.Value.Elem().Addr().Interface()); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (db *DirectiveBody) Encode(rtm *DirectiveRuntime) error {
-	bodyFormat, bodySerializer := db.getSerializer(rtm)
-	if bodySerializer == nil {
+	bodyFormat, bodyCodec := db.getCodec(rtm)
+	if bodyCodec == nil {
 		return fmt.Errorf("%w: %q", ErrUnknownBodyFormat, bodyFormat)
 	}
-	if bodyReader, err := bodySerializer.Encode(rtm.Value.Interface()); err != nil {
+	if bodyReader, err := bodyCodec.Encode(rtm.Value.Interface()); err != nil {
 		return err
 	} else {
 		rtm.GetRequestBuilder().SetBody(bodyFormat, io.NopCloser(bodyReader))
@@ -47,23 +47,23 @@ func (db *DirectiveBody) Encode(rtm *DirectiveRuntime) error {
 	}
 }
 
-func (*DirectiveBody) getSerializer(rtm *DirectiveRuntime) (bodyFormat string, serializer BodySerializer) {
+func (*DirectiveBody) getCodec(rtm *DirectiveRuntime) (bodyFormat string, bodyCodec BodyCodec) {
 	bodyFormat = "json"
 	if len(rtm.Directive.Argv) > 0 {
 		bodyFormat = strings.ToLower(rtm.Directive.Argv[0])
 	}
-	serializer = getBodySerializer(bodyFormat)
+	bodyCodec = getBodyCodec(bodyFormat)
 	return
 }
 
-var bodyFormats = map[string]BodySerializer{
+var bodyFormats = map[string]BodyCodec{
 	"json": &JSONBody{},
 	"xml":  &XMLBody{},
 }
 
-// BodySerializer is the interface for encoding and decoding the request body.
+// BodyCodec is the interface for encoding and decoding the HTTP request body.
 // Common body formats are: json, xml, yaml, etc.
-type BodySerializer interface {
+type BodyCodec interface {
 	// Decode decodes the request body into the specified object.
 	Decode(src io.Reader, dst any) error
 	// Encode encodes the specified object into a reader for the request body.
@@ -71,14 +71,14 @@ type BodySerializer interface {
 }
 
 // RegisterBodyFormat registers a new data formatter for the body request, which has the
-// BodyEncoderDecoder interface implemented. Panics on taken name, empty name or nil
+// BodyCodec interface implemented. Panics on taken name, empty name or nil
 // decoder. Pass parameter force (true) to ignore the name conflict.
 //
-// The BodyEncoderDecoder is used by the body directive to decode and encode the data in
+// The BodyCodec is used by the body directive to decode and encode the data in
 // the given format (body format).
 //
 // It is also useful when you want to override the default registered
-// BodyEncoderDecoder. For example, the default JSON decoder is borrowed from
+// BodyCodec. For example, the default JSON decoder is borrowed from
 // encoding/json. You can replace it with your own implementation, e.g.
 // json-iterator/go. For example:
 //
@@ -86,13 +86,13 @@ type BodySerializer interface {
 //	    RegisterBodyFormat("json", &myJSONBody{}, true) // force register, replace the old one
 //	    RegisterBodyFormat("yaml", &myYAMLBody{}) // register a new body format "yaml"
 //	}
-func RegisterBodyFormat(format string, body BodySerializer, force ...bool) {
+func RegisterBodyFormat(format string, codec BodyCodec, force ...bool) {
 	internal.PanicOnError(
-		registerBodyFormat(format, body, force...),
+		registerBodyFormat(format, codec, force...),
 	)
 }
 
-func getBodySerializer(bodyFormat string) BodySerializer {
+func getBodyCodec(bodyFormat string) BodyCodec {
 	return bodyFormats[bodyFormat]
 }
 
@@ -124,18 +124,18 @@ func (en *XMLBody) Encode(src any) (io.Reader, error) {
 	return &buf, nil
 }
 
-func registerBodyFormat(format string, body BodySerializer, force ...bool) error {
+func registerBodyFormat(format string, codec BodyCodec, force ...bool) error {
 	ignoreConflict := len(force) > 0 && force[0]
 	format = strings.ToLower(format)
-	if !ignoreConflict && getBodySerializer(format) != nil {
+	if !ignoreConflict && getBodyCodec(format) != nil {
 		return fmt.Errorf("duplicate body format: %q", format)
 	}
 	if format == "" {
 		return errors.New("body format cannot be empty")
 	}
-	if body == nil {
-		return errors.New("body serializer cannot be nil")
+	if codec == nil {
+		return errors.New("body codec cannot be nil")
 	}
-	bodyFormats[format] = body
+	bodyFormats[format] = codec
 	return nil
 }

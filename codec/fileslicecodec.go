@@ -1,4 +1,4 @@
-package core
+package codec
 
 import (
 	"errors"
@@ -6,12 +6,12 @@ import (
 	"reflect"
 )
 
-type FileSlicable interface {
+type FileSliceCodec interface {
 	ToFileSlice() ([]FileMarshaler, error)
 	FromFileSlice([]FileHeader) error
 }
 
-func NewFileSlicable(rv reflect.Value) (FileSlicable, error) {
+func NewFileSliceCodec(rv reflect.Value) (FileSliceCodec, error) {
 	if IsPatchField(rv.Type()) {
 		return NewFileSlicablePatchFieldWrapper(rv)
 	}
@@ -25,11 +25,11 @@ func NewFileSlicable(rv reflect.Value) (FileSlicable, error) {
 
 type FileSlicablePatchFieldWrapper struct {
 	Value                 reflect.Value // of patch.Field[T]
-	internalFileSliceable FileSlicable
+	internalFileSliceable FileSliceCodec
 }
 
 func NewFileSlicablePatchFieldWrapper(rv reflect.Value) (*FileSlicablePatchFieldWrapper, error) {
-	fileSlicable, err := NewFileSlicable(rv.FieldByName("Value"))
+	fileSlicable, err := NewFileSliceCodec(rv.FieldByName("Value"))
 	if err != nil {
 		return nil, err
 	} else {
@@ -94,7 +94,7 @@ func (w *FileableSliceWrapper) FromFileSlice(fhs []FileHeader) error {
 	return nil
 }
 
-type FileSlicableSingleFileableWrapper struct{ Fileable }
+type FileSlicableSingleFileableWrapper struct{ FileCodec }
 
 func NewFileSlicableSingleFileableWrapper(rv reflect.Value) (*FileSlicableSingleFileableWrapper, error) {
 	if fileable, err := NewFileable(rv); err != nil {
@@ -105,7 +105,7 @@ func NewFileSlicableSingleFileableWrapper(rv reflect.Value) (*FileSlicableSingle
 }
 
 func (w *FileSlicableSingleFileableWrapper) ToFileSlice() ([]FileMarshaler, error) {
-	return []FileMarshaler{w.Fileable}, nil
+	return []FileMarshaler{w.FileCodec}, nil
 }
 
 func (w *FileSlicableSingleFileableWrapper) FromFileSlice(files []FileHeader) error {

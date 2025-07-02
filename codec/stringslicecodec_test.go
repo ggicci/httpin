@@ -1,4 +1,4 @@
-package core
+package codec
 
 import (
 	"reflect"
@@ -51,13 +51,13 @@ func TestStringSlicable_ToStringSlice(t *testing.T) {
 }
 
 func testAssignStringSlice(t *testing.T, rv reflect.Value, values []string) {
-	ss, err := NewStringSlicable(rv, nil)
+	ss, err := testNS.NewStringSliceCodec(rv, nil)
 	assert.NoError(t, err)
 	assert.NoError(t, ss.FromStringSlice(values))
 }
 
 func testGetStringSlice(t *testing.T, rv reflect.Value) []string {
-	ss, err := NewStringSlicable(rv, nil)
+	ss, err := testNS.NewStringSliceCodec(rv, nil)
 	assert.NoError(t, err)
 	values, err := ss.ToStringSlice()
 	assert.NoError(t, err)

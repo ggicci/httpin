@@ -8,23 +8,15 @@ import (
 	"github.com/ggicci/owl"
 )
 
-func init() {
-	RegisterDirective("form", &DirectvieForm{})
-	RegisterDirective("query", &DirectiveQuery{})
-	RegisterDirective("header", &DirectiveHeader{})
-	RegisterDirective("body", &DirectiveBody{})
-	RegisterDirective("required", &DirectiveRequired{})
-	RegisterDirective("default", &DirectiveDefault{})
-	RegisterDirective("nonzero", &DirectiveNonzero{})
-	registerDirective("path", defaultPathDirective)
-	registerDirective("omitempty", &DirectiveOmitEmpty{})
+type DirectiveExecutor interface {
+	// Encode encodes the field of the input struct to the HTTP request.
+	Encode(*DirectiveRuntime) error
 
-	// decoder is a special executor which does nothing, but is an indicator of
-	// overriding the decoder for a specific field.
-	registerDirective("decoder", noopDirective)
-	registerDirective("coder", noopDirective)
+	// Decode decodes the field of the input struct from the HTTP request.
+	Decode(*DirectiveRuntime) error
 }
 
+// FIXME(ggicci): remove the following decoderNamespace & encoderNamespace.
 var (
 	// decoderNamespace is the namespace for registering directive executors that are
 	// used to decode the http request to input struct.
@@ -33,19 +25,52 @@ var (
 	// encoderNamespace is the namespace for registering directive executors that are
 	// used to encode the input struct to http request.
 	encoderNamespace = owl.NewNamespace()
-
-	// reservedExecutorNames are the names that cannot be used to register user defined directives
-	reservedExecutorNames = []string{"decoder", "coder"}
-
-	noopDirective = &directiveNoop{}
 )
 
-type DirectiveExecutor interface {
-	// Encode encodes the field of the input struct to the HTTP request.
-	Encode(*DirectiveRuntime) error
+// reservedExecutorNames are the names that cannot be used to register user defined directives
+var reservedExecutorNames = []string{"codec", "decoder", "coder"}
 
-	// Decode decodes the field of the input struct from the HTTP request.
-	Decode(*DirectiveRuntime) error
+// DirectiveNamespace holds the namespaces for directive executors. It is used to
+// register directive executors that are used to decode and encode the HTTP request
+// to/from the input struct.
+type DirectiveNamespace struct {
+	// decoders is the namespace for registering directive executors that are
+	// used to decode the HTTP request to input struct.
+	decoders *owl.Namespace
+
+	// encoders is the namespace for registering directive executors that are
+	// used to encode the input struct to HTTP request.
+	encoders *owl.Namespace
+}
+
+func NewDirectiveNamespace() *DirectiveNamespace {
+	ns := &DirectiveNamespace{
+		decoders: owl.NewNamespace(),
+		encoders: owl.NewNamespace(),
+	}
+	ns.registerBuiltinDirectives()
+	return ns
+}
+
+func (ns *DirectiveNamespace) registerBuiltinDirectives() {
+	ns.RegisterDirective("form", &DirectvieForm{})
+	ns.RegisterDirective("query", &DirectiveQuery{})
+	ns.RegisterDirective("header", &DirectiveHeader{})
+	ns.RegisterDirective("body", &DirectiveBody{})
+	ns.RegisterDirective("required", &DirectiveRequired{})
+	ns.RegisterDirective("default", &DirectiveDefault{})
+	ns.RegisterDirective("nonzero", &DirectiveNonzero{})
+	ns.registerDirective("path", defaultPathDirective)
+	ns.registerDirective("omitempty", &DirectiveOmitEmpty{})
+
+	// The following are 3 special executors which do nothing. Each of them just
+	// serves as an indicator of overriding the codec for a specific field. For
+	// historical reasons, we have three of them, but we should only use "codec"
+	// in the future. The "decoder" and "coder" are kept for backward
+	// compatibility, and will be removed soon.
+	ns.registerDirective("decoder", &DirectiveNoop{})
+	ns.registerDirective("coder", &DirectiveNoop{})
+	ns.registerDirective("codec", &DirectiveNoop{})
 }
 
 // RegisterDirective registers a DirectiveExecutor with the given directive name. The
@@ -56,14 +81,14 @@ type DirectiveExecutor interface {
 //
 // Will panic if the name were taken or given executor is nil. Pass parameter force
 // (true) to ignore the name conflict.
-func RegisterDirective(name string, executor DirectiveExecutor, force ...bool) {
+func (ns *DirectiveNamespace) RegisterDirective(name string, executor DirectiveExecutor, force ...bool) {
 	panicOnReservedExecutorName(name)
-	registerDirective(name, executor, force...)
+	ns.registerDirective(name, executor, force...)
 }
 
-func registerDirective(name string, executor DirectiveExecutor, force ...bool) {
-	registerDirectiveExecutorToNamespace(decoderNamespace, name, executor, force...)
-	registerDirectiveExecutorToNamespace(encoderNamespace, name, executor, force...)
+func (ns *DirectiveNamespace) registerDirective(name string, executor DirectiveExecutor, force ...bool) {
+	registerDirectiveExecutorToNamespace(ns.decoders, name, executor, force...)
+	registerDirectiveExecutorToNamespace(ns.encoders, name, executor, force...)
 }
 
 func registerDirectiveExecutorToNamespace(ns *owl.Namespace, name string, exe DirectiveExecutor, force ...bool) {
@@ -90,9 +115,3 @@ func panicOnReservedExecutorName(name string) {
 		}
 	}
 }
-
-// directiveNoop is a DirectiveExecutor that does nothing, "noop" stands for "no operation".
-type directiveNoop struct{}
-
-func (*directiveNoop) Encode(*DirectiveRuntime) error { return nil }
-func (*directiveNoop) Decode(*DirectiveRuntime) error { return nil }

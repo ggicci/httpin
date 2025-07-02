@@ -31,7 +31,7 @@ func TestDirectiveDefault_Decode(t *testing.T) {
 	}
 	expected := &ThingWithDefaultValues{
 		Page:           7,
-		PointerPage:    internal.Pointerize[int](9),
+		PointerPage:    internal.Pointerize(9),
 		PatchPage:      patch.Field[int]{Value: 11, Valid: true},
 		PerPage:        20,
 		StateList:      []string{"pending", "in_progress", "failed"},

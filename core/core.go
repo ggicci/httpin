@@ -19,6 +19,7 @@ var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 // Who is responsible for decoding an HTTP request to an instance of such struct
 // type.
 type Core struct {
+	ns                     *Namespace
 	resolver               *owl.Resolver // for decoding
 	scanResolver           *owl.Resolver // for encoding
 	errorHandler           ErrorHandler
@@ -34,31 +35,7 @@ type Core struct {
 //   - decoding an HTTP request to an instance of the inputStruct;
 //   - encoding an instance of the inputStruct to an HTTP request.
 func New(inputStruct any, opts ...Option) (*Core, error) {
-	resolver, err := buildResolver(inputStruct)
-	if err != nil {
-		return nil, err
-	}
-
-	core := &Core{
-		resolver: resolver,
-	}
-
-	// Apply default options and user custom options to the
-	var allOptions []Option
-	defaultOptions := []Option{
-		WithMaxMemory(defaultMaxMemory),
-		WithNestedDirectivesEnabled(globalNestedDirectivesEnabled),
-	}
-	allOptions = append(allOptions, defaultOptions...)
-	allOptions = append(allOptions, opts...)
-
-	for _, opt := range allOptions {
-		if err := opt(core); err != nil {
-			return nil, fmt.Errorf("invalid option: %w", err)
-		}
-	}
-
-	return core, nil
+	return defaultNS.New(inputStruct, opts...)
 }
 
 // Decode decodes an HTTP request to an instance of the input struct and returns
@@ -84,7 +61,7 @@ func (c *Core) DecodeTo(req *http.Request, value any) (err error) {
 
 	err = c.resolver.ResolveTo(
 		value,
-		owl.WithNamespace(decoderNamespace),
+		owl.WithNamespace(c.ns.decoders),
 		owl.WithValue(CtxRequest, req),
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
 	)
@@ -119,7 +96,7 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 	// NOTE(ggicci): the error returned a joined error by using errors.Join.
 	if err = c.scanResolver.Scan(
 		input,
-		owl.WithNamespace(encoderNamespace),
+		owl.WithNamespace(c.ns.encoders),
 		owl.WithValue(CtxRequestBuilder, rb),
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
 	); err != nil {
@@ -214,6 +191,7 @@ func normalizeResolver(r *owl.Resolver) error {
 		for _, fn := range []func(*owl.Resolver) error{
 			removeDecoderDirective,             // backward compatibility, use "coder" instead
 			removeCoderDirective,               // "coder" takes precedence over "decoder"
+			removeCodecDirective,               // use "codec" instead
 			ensureDirectiveExecutorsRegistered, // always the last one
 		} {
 			if err := fn(r); err != nil {
@@ -227,17 +205,21 @@ func normalizeResolver(r *owl.Resolver) error {
 }
 
 func removeDecoderDirective(r *owl.Resolver) error {
-	return reserveCoderDirective(r, "decoder")
+	return reserveCodecDirective(r, "decoder")
 }
 
 func removeCoderDirective(r *owl.Resolver) error {
-	return reserveCoderDirective(r, "coder")
+	return reserveCodecDirective(r, "coder")
 }
 
-// reserveCoderDirective removes the directive from the resolver. name is "coder" or "decoder".
+func removeCodecDirective(r *owl.Resolver) error {
+	return reserveCodecDirective(r, "codec")
+}
+
+// reserveCodecDirective removes the directive from the resolver. name is "coder" or "decoder".
 // The "decoder"/"coder"are two special directives which do nothing, but an indicator of
 // overriding the decoder and encoder for a specific field.
-func reserveCoderDirective(r *owl.Resolver, name string) error {
+func reserveCodecDirective(r *owl.Resolver, name string) error {
 	d := r.RemoveDirective(name)
 	if d == nil {
 		return nil
@@ -250,7 +232,7 @@ func reserveCoderDirective(r *owl.Resolver, name string) error {
 		return fmt.Errorf("directive %s: cannot be used on a file type field", name)
 	}
 
-	namedAdaptor := namedStringableAdaptors[d.Argv[0]]
+	namedAdaptor := namedStringCodecAdaptors[d.Argv[0]]
 	if namedAdaptor == nil {
 		return fmt.Errorf("directive %s: %w: %q", name, ErrUnregisteredCoder, d.Argv[0])
 	}
@@ -266,7 +248,7 @@ func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
 		if decoderNamespace.LookupExecutor(d.Name) == nil {
 			return fmt.Errorf("%w: %q", ErrUnregisteredDirective, d.Name)
 		}
-		// NOTE: don't need to check encoderNamespace because a directive
+		// NOTE: don't need to check encoders namespace because a directive
 		// will always be registered in both namespaces. See RegisterDirective().
 	}
 	return nil
@@ -279,9 +261,10 @@ func (d directiveOrderForEncoding) Len() int {
 }
 
 func (d directiveOrderForEncoding) Less(i, j int) bool {
-	if d[i].Name == "default" {
+	switch d[i].Name {
+	case "default":
 		return true // always the first one to run
-	} else if d[i].Name == "nonzero" {
+	case "nonzero":
 		return true // always the second one to run
 	}
 	return false
