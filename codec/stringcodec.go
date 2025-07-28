@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-
-	"github.com/ggicci/strconvx"
 )
 
 // NewStringCodec creates a StringCodec instance from a reflect.Value. It allows
@@ -40,7 +38,7 @@ func (ns *Namespace) newStringCodec(rv reflect.Value, adaptor StringCodecAdaptor
 	}
 
 	// Fallback to use built-in StringCodec types.
-	return (*strconvx.Namespace)(ns).New(rv)
+	return ns.Namespace.New(rv)
 }
 
 // StringCodec4PatchField makes patch.Field[T] implement StringCodec as long as

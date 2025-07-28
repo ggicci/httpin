@@ -98,12 +98,12 @@ func TestDirectiveDefault_NewRequest(t *testing.T) {
 	assert.Equal(t, expected, req)
 }
 
-func TestDirectiveDefault_NewRequest_WithNamedCoder(t *testing.T) {
+func TestDirectiveDefault_NewRequest_WithNamedCodec(t *testing.T) {
 	registerMyDate()
 	type ListUsersRequest struct {
 		Page             int       `in:"query=page;default=1"`
 		PerPage          int       `in:"query=per_page;default=20"`
-		RegistrationDate time.Time `in:"query=registration_date;default=2020-01-01;coder=mydate"`
+		RegistrationDate time.Time `in:"query=registration_date;default=2020-01-01;codec=mydate"`
 	}
 
 	co, err := New(ListUsersRequest{})

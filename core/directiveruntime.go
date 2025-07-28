@@ -16,28 +16,45 @@ const (
 	// from DirectiveRuntime.Context. The HTTP request value is injected by
 	// httpin to the context of DirectiveRuntime before executing the directive.
 	// See Core.Decode() for more details.
+	//
+	// Use DirectiveRuntime.GetRequest() to get the HTTP request.
 	CtxRequest contextKey = iota
 
+	// Use DirectiveRuntime.GetRequestBuilder() to get the request builder.
 	CtxRequestBuilder
 
-	// CtxCustomCoder is the key to get the custom decoder for a field from
-	// Resolver.Context. Which is specified by the "decoder" directive.
-	// During resolver building phase, the "decoder" directive will be removed
-	// from the resolver, and the targeted decoder by name will be put into
-	// Resolver.Context with this key. e.g.
+	// CtxCustomCodec is the context key used to retrieve a custom codec for a field
+	// from Resolver.Context. This codec is specified by the "codec" directive.
+	//
+	// During the resolver-building phase, the "codec" directive is stripped from the field,
+	// and the corresponding codec (looked up by name) is stored in Resolver.Context using this key.
+	//
+	// Example:
 	//
 	//    type GreetInput struct {
-	//        Message string `httpin:"decoder=custom"`
+	//        Message string `in:"codec=custom"`
 	//    }
-	// For the above example, the decoder named "custom" will be put into the
-	// resolver of Message field with this key.
-	CtxCustomCoder
+	//
+	// In this example, the codec named "custom" will be associated with the resolver for the
+	// Message field via this context key.
+	//
+	// Use DirectiveRuntime.GetCustomCodec() to get the codec.
+	CtxCustomCodec
 
 	// CtxFieldSet is used by executors to tell whether a field has been set. When
 	// multiple executors were applied to a field, if the field value were set
 	// by a former executor, the latter executors MAY skip running by consulting
 	// this context value.
+	//
+	// Use DirectiveRuntime.IsFiledSet() to get the value.
+	//
+	// Use DirectiveRuntime.MarkFieldSet(true/false) to set the value.
 	CtxFieldSet
+
+	// CtxNamespace indicates the httpin namespace to which the resources belong.
+	//
+	// Use DirectiveRuntime.GetNamespace() to get the httpin namespace.
+	CtxNamespace
 )
 
 // DirectiveRuntime is the runtime of a directive execution. It wraps owl.DirectiveRuntime,
@@ -45,6 +62,14 @@ const (
 //
 // See owl.DirectiveRuntime for more details.
 type DirectiveRuntime owl.DirectiveRuntime
+
+// Get the httpin namespace.
+func (rtm *DirectiveRuntime) GetNamespace() *Namespace {
+	if ns := rtm.Context.Value(CtxNamespace); ns != nil {
+		return ns.(*Namespace)
+	}
+	panic("namespace must be set")
+}
 
 // GetRequest returns the HTTP request value from the context of
 // DirectiveRuntime. This is useful for executors that need to access the HTTP
@@ -67,10 +92,10 @@ func (rtm *DirectiveRuntime) GetRequestBuilder() *RequestBuilder {
 	return nil
 }
 
-// GetCustomCodec returns the custom codec bound to the field by the "coder",
+// GetCustomCodec returns the custom codec bound to the field by the "codec", "coder",
 // "decoder" directives.
 func (rtm *DirectiveRuntime) GetCustomCodec() *NamedStringCodecAdaptor {
-	if info := rtm.Resolver.Context.Value(CtxCustomCoder); info != nil {
+	if info := rtm.Resolver.Context.Value(CtxCustomCodec); info != nil {
 		return info.(*NamedStringCodecAdaptor)
 	} else {
 		return nil

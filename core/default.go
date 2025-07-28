@@ -5,8 +5,6 @@ package core
 
 import (
 	"mime/multipart"
-
-	"github.com/ggicci/httpin/internal"
 )
 
 type DirectiveDefault struct{}
@@ -39,9 +37,9 @@ func (*DirectiveDefault) Encode(rtm *DirectiveRuntime) error {
 	if coder != nil {
 		adapt = coder.Adaptor
 	}
-	if stringSlicable, err := internal.NewStringSliceCodec(rtm.Value, adapt); err != nil {
+	if stringSliceCodec, err := rtm.GetNamespace().NewStringSliceCodec(rtm.Value, adapt); err != nil {
 		return err
 	} else {
-		return stringSlicable.FromStringSlice(rtm.Directive.Argv)
+		return stringSliceCodec.FromStringSlice(rtm.Directive.Argv)
 	}
 }

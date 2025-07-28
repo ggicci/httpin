@@ -5,16 +5,20 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/httpin/codec"
 	"github.com/ggicci/owl"
 )
 
 var (
 	ErrUnregisteredDirective = errors.New("unregistered directive")
-	ErrUnregisteredCoder     = errors.New("unregistered coder")
-	ErrFieldTypeMismatch     = internal.ErrFieldTypeMismatch
-	ErrUnsupportedFieldType  = internal.ErrUnsupportedFieldType
+	ErrUnregisteredCodec     = errors.New("unregistered codec")
+	ErrFieldTypeMismatch     = codec.ErrFieldTypeMismatch
+	ErrUnsupportedFieldType  = codec.ErrUnsupportedFieldType
 	ErrUnsupportedType       = owl.ErrUnsupportedType
+
+	ErrMissingCodecName      = errors.New("missing codec name")
+	ErrTooManyNamedCodecs    = errors.New("too many named codecs")
+	ErrIncompatibleDirective = errors.New("incompatible directive")
 )
 
 type InvalidFieldError struct {

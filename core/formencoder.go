@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/ggicci/httpin/codec"
 	"github.com/ggicci/httpin/internal"
 )
 
@@ -19,15 +20,16 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 		return nil // skip when already encoded by former directives
 	}
 
+	ns := rtm.GetNamespace()
 	key := rtm.Directive.Argv[0]
 	valueType := rtm.Value.Type()
 	// When baseType is a file type, we treat it as a file upload.
-	if isFileType(valueType) {
+	if ns.IsFileType(valueType) {
 		if internal.IsNil(rtm.Value) {
 			return nil // skip when nil, which means no file uploaded
 		}
 
-		encoder, err := internal.NewFileSliceCodec(rtm.Value)
+		encoder, err := codec.NewFileSliceCodec(rtm.Value)
 		if err != nil {
 			return err
 		}
@@ -47,7 +49,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 		adapt = encoderInfo.Adaptor
 	}
 	var encoder StringSliceCodec
-	encoder, err := internal.NewStringSliceCodec(rtm.Value, adapt)
+	encoder, err := ns.NewStringSliceCodec(rtm.Value, adapt)
 	if err != nil {
 		return err
 	}
@@ -61,7 +63,7 @@ func (e *FormEncoder) Execute(rtm *DirectiveRuntime) error {
 	}
 }
 
-func fileUploadBuilder(rtm *DirectiveRuntime, files []internal.FileMarshaler) error {
+func fileUploadBuilder(rtm *DirectiveRuntime, files []FileMarshaler) error {
 	rb := rtm.GetRequestBuilder()
 	key := rtm.Directive.Argv[0]
 	rb.SetAttachment(key, files)

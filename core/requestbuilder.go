@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/httpin/codec"
 )
 
-type FileMarshaler = internal.FileMarshaler
+type FileMarshaler = codec.FileMarshaler
 
 type RequestBuilder struct {
 	Query      url.Values

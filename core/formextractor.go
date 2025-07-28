@@ -3,7 +3,7 @@ package core
 import (
 	"mime/multipart"
 
-	"github.com/ggicci/httpin/internal"
+	"github.com/ggicci/httpin/codec"
 )
 
 type FormExtractor struct {
@@ -40,10 +40,11 @@ func (e *FormExtractor) extract(key string) error {
 		return nil
 	}
 
+	ns := e.Runtime.GetNamespace()
 	var sourceValue any
 	var err error
 	valueType := e.Runtime.Value.Type().Elem()
-	if isFileType(valueType) {
+	if ns.IsFileType(valueType) {
 		// When fileDecoder is not nil, it means that the field is a file upload.
 		// We should decode files instead of values.
 		if len(files) == 0 {
@@ -52,9 +53,9 @@ func (e *FormExtractor) extract(key string) error {
 		sourceValue = files
 
 		var decoder FileSliceCodec
-		decoder, err = internal.NewFileSliceCodec(e.Runtime.Value.Elem())
+		decoder, err = codec.NewFileSliceCodec(e.Runtime.Value.Elem())
 		if err == nil {
-			err = decoder.FromFileSlice(internal.ToFileHeaderList(files))
+			err = decoder.FromFileSlice(codec.ToFileHeaderList(files))
 		}
 	} else {
 		if len(values) == 0 {
@@ -68,7 +69,7 @@ func (e *FormExtractor) extract(key string) error {
 			adapt = decoderInfo.Adaptor
 		}
 		var decoder StringSliceCodec
-		decoder, err = internal.NewStringSliceCodec(e.Runtime.Value.Elem(), adapt)
+		decoder, err = ns.NewStringSliceCodec(e.Runtime.Value.Elem(), adapt)
 		if err == nil {
 			err = decoder.FromStringSlice(values)
 		}

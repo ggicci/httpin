@@ -8,32 +8,9 @@ import (
 	"github.com/ggicci/owl"
 )
 
-type DirectiveExecutor interface {
-	// Encode encodes the field of the input struct to the HTTP request.
-	Encode(*DirectiveRuntime) error
-
-	// Decode decodes the field of the input struct from the HTTP request.
-	Decode(*DirectiveRuntime) error
-}
-
-// FIXME(ggicci): remove the following decoderNamespace & encoderNamespace.
-var (
-	// decoderNamespace is the namespace for registering directive executors that are
-	// used to decode the http request to input struct.
-	decoderNamespace = owl.NewNamespace()
-
-	// encoderNamespace is the namespace for registering directive executors that are
-	// used to encode the input struct to http request.
-	encoderNamespace = owl.NewNamespace()
-)
-
-// reservedExecutorNames are the names that cannot be used to register user defined directives
-var reservedExecutorNames = []string{"codec", "decoder", "coder"}
-
-// DirectiveNamespace holds the namespaces for directive executors. It is used to
-// register directive executors that are used to decode and encode the HTTP request
-// to/from the input struct.
-type DirectiveNamespace struct {
+// DirectiveRegistry is the place to register directive executors that are used
+// to decode and encode the HTTP request to/from the input struct.
+type DirectiveRegistry struct {
 	// decoders is the namespace for registering directive executors that are
 	// used to decode the HTTP request to input struct.
 	decoders *owl.Namespace
@@ -43,8 +20,8 @@ type DirectiveNamespace struct {
 	encoders *owl.Namespace
 }
 
-func NewDirectiveNamespace() *DirectiveNamespace {
-	ns := &DirectiveNamespace{
+func NewDirectiveRegistry() *DirectiveRegistry {
+	ns := &DirectiveRegistry{
 		decoders: owl.NewNamespace(),
 		encoders: owl.NewNamespace(),
 	}
@@ -52,7 +29,10 @@ func NewDirectiveNamespace() *DirectiveNamespace {
 	return ns
 }
 
-func (ns *DirectiveNamespace) registerBuiltinDirectives() {
+// reservedExecutorNames are the names that cannot be used to register user defined directives
+var reservedExecutorNames = []string{"codec", "decoder", "coder"}
+
+func (ns *DirectiveRegistry) registerBuiltinDirectives() {
 	ns.RegisterDirective("form", &DirectvieForm{})
 	ns.RegisterDirective("query", &DirectiveQuery{})
 	ns.RegisterDirective("header", &DirectiveHeader{})
@@ -65,12 +45,12 @@ func (ns *DirectiveNamespace) registerBuiltinDirectives() {
 
 	// The following are 3 special executors which do nothing. Each of them just
 	// serves as an indicator of overriding the codec for a specific field. For
-	// historical reasons, we have three of them, but we should only use "codec"
+	// historical reasons, we have three of them, but on "codec" should be used
 	// in the future. The "decoder" and "coder" are kept for backward
-	// compatibility, and will be removed soon.
-	ns.registerDirective("decoder", &DirectiveNoop{})
-	ns.registerDirective("coder", &DirectiveNoop{})
+	// compatibility, and will be removed eventually.
 	ns.registerDirective("codec", &DirectiveNoop{})
+	ns.registerDirective("coder", &DirectiveNoop{})
+	ns.registerDirective("decoder", &DirectiveNoop{})
 }
 
 // RegisterDirective registers a DirectiveExecutor with the given directive name. The
@@ -81,25 +61,18 @@ func (ns *DirectiveNamespace) registerBuiltinDirectives() {
 //
 // Will panic if the name were taken or given executor is nil. Pass parameter force
 // (true) to ignore the name conflict.
-func (ns *DirectiveNamespace) RegisterDirective(name string, executor DirectiveExecutor, force ...bool) {
+func (ns *DirectiveRegistry) RegisterDirective(name string, executor DirectiveExecutor, force ...bool) {
 	panicOnReservedExecutorName(name)
 	ns.registerDirective(name, executor, force...)
 }
 
-func (ns *DirectiveNamespace) registerDirective(name string, executor DirectiveExecutor, force ...bool) {
-	registerDirectiveExecutorToNamespace(ns.decoders, name, executor, force...)
-	registerDirectiveExecutorToNamespace(ns.encoders, name, executor, force...)
-}
-
-func registerDirectiveExecutorToNamespace(ns *owl.Namespace, name string, exe DirectiveExecutor, force ...bool) {
-	if exe == nil {
+func (ns *DirectiveRegistry) registerDirective(name string, executor DirectiveExecutor, force ...bool) {
+	if executor == nil {
 		internal.PanicOnError(errors.New("nil directive executor"))
 	}
-	if ns == decoderNamespace {
-		ns.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(exe.Decode), force...)
-	} else {
-		ns.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(exe.Encode), force...)
-	}
+
+	ns.decoders.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(executor.Decode), force...)
+	ns.encoders.RegisterDirectiveExecutor(name, asOwlDirectiveExecutor(executor.Encode), force...)
 }
 
 func asOwlDirectiveExecutor(directiveFunc func(*DirectiveRuntime) error) owl.DirectiveExecutor {

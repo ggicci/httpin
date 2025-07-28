@@ -72,34 +72,38 @@ func TestNew_ErrUnregisteredDirective(t *testing.T) {
 	assert.ErrorContains(t, err, "base58_to_integer")
 }
 
-func TestNew_WithNamedCoder_ErrMissingCoderName(t *testing.T) {
+func TestNew_WithNamedCodec_ErrMissingCodecName(t *testing.T) {
 	type Input struct {
 		Gender string `in:"form=gender;decoder"`
 	}
 
 	co, err := New(Input{})
-	assert.ErrorContains(t, err, "directive decoder: missing coder name")
+	assert.ErrorIs(t, err, ErrMissingCodecName)
+	assert.ErrorContains(t, err, "directive \"decoder\":")
 	assert.Nil(t, co)
 }
 
-func TestNew_WithNamedCoder_ErrUnregisteredCoder(t *testing.T) {
+func TestNew_WithNamedCodec_ErrUnregisteredCodec(t *testing.T) {
 	type Input struct {
 		Gender string `in:"form=gender;coder=gender"`
 	}
 	co, err := New(Input{})
-	assert.ErrorContains(t, err, "directive coder: unregistered coder: \"gender\"")
+	assert.ErrorIs(t, err, ErrUnregisteredCodec)
+	assert.ErrorContains(t, err, "directive \"coder\":")
 	assert.Nil(t, co)
 }
 
-func TestNew_WithNamedCoder_ErrCannotSpecifyOnFileTypeFields(t *testing.T) {
+func TestNew_WithNamedCodec_ErrIncompatibleDirective(t *testing.T) {
 	registerMyDate()
 	type FunnyFile struct{}
-	fileTypes[internal.TypeOf[*FunnyFile]()] = struct{}{} // fake a registered file type
+	defaultNS.RegisterFileCodec(internal.TypeOf[*FunnyFile]())
 	type Input struct {
-		Avatar *FunnyFile `in:"form=avatar;coder=mydate"`
+		Avatar *FunnyFile `in:"form=avatar;codec=mydate"`
 	}
 	co, err := New(Input{})
-	assert.ErrorContains(t, err, "directive coder: cannot be used on a file type field")
+	assert.ErrorIs(t, err, ErrIncompatibleDirective)
+	assert.ErrorContains(t, err, "directive \"codec\":")
+	assert.ErrorContains(t, err, "cannot be used on a field of file type")
 	assert.Nil(t, co)
 	removeFileType[*FunnyFile]()
 	unregisterMyDate()
@@ -564,11 +568,11 @@ func TestRegisterCoder_CustomType_OverrideDefaultTypeCoder(t *testing.T) {
 }
 
 func removeType[T any]() {
-	internal.StrconvxNS.UndoAdapt(internal.TypeOf[T]())
+	defaultNS.UndoAdapt(internal.TypeOf[T]())
 }
 
 func removeNamedType(name string) {
-	delete(namedStringCodecAdaptors, name)
+	defaultNS.unregisterNamedCodec(name)
 }
 
 func registerMyDate() {

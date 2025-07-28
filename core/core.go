@@ -13,8 +13,6 @@ import (
 	"github.com/ggicci/owl"
 )
 
-var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
-
 // Core is the Core of httpin. It holds the resolver of a specific struct type.
 // Who is responsible for decoding an HTTP request to an instance of such struct
 // type.
@@ -61,6 +59,7 @@ func (c *Core) DecodeTo(req *http.Request, value any) (err error) {
 
 	err = c.resolver.ResolveTo(
 		value,
+		owl.WithValue(CtxNamespace, c.ns),
 		owl.WithNamespace(c.ns.decoders),
 		owl.WithValue(CtxRequest, req),
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
@@ -96,7 +95,8 @@ func (c *Core) NewRequestWithContext(ctx context.Context, method string, url str
 	// NOTE(ggicci): the error returned a joined error by using errors.Join.
 	if err = c.scanResolver.Scan(
 		input,
-		owl.WithNamespace(c.ns.encoders),
+		owl.WithValue(CtxNamespace, c.ns),
+		owl.WithNamespace(c.ns.encoders), // NOTE: this is owl's namespace
 		owl.WithValue(CtxRequestBuilder, rb),
 		owl.WithNestedDirectivesEnabled(c.enableNestedDirectives),
 	); err != nil {
@@ -159,117 +159,4 @@ func (c *Core) parseRequestForm(req *http.Request) (err error) {
 		err = req.ParseForm()
 	}
 	return
-}
-
-// buildResolver builds a resolver for the inputStruct. It will run normalizations
-// on the resolver and cache it.
-func buildResolver(inputStruct any) (*owl.Resolver, error) {
-	resolver, err := owl.New(inputStruct)
-	if err != nil {
-		return nil, err
-	}
-
-	// Returns the cached resolver if it's already built.
-	if cached, ok := builtResolvers.Load(resolver.Type); ok {
-		return cached.(*owl.Resolver), nil
-	}
-
-	// Normalize the resolver before caching it.
-	if err := normalizeResolver(resolver); err != nil {
-		return nil, err
-	}
-
-	// Cache the resolver.
-	builtResolvers.Store(resolver.Type, resolver)
-	return resolver, nil
-}
-
-// normalizeResolver normalizes the resolvers by running a series of
-// normalizations on every field resolver.
-func normalizeResolver(r *owl.Resolver) error {
-	normalize := func(r *owl.Resolver) error {
-		for _, fn := range []func(*owl.Resolver) error{
-			removeDecoderDirective,             // backward compatibility, use "coder" instead
-			removeCoderDirective,               // "coder" takes precedence over "decoder"
-			removeCodecDirective,               // use "codec" instead
-			ensureDirectiveExecutorsRegistered, // always the last one
-		} {
-			if err := fn(r); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	return r.Iterate(normalize)
-}
-
-func removeDecoderDirective(r *owl.Resolver) error {
-	return reserveCodecDirective(r, "decoder")
-}
-
-func removeCoderDirective(r *owl.Resolver) error {
-	return reserveCodecDirective(r, "coder")
-}
-
-func removeCodecDirective(r *owl.Resolver) error {
-	return reserveCodecDirective(r, "codec")
-}
-
-// reserveCodecDirective removes the directive from the resolver. name is "coder" or "decoder".
-// The "decoder"/"coder"are two special directives which do nothing, but an indicator of
-// overriding the decoder and encoder for a specific field.
-func reserveCodecDirective(r *owl.Resolver, name string) error {
-	d := r.RemoveDirective(name)
-	if d == nil {
-		return nil
-	}
-	if len(d.Argv) == 0 {
-		return fmt.Errorf("directive %s: missing coder name", name)
-	}
-
-	if isFileType(r.Type) {
-		return fmt.Errorf("directive %s: cannot be used on a file type field", name)
-	}
-
-	namedAdaptor := namedStringCodecAdaptors[d.Argv[0]]
-	if namedAdaptor == nil {
-		return fmt.Errorf("directive %s: %w: %q", name, ErrUnregisteredCoder, d.Argv[0])
-	}
-
-	r.Context = context.WithValue(r.Context, CtxCustomCoder, namedAdaptor)
-	return nil
-}
-
-// ensureDirectiveExecutorsRegistered ensures all directives that defined in the
-// resolver are registered in the executor registry.
-func ensureDirectiveExecutorsRegistered(r *owl.Resolver) error {
-	for _, d := range r.Directives {
-		if decoderNamespace.LookupExecutor(d.Name) == nil {
-			return fmt.Errorf("%w: %q", ErrUnregisteredDirective, d.Name)
-		}
-		// NOTE: don't need to check encoders namespace because a directive
-		// will always be registered in both namespaces. See RegisterDirective().
-	}
-	return nil
-}
-
-type directiveOrderForEncoding []*owl.Directive
-
-func (d directiveOrderForEncoding) Len() int {
-	return len(d)
-}
-
-func (d directiveOrderForEncoding) Less(i, j int) bool {
-	switch d[i].Name {
-	case "default":
-		return true // always the first one to run
-	case "nonzero":
-		return true // always the second one to run
-	}
-	return false
-}
-
-func (d directiveOrderForEncoding) Swap(i, j int) {
-	d[i], d[j] = d[j], d[i]
 }

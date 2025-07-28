@@ -29,11 +29,6 @@ type (
 	StringCodecAdaptor = codec.StringCodecAdaptor
 )
 
-var (
-	fileTypes                = make(map[reflect.Type]struct{})
-	namedStringCodecAdaptors = make(map[string]*NamedStringCodecAdaptor)
-)
-
 // RegisterCodec registers a custom codec for the given type T. When a field of
 // type T is encountered, this codec will be used to convert the value to a
 // StringCodec, which will be used to convert the value from/to string.
@@ -69,7 +64,7 @@ var (
 //		return nil
 //	}
 func RegisterCodec[T any](adaptor func(*T) (StringCodec, error)) {
-	internal.StrconvxNS.Adapt(strconvx.ToAnyAdaptor(adaptor))
+	defaultNS.Adapt(strconvx.ToAnyAdaptor(adaptor))
 }
 
 // Deprecated: Use RegisterCodec instead.
@@ -115,11 +110,7 @@ func RegisterCoder[T any](adapt func(*T) (StringCodec, error)) {
 //	}
 func RegisterNamedCodec[T any](name string, adapt func(*T) (StringCodec, error)) {
 	typ, adaptor := strconvx.ToAnyAdaptor(adapt)
-	namedStringCodecAdaptors[name] = &NamedStringCodecAdaptor{
-		Name:     name,
-		BaseType: typ,
-		Adaptor:  adaptor,
-	}
+	defaultNS.RegisterNamedCodec(name, typ, adaptor)
 }
 
 // Deprecated: Use RegisterNamedCodec instead.
@@ -131,7 +122,7 @@ func RegisterNamedCoder[T any](name string, adapt func(*T) (StringCodec, error))
 // the FileCodec interface. Remember if you don't register the type explicitly,
 // it won't be recognized as a file type.
 func RegisterFileCodec[T FileCodec]() {
-	fileTypes[internal.TypeOf[T]()] = struct{}{}
+	defaultNS.RegisterFileCodec(internal.TypeOf[T]())
 }
 
 // Deprecated: Use RegisterFileCodec instead.
@@ -145,8 +136,14 @@ type NamedStringCodecAdaptor struct {
 	Adaptor  StringCodecAdaptor
 }
 
-func isFileType(typ reflect.Type) bool {
-	baseType, _ := internal.BaseTypeOf(typ)
-	_, ok := fileTypes[baseType]
-	return ok
+// RegisterDirective registers a DirectiveExecutor with the given directive name. The
+// directive should be able to both extract the value from the HTTP request and build
+// the HTTP request from the value. The Decode API is used to decode data from the HTTP
+// request to a field of the input struct, and Encode API is used to encode the field of
+// the input struct to the HTTP request.
+//
+// Will panic if the name were taken or given executor is nil. Pass parameter force
+// (true) to ignore the name conflict.
+func RegisterDirective(name string, executor DirectiveExecutor, force ...bool) {
+	defaultNS.RegisterDirective(name, executor, force...)
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ggicci/httpin/codec"
 	"github.com/ggicci/httpin/internal"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +29,7 @@ func (bf *BadFile) MarshalFile() (io.ReadCloser, error) {
 
 var errBadFile = errors.New("bad file")
 
-func (bf *BadFile) UnmarshalFile(fh internal.FileHeader) error {
+func (bf *BadFile) UnmarshalFile(fh codec.FileHeader) error {
 	return errBadFile
 }
 
@@ -348,5 +349,5 @@ func newMultipartFormWriterFromMap(m map[string]any) (body *bytes.Buffer, writer
 }
 
 func removeFileType[T any]() {
-	delete(fileTypes, internal.TypeOf[T]())
+	defaultNS.unregisterFileCodec(internal.TypeOf[T]())
 }

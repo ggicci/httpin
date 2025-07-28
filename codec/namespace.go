@@ -4,8 +4,12 @@ import (
 	"github.com/ggicci/strconvx"
 )
 
-type Namespace strconvx.Namespace
+type Namespace struct {
+	*strconvx.Namespace
+}
 
 func NewNamespace() *Namespace {
-	return (*Namespace)(strconvx.NewNamespace())
+	return &Namespace{
+		Namespace: strconvx.NewNamespace(),
+	}
 }
