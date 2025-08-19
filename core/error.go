@@ -12,10 +12,9 @@ import (
 var (
 	ErrUnregisteredDirective = errors.New("unregistered directive")
 	ErrUnregisteredCodec     = errors.New("unregistered codec")
-	ErrFieldTypeMismatch     = codec.ErrFieldTypeMismatch
-	ErrUnsupportedFieldType  = codec.ErrUnsupportedFieldType
+	ErrFieldTypeMismatch     = codec.ErrTypeMismatch
+	ErrUnsupportedFieldType  = codec.ErrUnsupportedType
 	ErrUnsupportedType       = owl.ErrUnsupportedType
-
 	ErrMissingCodecName      = errors.New("missing codec name")
 	ErrTooManyNamedCodecs    = errors.New("too many named codecs")
 	ErrIncompatibleDirective = errors.New("incompatible directive")

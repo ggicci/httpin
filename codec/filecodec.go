@@ -10,8 +10,9 @@ import (
 	"github.com/ggicci/httpin/internal"
 )
 
-// FileHeader is the interface that groups the methods of multipart.FileHeader.
-type FileHeader interface {
+// FileObject represents a file object, which is typically used to represent a file in
+// a multipart/form-data request. See multipart.FileHeader for more details.
+type FileObject interface {
 	Filename() string
 	Size() int64
 	MIMEHeader() textproto.MIMEHeader
@@ -24,7 +25,7 @@ type FileMarshaler interface {
 }
 
 type FileUnmarshaler interface {
-	UnmarshalFile(FileHeader) error
+	UnmarshalFile(FileObject) error
 }
 
 type FileCodec interface {
@@ -32,15 +33,15 @@ type FileCodec interface {
 	FileUnmarshaler
 }
 
-func NewFileable(rv reflect.Value) (FileCodec, error) {
+func NewFileCodec(rv reflect.Value) (FileCodec, error) {
 	if IsPatchField(rv.Type()) {
-		return NewFileablePatchFieldWrapper(rv)
+		return NewFileCodec4PatchField(rv)
 	}
 
-	return newFileable(rv)
+	return newFileCodec(rv)
 }
 
-func newFileable(rv reflect.Value) (FileCodec, error) {
+func newFileCodec(rv reflect.Value) (FileCodec, error) {
 	rv, err := getPointer(rv)
 	if err != nil {
 		return nil, err
@@ -52,43 +53,16 @@ func newFileable(rv reflect.Value) (FileCodec, error) {
 	return nil, errors.New("unsupported file type")
 }
 
-type FileablePatchFieldWrapper struct {
-	Value            reflect.Value // of patch.Field[T]
-	internalFileable FileCodec
-}
-
-func NewFileablePatchFieldWrapper(rv reflect.Value) (*FileablePatchFieldWrapper, error) {
-	fileable, err := NewFileable(rv.FieldByName("Value"))
-	if err != nil {
-		return nil, err
-	} else {
-		return &FileablePatchFieldWrapper{
-			Value:            rv,
-			internalFileable: fileable,
-		}, nil
-	}
-}
-
-func (w *FileablePatchFieldWrapper) Filename() string {
-	return w.internalFileable.Filename()
-}
-
-func (w *FileablePatchFieldWrapper) MarshalFile() (io.ReadCloser, error) {
-	return w.internalFileable.MarshalFile()
-}
-
-func (w *FileablePatchFieldWrapper) UnmarshalFile(fh FileHeader) error {
-	if err := w.internalFileable.UnmarshalFile(fh); err != nil {
-		return err
-	} else {
-		w.Value.FieldByName("Valid").SetBool(true)
-		return nil
-	}
-}
-
 var fileCodecType = internal.TypeOf[FileCodec]()
 
-// multipartFileHeader is the adaptor of multipart.FileHeader.
+func MultipartFileHeaderAsFileObject(fh *multipart.FileHeader) FileObject {
+	if fh == nil {
+		return nil
+	}
+	return &multipartFileHeader{fh}
+}
+
+// multipartFileHeader wraps multipart.FileHeader into a FileObject.
 type multipartFileHeader struct{ *multipart.FileHeader }
 
 func (h *multipartFileHeader) Filename() string {
@@ -105,12 +79,4 @@ func (h *multipartFileHeader) MIMEHeader() textproto.MIMEHeader {
 
 func (h *multipartFileHeader) Open() (multipart.File, error) {
 	return h.FileHeader.Open()
-}
-
-func ToFileHeaderList(fhs []*multipart.FileHeader) []FileHeader {
-	result := make([]FileHeader, len(fhs))
-	for i, fh := range fhs {
-		result[i] = &multipartFileHeader{fh}
-	}
-	return result
 }

@@ -7,11 +7,11 @@ import (
 	"os"
 )
 
-// File is the builtin type of httpin to manupulate file uploads. On the server
+// File is the builtin type of httpin to manipulate file uploads. On the server
 // side, it is used to represent a file in a multipart/form-data request. On the
 // client side, it is used to represent a file to be uploaded.
 type File struct {
-	FileHeader
+	FileObject
 	uploadFilename string
 	uploadReader   io.ReadCloser
 }
@@ -23,8 +23,8 @@ func (f *File) Filename() string {
 	if f.IsUpload() {
 		return f.uploadFilename
 	}
-	if f.FileHeader != nil {
-		return f.FileHeader.Filename()
+	if f.FileObject != nil {
+		return f.FileObject.Filename()
 	}
 	return ""
 }
@@ -38,8 +38,8 @@ func (f *File) MarshalFile() (io.ReadCloser, error) {
 	}
 }
 
-func (f *File) UnmarshalFile(fh FileHeader) error {
-	f.FileHeader = fh
+func (f *File) UnmarshalFile(fh FileObject) error {
+	f.FileObject = fh
 	return nil
 }
 
@@ -77,10 +77,10 @@ func (f *File) OpenUploadStream() (io.ReadCloser, error) {
 // OpenReceiveStream returns a io.Reader for the file in the multipart/form-data request.
 // Call this method on the server side to read the file content.
 func (f *File) OpenReceiveStream() (multipart.File, error) {
-	if f.FileHeader == nil {
+	if f.FileObject == nil {
 		return nil, errors.New("invalid upload (server): nil file header")
 	}
-	return f.FileHeader.Open()
+	return f.FileObject.Open()
 }
 
 func (f *File) ReadAll() ([]byte, error) {

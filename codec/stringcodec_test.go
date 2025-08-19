@@ -211,7 +211,7 @@ func testAssignString(t *testing.T, rv reflect.Value, value string) {
 
 func testNewStringCodecErrUnsupported(t *testing.T, rv reflect.Value) {
 	s, err := testNS.NewStringCodec(rv, nil)
-	assert.ErrorIs(t, err, ErrUnsupportedFieldType)
+	assert.ErrorIs(t, err, ErrUnsupportedType)
 	assert.Nil(t, s)
 }
 

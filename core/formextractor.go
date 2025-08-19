@@ -55,7 +55,7 @@ func (e *FormExtractor) extract(key string) error {
 		var decoder FileSliceCodec
 		decoder, err = codec.NewFileSliceCodec(e.Runtime.Value.Elem())
 		if err == nil {
-			err = decoder.FromFileSlice(codec.ToFileHeaderList(files))
+			err = decoder.FromFileSlice(toFileObjects(files))
 		}
 	} else {
 		if len(values) == 0 {
@@ -80,4 +80,12 @@ func (e *FormExtractor) extract(key string) error {
 	}
 	e.Runtime.MarkFieldSet(true)
 	return nil
+}
+
+func toFileObjects(fhs []*multipart.FileHeader) []codec.FileObject {
+	result := make([]codec.FileObject, len(fhs))
+	for i, fh := range fhs {
+		result[i] = codec.MultipartFileHeaderAsFileObject(fh)
+	}
+	return result
 }

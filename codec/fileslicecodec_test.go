@@ -18,33 +18,33 @@ func TestFileSlicable_FromFileSlice(t *testing.T) {
 	filePatchAvatar := testutil.CreateTempFileV2(t)
 	filePatchAvatarPointer := testutil.CreateTempFileV2(t)
 
-	testAssignFileSlice(t, rv.FieldByName("Avatar"), []FileHeader{
+	testAssignFileSlice(t, rv.FieldByName("Avatar"), []FileObject{
 		mockFileHeader(t, fileAvatar.Filename),
 	})
-	testAssignFileSlice(t, rv.FieldByName("AvatarPointer"), []FileHeader{
+	testAssignFileSlice(t, rv.FieldByName("AvatarPointer"), []FileObject{
 		mockFileHeader(t, fileAvatarPointer.Filename),
 	})
-	testAssignFileSlice(t, rv.FieldByName("Avatars"), []FileHeader{
+	testAssignFileSlice(t, rv.FieldByName("Avatars"), []FileObject{
 		mockFileHeader(t, fileAvatar.Filename),
 		mockFileHeader(t, fileAvatarPointer.Filename),
 	})
-	testAssignFileSlice(t, rv.FieldByName("AvatarPointers"), []FileHeader{
+	testAssignFileSlice(t, rv.FieldByName("AvatarPointers"), []FileObject{
 		mockFileHeader(t, fileAvatarPointer.Filename),
 		mockFileHeader(t, fileAvatar.Filename),
 	})
 
-	testAssignFileSlice(t, rv.FieldByName("PatchAvatar"), []FileHeader{
+	testAssignFileSlice(t, rv.FieldByName("PatchAvatar"), []FileObject{
 		mockFileHeader(t, filePatchAvatar.Filename),
 	})
-	testAssignFileSlice(t, rv.FieldByName("PatchAvatarPointer"), []FileHeader{
+	testAssignFileSlice(t, rv.FieldByName("PatchAvatarPointer"), []FileObject{
 		mockFileHeader(t, filePatchAvatarPointer.Filename),
 	})
-	testAssignFileSlice(t, rv.FieldByName("PatchAvatars"), []FileHeader{
+	testAssignFileSlice(t, rv.FieldByName("PatchAvatars"), []FileObject{
 		mockFileHeader(t, fileAvatar.Filename),
 		mockFileHeader(t, filePatchAvatar.Filename),
 		mockFileHeader(t, filePatchAvatarPointer.Filename),
 	})
-	testAssignFileSlice(t, rv.FieldByName("PatchAvatarPointers"), []FileHeader{
+	testAssignFileSlice(t, rv.FieldByName("PatchAvatarPointers"), []FileObject{
 		mockFileHeader(t, fileAvatar.Filename),
 		mockFileHeader(t, fileAvatarPointer.Filename),
 		mockFileHeader(t, filePatchAvatar.Filename),
@@ -128,7 +128,7 @@ func TestFileSlicable_ToFileSlice(t *testing.T) {
 	validateFileList(t, []*testutil.NamedTempFile{fileAvatar, fileAvatarPointer, filePatchAvatar, filePatchAvatarPointer}, testGetFileSlice(t, rv.FieldByName("PatchAvatarPointers")))
 }
 
-func testAssignFileSlice(t *testing.T, rv reflect.Value, files []FileHeader) {
+func testAssignFileSlice(t *testing.T, rv reflect.Value, files []FileObject) {
 	fs, err := NewFileSliceCodec(rv)
 	assert.NoError(t, err)
 	assert.NoError(t, fs.FromFileSlice(files))

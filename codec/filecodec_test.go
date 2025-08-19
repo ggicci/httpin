@@ -80,7 +80,7 @@ func TestFileable_MarshalFile(t *testing.T) {
 }
 
 func testNewFileableErrUnsupported(t *testing.T, rv reflect.Value) {
-	fileable, err := NewFileable(rv)
+	fileable, err := NewFileCodec(rv)
 	assert.ErrorContains(t, err, "unsupported file type")
 	assert.Nil(t, fileable)
 }
@@ -95,7 +95,7 @@ func validateFile(t *testing.T, expected *testutil.NamedTempFile, actual FileMar
 }
 
 func validateRvFile(t *testing.T, expected *testutil.NamedTempFile, actual reflect.Value) {
-	file, err := NewFileable(actual)
+	file, err := NewFileCodec(actual)
 	assert.NoError(t, err)
 	reader, err := file.MarshalFile()
 	assert.NoError(t, err)
@@ -107,7 +107,7 @@ func validateRvFile(t *testing.T, expected *testutil.NamedTempFile, actual refle
 }
 
 func testAssignFile(t *testing.T, rv reflect.Value) *testutil.NamedTempFile {
-	fileable, err := NewFileable(rv)
+	fileable, err := NewFileCodec(rv)
 	assert.NoError(t, err)
 	file := testutil.CreateTempFileV2(t)
 	assert.NoError(t, fileable.UnmarshalFile(mockFileHeader(t, file.Filename)))
@@ -118,7 +118,7 @@ type dummyFileHeader struct {
 	file *os.File
 }
 
-func mockFileHeader(t *testing.T, filename string) FileHeader {
+func mockFileHeader(t *testing.T, filename string) FileObject {
 	file, err := os.Open(filename)
 	if err != nil {
 		t.Error(err)

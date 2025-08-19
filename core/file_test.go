@@ -29,7 +29,7 @@ func (bf *BadFile) MarshalFile() (io.ReadCloser, error) {
 
 var errBadFile = errors.New("bad file")
 
-func (bf *BadFile) UnmarshalFile(fh codec.FileHeader) error {
+func (bf *BadFile) UnmarshalFile(fh codec.FileObject) error {
 	return errBadFile
 }
 
