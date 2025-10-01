@@ -13,6 +13,12 @@ import (
 	"github.com/ggicci/owl"
 )
 
+var (
+	// ErrFailedToParseRequestForm is returned when the request form parsing fails.
+	// See http.Request.ParseForm and http.Request.ParseMultipartForm for more details.
+	ErrFailedToParseRequestForm = errors.New("failed to parse request form")
+)
+
 var builtResolvers sync.Map // map[reflect.Type]*owl.Resolver
 
 // Core is the Core of httpin. It holds the resolver of a specific struct type.
@@ -79,7 +85,7 @@ func (c *Core) Decode(req *http.Request) (any, error) {
 // to the struct instance of the type that the Core instance holds.
 func (c *Core) DecodeTo(req *http.Request, value any) (err error) {
 	if err = c.parseRequestForm(req); err != nil {
-		return fmt.Errorf("failed to parse request form: %w", err)
+		return fmt.Errorf("%w: %w", ErrFailedToParseRequestForm, err)
 	}
 
 	err = c.resolver.ResolveTo(

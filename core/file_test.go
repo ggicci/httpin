@@ -117,6 +117,7 @@ func TestMultipartForm_UploadSingleFile_FailOnBrokenBoundaries(t *testing.T) {
 	gotInput, err := co.Decode(r)
 	assert.Nil(gotInput)
 	assert.Error(err)
+	assert.ErrorIs(err, ErrFailedToParseRequestForm)
 }
 
 func TestMultipartForm_UploadSingleFile_FailOnDecodeError(t *testing.T) {
