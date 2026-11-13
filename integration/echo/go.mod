@@ -1,6 +1,6 @@
 module github.com/ggicci/httpin/integration/echo
 
-go 1.26.5
+go 1.25.0
 
 require (
 	github.com/ggicci/httpin v0.20.5
