@@ -1,5 +1,5 @@
-github.com/ggicci/httpin v0.20.5 h1:Qwg6s98Cpqrt41JjpZJtwQR8avmls27Iuvtj5/WZHWY=
-github.com/ggicci/httpin v0.20.5/go.mod h1:zUZZ+RimYLx6q0Lt6W4fQSJ0EjFhVP7g0/pr+FInlVo=
+github.com/ggicci/httpin v0.21.0 h1:8B+XnAT5tPUfQfhcd07e9ia5x+XW04IVcBekS+s25ac=
+github.com/ggicci/httpin v0.21.0/go.mod h1:9R+FjW9RyijLGtjspE2FkuaBxyEnEv5z10ryNzq5K6w=
 github.com/ggicci/owl v0.8.2 h1:og+lhqpzSMPDdEB+NJfzoAJARP7qCG3f8uUC3xvGukA=
 github.com/ggicci/owl v0.8.2/go.mod h1:PHRD57u41vFN5UtFz2SF79yTVoM3HlWpjMiE+ZU2dj4=
 github.com/justinas/alice v1.2.0 h1:+MHSA/vccVCF4Uq37S42jwlkvI2Xzl7zTPCN5BnZNVo=
