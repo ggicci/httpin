@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -34,7 +33,7 @@ func TestIssue88_RequestBuilderFileUploadStreaming(t *testing.T) {
 	assert.Equal(t, "hello world", string(content))
 }
 
-func TestIssue88_CancelStreaming(t *testing.T) {
+func TestIssue88_CancelBeforeStreaming(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	rb := NewRequestBuilder(ctx)
@@ -43,10 +42,8 @@ func TestIssue88_CancelStreaming(t *testing.T) {
 		UploadStream(io.NopCloser(contentReader)),
 	})
 	req, _ := http.NewRequest("GET", "/", nil)
-	rb.Populate(req)
-
 	cancel()
-	time.Sleep(time.Millisecond * 100)
+	assert.NoError(t, rb.Populate(req))
 
 	err := req.ParseMultipartForm(32 << 20)
 	assert.ErrorContains(t, err, "context canceled")
