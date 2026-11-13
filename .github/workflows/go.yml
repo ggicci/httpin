@@ -25,7 +25,7 @@ jobs:
         with:
           name: codecov-umbrella
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./main.cover.out
+          files: ./httpin.cover.out,./integration/echo/echo.cover.out
           flags: unittests
           fail_ci_if_error: true
           verbose: true

@@ -1,10 +1,13 @@
-package integration
+// Package echo integrates httpin with the Echo web framework. It lives in
+// its own package so that importing the other integrations does not pull
+// Echo into the dependency graph.
+package echo
 
 import (
 	"mime/multipart"
 
 	"github.com/ggicci/httpin/core"
-	"github.com/labstack/echo/v4"
+	echov4 "github.com/labstack/echo/v4"
 )
 
 // UseEchoRouter registers a new directive executor which can extract values
@@ -13,13 +16,13 @@ import (
 //
 // Usage:
 //
-//	import httpin_integration "github.com/ggicci/httpin/integration"
+//	import httpin_echo "github.com/ggicci/httpin/integration/echo"
 //
 //	func init() {
 //	    e := echo.New()
-//	    httpin_integration.UseEchoRouter("path", e)
+//	    httpin_echo.UseEchoRouter("path", e)
 //	}
-func UseEchoRouter(name string, e *echo.Echo) {
+func UseEchoRouter(name string, e *echov4.Echo) {
 	core.RegisterDirective(
 		name,
 		core.NewDirectivePath((&echoRouterExtractor{e}).Execute),
@@ -29,7 +32,7 @@ func UseEchoRouter(name string, e *echo.Echo) {
 
 // echoRouterExtractor is an extractor for mux.Vars
 type echoRouterExtractor struct {
-	e *echo.Echo
+	e *echov4.Echo
 }
 
 func (mux *echoRouterExtractor) Execute(rtm *core.DirectiveRuntime) error {
